@@ -5,6 +5,7 @@ import { AurenComposer } from '../components/AurenComposer';
 import { AurenHeader } from '../components/AurenHeader';
 import { AurenMessageList, type AurenMessage } from '../components/AurenMessageList';
 import { AurenQuickActions } from '../components/AurenQuickActions';
+import { AurenSidebar } from '../components/AurenSidebar';
 import { sendAurenChatMessage } from '../lib/aurenAiClient';
 import { colors } from '../theme';
 
@@ -29,6 +30,7 @@ function createFallbackAurenResponse(message: string) {
 
 export function AurenHomeScreen() {
   const insets = useSafeAreaInsets();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [messages, setMessages] = useState<AurenMessage[]>([]);
@@ -48,6 +50,22 @@ export function AurenHomeScreen() {
     () => composerHeight + composerBottomInset + MESSAGE_LIST_BOTTOM_GAP,
     [composerBottomInset, composerHeight],
   );
+
+  function openSidebar() {
+    Keyboard.dismiss();
+    setSidebarOpen(true);
+  }
+
+  function closeSidebar() {
+    setSidebarOpen(false);
+  }
+
+  function startNewChat() {
+    setMessages([]);
+    setDraft('');
+    setAssistantThinking(false);
+    setSidebarOpen(false);
+  }
 
   async function handleSend() {
     const nextContent = draft.trim();
@@ -149,60 +167,62 @@ export function AurenHomeScreen() {
   }, [composerBottom, insets.bottom]);
 
   return (
-    <SafeAreaView style={styles.screen}>
-      <AurenHeader />
+    <AurenSidebar open={sidebarOpen} onClose={closeSidebar} onNewChat={startNewChat}>
+      <SafeAreaView style={styles.screen}>
+        <AurenHeader onOpenMenu={openSidebar} />
 
-      {hasMessages || assistantThinking ? (
-        <View style={styles.chatContent}>
-          <AurenMessageList
-            messages={messages}
-            thinking={assistantThinking}
-            bottomInset={messageListBottomInset}
-          />
-        </View>
-      ) : (
-        <Pressable style={styles.content} onPress={dismissKeyboard}>
-          <Animated.View
-            style={[
-              styles.startContent,
-              {
-                opacity: startContentOpacity,
-                transform: [{ translateY: heroTranslateY }],
-              },
-            ]}
-          >
-            <View style={styles.hero}>
-              <Text style={styles.heroTitle}>{'Good evening,\nlet’s study smarter.'}</Text>
-              <Text style={styles.heroSubtitle}>{'I’m here to help you focus, learn faster,\nand stay on track.'}</Text>
-            </View>
-
+        {hasMessages || assistantThinking ? (
+          <View style={styles.chatContent}>
+            <AurenMessageList
+              messages={messages}
+              thinking={assistantThinking}
+              bottomInset={messageListBottomInset}
+            />
+          </View>
+        ) : (
+          <Pressable style={styles.content} onPress={dismissKeyboard}>
             <Animated.View
-              pointerEvents={inputFocused ? 'none' : 'auto'}
               style={[
-                styles.actionsWrap,
+                styles.startContent,
                 {
-                  opacity: quickActionsOpacity,
-                  transform: [{ translateY: quickActionsTranslateY }, { scale: quickActionsScale }],
+                  opacity: startContentOpacity,
+                  transform: [{ translateY: heroTranslateY }],
                 },
               ]}
             >
-              <AurenQuickActions />
-            </Animated.View>
-          </Animated.View>
-        </Pressable>
-      )}
+              <View style={styles.hero}>
+                <Text style={styles.heroTitle}>{'Good evening,\nlet’s study smarter.'}</Text>
+                <Text style={styles.heroSubtitle}>{'I’m here to help you focus, learn faster,\nand stay on track.'}</Text>
+              </View>
 
-      <Animated.View style={[styles.composerWrap, { bottom: composerBottom }]}> 
-        <AurenComposer
-          value={draft}
-          onChangeText={setDraft}
-          onFocus={() => setInputFocused(true)}
-          onBlur={() => setInputFocused(false)}
-          onSend={handleSend}
-          onHeightChange={setComposerHeight}
-        />
-      </Animated.View>
-    </SafeAreaView>
+              <Animated.View
+                pointerEvents={inputFocused ? 'none' : 'auto'}
+                style={[
+                  styles.actionsWrap,
+                  {
+                    opacity: quickActionsOpacity,
+                    transform: [{ translateY: quickActionsTranslateY }, { scale: quickActionsScale }],
+                  },
+                ]}
+              >
+                <AurenQuickActions />
+              </Animated.View>
+            </Animated.View>
+          </Pressable>
+        )}
+
+        <Animated.View style={[styles.composerWrap, { bottom: composerBottom }]}> 
+          <AurenComposer
+            value={draft}
+            onChangeText={setDraft}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
+            onSend={handleSend}
+            onHeightChange={setComposerHeight}
+          />
+        </Animated.View>
+      </SafeAreaView>
+    </AurenSidebar>
   );
 }
 

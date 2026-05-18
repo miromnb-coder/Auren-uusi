@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, shadows } from '../theme';
 
@@ -21,7 +22,7 @@ export function AurenComposer() {
             <ChatIcon />
           </ComposerButton>
           <ComposerButton accessibilityLabel="Use voice">
-            <Text style={styles.micText}>♩</Text>
+            <MicIcon />
           </ComposerButton>
           <ComposerButton accessibilityLabel="Send message" disabled>
             <Text style={styles.sendText}>↑</Text>
@@ -35,7 +36,7 @@ export function AurenComposer() {
 type ComposerButtonProps = {
   accessibilityLabel: string;
   disabled?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 function ComposerButton({ accessibilityLabel, disabled = false, children }: ComposerButtonProps) {
@@ -65,6 +66,15 @@ function ChatIcon() {
   return (
     <View style={styles.chatIcon}>
       <View style={styles.chatTail} />
+    </View>
+  );
+}
+
+function MicIcon() {
+  return (
+    <View style={styles.micIcon}>
+      <View style={styles.micStem} />
+      <View style={styles.micBase} />
     </View>
   );
 }
@@ -121,14 +131,6 @@ const styles = StyleSheet.create({
     lineHeight: 38,
     fontWeight: '300',
   },
-  micText: {
-    marginTop: -4,
-    color: colors.icon,
-    fontSize: 34,
-    lineHeight: 38,
-    fontWeight: '500',
-    transform: [{ rotate: '180deg' }],
-  },
   sendText: {
     color: colors.mutedSoft,
     fontSize: 30,
@@ -181,5 +183,28 @@ const styles = StyleSheet.create({
     borderColor: colors.icon,
     transform: [{ rotate: '18deg' }],
     backgroundColor: colors.surfaceStrong,
+  },
+  micIcon: {
+    width: 24,
+    height: 31,
+    alignItems: 'center',
+  },
+  micStem: {
+    width: 13,
+    height: 23,
+    borderRadius: 7,
+    borderWidth: 2.4,
+    borderColor: colors.icon,
+  },
+  micBase: {
+    marginTop: -2,
+    width: 21,
+    height: 10,
+    borderBottomWidth: 2.4,
+    borderLeftWidth: 2.4,
+    borderRightWidth: 2.4,
+    borderBottomLeftRadius: 11,
+    borderBottomRightRadius: 11,
+    borderColor: colors.icon,
   },
 });

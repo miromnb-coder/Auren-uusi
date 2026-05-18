@@ -5,12 +5,13 @@ import { colors, shadows } from '../theme';
 
 type AurenWelcomeScreenProps = {
   onContinue: () => void;
+  onEmailContinue: () => void;
 };
 
 const GOOGLE_ICON_URI =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAABmJLR0QA/wD/AP+gvaeTAAAJJElEQVR4nO2be1BU1x3Hv+fevcsuu8trEQW0gkhRUATi+9HEqonWJHbsqDO1akwzmUYnJtaoRM24xprxgYljfYQZUztpbByNNTFKpDHiI5pMFCL4QFFRUEAerrzZx733Pk9y9l3vgkLbu7suRKC85J3z7znnP+f3fd9n5/u8Z+65x2pJkiRJkiRJkiRJkiRJkiRJkiRJkiT9b0F3jKQA3oC7QDXgJfAo8AhQBOgE3AB+DfwM+AjYCLgGJAB7gE9AbeAZcAvYBdYDlwCvgRPAB+BfwAXgPyAI/AEsAGcBXwBNgB3AUsA84AtwGTgI/A2uAi8BG4H9gLrAWGAo8Bt4CZwAJwGrgHPAg8A9YB6wF3gUuAX8At4F3gT+E8o/6v4B3wNOAGcBz4CrwGfA08DnwEPgT8Bf4K7wKfA++BT4EvgMeBu4C7wIjABuA+8CXwJPADcDEwDNgPnApuAO8AWwCzgTnAHuA64C7wNnApeBf4GvAPcB44DFwBTgHnAWuBT8A3wP/A58Bf4BfgK8Bf4DvgE+Bf4G/gX+Cf8Jf4B/gb+BP8J/4R/gz/BH+GP8Bf4M/wt/hT/D3+Af8M/wt/hX/Dv+Ff8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3DP8H/AL+WywU6Rr5TAAAAAElFTkSuQmCC';
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAABmJLR0QA/wD/AP+gvaeTAAAJJElEQVR4nO2be1BU1x3Hv+fevcsuu8trEQW0gkhRUATi+9HEqonWJHbsqDO1akwzmUYnJtaoRM24xprxgYljfYQZUztpbByNNTFKpDHiI5pMFCL4QFFRUEAerrzZx733Pk9y9l3vgkLbu7suRKC85J3z7znnP+f3fd9n5/u8Z+65x2pJkiRJkiRJkiRJkiRJkiRJkiRJkiT9b0F3jKQA3oC7QDXgJfAo8AhQBOgE3AB+DfwM+AjYCLgGJAB7gE9AbeAZcAvYBdYDlwCvgRPAB+BfwAXgPyAI/AEsAGcBXwBNgB3AUsA84AtwGTgI/A2uAi8BG4H9gLrAWGAo8Bt4CZwAJwGrgHPAg8A9YB6wF3gUuAX8At4F3gT+E8o/6v4B3wNOAGcBz4CrwGfA08DnwEPgT8Bf4K7wKfA++BT4EvgMeBu4C7wIjABuA+8CXwJPADcDEwDNgPnApuAO8AWwCzgTnAHuA64C7wNnApeBf4GvAPcB44DFwBTgHnAWuBT8A3wP/A58Bf4BfgK8Bf4DvgE+Bf4G/gX+Cf8Jf4B/gb+BP8J/4R/gz/BH+GP8Bf4M/wt/hT/D3+Af8M/wt/hX/Dv+Ff8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3DP8H/AL+WywU6Rr5TAAAAAElFTkSuQmCC';
 
-export function AurenWelcomeScreen({ onContinue }: AurenWelcomeScreenProps) {
+export function AurenWelcomeScreen({ onContinue, onEmailContinue }: AurenWelcomeScreenProps) {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.content}>
@@ -31,12 +32,12 @@ export function AurenWelcomeScreen({ onContinue }: AurenWelcomeScreenProps) {
             <Text style={styles.lightButtonText}>Continue with Google</Text>
           </Pressable>
 
-          <Pressable onPress={onContinue} style={({ pressed }) => [styles.lightButton, pressed && styles.pressed]}>
+          <Pressable onPress={onEmailContinue} style={({ pressed }) => [styles.lightButton, pressed && styles.pressed]}>
             <Ionicons name="mail-outline" size={28} color={colors.icon} />
             <Text style={styles.lightButtonText}>Continue with Email</Text>
           </Pressable>
 
-          <Pressable onPress={onContinue} style={({ pressed }) => [styles.loginRow, pressed && styles.pressed]}>
+          <Pressable onPress={onEmailContinue} style={({ pressed }) => [styles.loginRow, pressed && styles.pressed]}>
             <Text style={styles.loginMuted}>Already have an account? </Text>
             <Text style={styles.loginStrong}>Log in</Text>
           </Pressable>

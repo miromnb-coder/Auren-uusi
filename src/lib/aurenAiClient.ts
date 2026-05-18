@@ -1,7 +1,12 @@
 import type { AurenMessage } from '../components/AurenMessageList';
 
-const SUPABASE_FUNCTION_URL = process.env.EXPO_PUBLIC_AUREN_CHAT_FUNCTION_URL;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const DEFAULT_SUPABASE_PROJECT_REF = 'rssoaopfutmphxekagha';
+const DEFAULT_SUPABASE_FUNCTION_URL = `https://${DEFAULT_SUPABASE_PROJECT_REF}.supabase.co/functions/v1/auren-chat`;
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_gYPUVZ0xt4u33jSf81biEQ_-22xVlSh';
+
+const SUPABASE_FUNCTION_URL =
+  process.env.EXPO_PUBLIC_AUREN_CHAT_FUNCTION_URL ?? DEFAULT_SUPABASE_FUNCTION_URL;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_ANON_KEY;
 
 type AurenChatResponse = {
   answer?: string;
@@ -10,16 +15,12 @@ type AurenChatResponse = {
 };
 
 export async function sendAurenChatMessage(messages: AurenMessage[]) {
-  if (!SUPABASE_FUNCTION_URL) {
-    throw new Error('Missing EXPO_PUBLIC_AUREN_CHAT_FUNCTION_URL');
-  }
-
   const response = await fetch(SUPABASE_FUNCTION_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(SUPABASE_ANON_KEY ? { Authorization: `Bearer ${SUPABASE_ANON_KEY}` } : {}),
-      ...(SUPABASE_ANON_KEY ? { apikey: SUPABASE_ANON_KEY } : {}),
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      apikey: SUPABASE_ANON_KEY,
     },
     body: JSON.stringify({
       messages: messages.map((message) => ({

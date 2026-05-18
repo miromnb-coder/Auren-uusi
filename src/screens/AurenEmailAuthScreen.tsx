@@ -19,7 +19,9 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
       <View style={styles.content}>
         <View style={styles.hero}>
           <Text style={styles.wordmark}>A U R E N</Text>
-          <Text style={styles.title}>Continue with Email</Text>
+          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
+            Continue with Email
+          </Text>
           <Text style={styles.subtitle}>{'Sign in or create your account to save\nyour study progress.'}</Text>
         </View>
 
@@ -95,7 +97,7 @@ const styles = StyleSheet.create({
   hero: {
     width: '100%',
     alignItems: 'center',
-    paddingTop: 122,
+    paddingTop: 106,
   },
   wordmark: {
     color: '#151922',
@@ -107,7 +109,8 @@ const styles = StyleSheet.create({
     marginLeft: 11,
   },
   title: {
-    marginTop: 54,
+    width: '100%',
+    marginTop: 50,
     color: '#151922',
     fontSize: 38,
     lineHeight: 46,
@@ -116,7 +119,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: 18,
+    marginTop: 16,
     color: '#747985',
     fontSize: 18,
     lineHeight: 26,
@@ -128,7 +131,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 28,
     right: 28,
-    bottom: 58,
+    bottom: 60,
     borderRadius: 34,
     paddingHorizontal: 28,
     paddingTop: 30,
@@ -153,7 +156,7 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   input: {
-    height: 55,
+    height: 53,
     marginTop: 10,
     paddingHorizontal: 18,
     borderRadius: 13,
@@ -167,7 +170,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.26,
   },
   passwordInputWrap: {
-    height: 55,
+    height: 53,
     marginTop: 10,
     borderRadius: 13,
     backgroundColor: 'rgba(255,255,255,0.6)',
@@ -206,7 +209,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.18,
   },
   continueButton: {
-    height: 54,
+    height: 53,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -227,8 +230,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.22,
   },
   magicButton: {
-    height: 54,
-    marginTop: 14,
+    height: 53,
+    marginTop: 13,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',

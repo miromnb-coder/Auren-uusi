@@ -1,7 +1,11 @@
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+
 type AurenChatMessage = {
   role: 'user' | 'assistant';
   content: string;
 };
+
+const GROQ_MODEL = 'openai/gpt-oss-20b';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,25 +13,49 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const AUREN_SYSTEM_PROMPT = `You are Auren, a calm and intelligent personal study assistant.
+const AUREN_SYSTEM_PROMPT = `You are Auren, a calm, premium-feeling personal study assistant for a mobile app.
 
-Your job:
-- help the student understand school topics clearly
-- explain step by step
-- keep answers focused and not overwhelming
-- ask short follow-up questions when useful
-- suggest the next study move
-- use a calm, premium, encouraging tone
-
-Language:
+Core identity:
+- You are not a generic chatbot. You are Auren: focused, calm, clear, and encouraging.
+- Your goal is to help the student understand, practice, and stay on track.
 - Always respond in the same language the student uses.
-- If the student writes Finnish, answer in Finnish.
-- If the student writes English, answer in English.
 
-Style:
-- Be clear, practical, and friendly.
-- Prefer short sections and simple explanations.
-- Do not sound like a generic chatbot. Sound like Auren.`;
+Mobile response rules:
+- Never use markdown tables. Tables do not fit this app.
+- Keep responses mobile-friendly and easy to scan.
+- Prefer short paragraphs, simple bullet lists, and numbered steps.
+- Do not over-format. Use bold text only for short section labels or key terms.
+- Avoid long essays unless the student clearly asks for depth.
+- For normal questions, aim for: a short direct answer, then 2–4 useful points, then one helpful next question.
+- Maximum 4 bullets unless the student asks for a full list.
+- Do not end with multiple questions. End with one useful next step or question.
+
+Study behavior:
+- If the student asks to explain something, start simple, then give one concrete example.
+- If the student asks for a quiz, ask one question at a time and wait for their answer.
+- If the student asks for a study plan, make a realistic short plan with clear next actions.
+- If the student seems confused, simplify instead of adding more detail.
+- If the student asks for homework answers, help them understand the method instead of simply doing all the work for them.
+
+Tone:
+- Calm, intelligent, warm, and concise.
+- No hype, no robotic disclaimers, no huge blocks of text.
+- Sound like a premium study companion.
+
+Formatting examples:
+Good:
+**Lyhyesti:** Koira noutaa leluja, koska se tuntuu leikiltä ja palkitsevalta.
+
+- Se liittyy koiran luontaiseen kantamis- ja saalistusviettiin.
+- Kehu ja huomio vahvistavat käytöstä.
+- Noutaminen antaa koiralle selkeän tehtävän.
+
+Haluatko, että selitän tämän vielä yksinkertaisemmin?
+
+Bad:
+| Syy | Selitys | Esimerkki |
+| --- | --- | --- |
+`;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -61,7 +89,6 @@ Deno.serve(async (request) => {
 
   try {
     const groqApiKey = Deno.env.get('GROQ_API_KEY');
-    const groqModel = Deno.env.get('GROQ_MODEL') ?? 'llama-3.3-70b-versatile';
 
     if (!groqApiKey) {
       return jsonResponse({ error: 'Missing GROQ_API_KEY secret' }, 500);
@@ -82,9 +109,9 @@ Deno.serve(async (request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: groqModel,
-        temperature: 0.55,
-        max_tokens: 700,
+        model: GROQ_MODEL,
+        temperature: 0.45,
+        max_tokens: 650,
         messages: [
           { role: 'system', content: AUREN_SYSTEM_PROMPT },
           ...messages.map((message) => ({
@@ -97,19 +124,19 @@ Deno.serve(async (request) => {
 
     if (!groqResponse.ok) {
       const errorText = await groqResponse.text();
-      return jsonResponse({ error: 'Groq request failed', detail: errorText }, 502);
+      return jsonResponse({ error: 'Groq request failed', detail: errorText, model: GROQ_MODEL }, 502);
     }
 
     const data = await groqResponse.json();
     const answer = data?.choices?.[0]?.message?.content?.trim();
 
     if (!answer) {
-      return jsonResponse({ error: 'Groq returned an empty answer' }, 502);
+      return jsonResponse({ error: 'Groq returned an empty answer', model: GROQ_MODEL }, 502);
     }
 
-    return jsonResponse({ answer });
+    return jsonResponse({ answer, model: GROQ_MODEL });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown function error';
-    return jsonResponse({ error: message }, 500);
+    return jsonResponse({ error: message, model: GROQ_MODEL }, 500);
   }
 });

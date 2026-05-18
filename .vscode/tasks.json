@@ -14,9 +14,9 @@
       "problemMatcher": []
     },
     {
-      "label": "Open Auren in Expo Go - tunnel",
+      "label": "Open Auren in Expo Go - local QR",
       "type": "shell",
-      "command": "npx expo start --tunnel --clear",
+      "command": "npx expo start --clear",
       "group": {
         "kind": "build",
         "isDefault": true
@@ -29,9 +29,9 @@
       "problemMatcher": []
     },
     {
-      "label": "Open Auren in Expo Go - local QR",
+      "label": "Open Auren in Expo Go - tunnel",
       "type": "shell",
-      "command": "npx expo start --clear",
+      "command": "npx expo start --tunnel --clear",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AurenComposer } from '../components/AurenComposer';
@@ -9,6 +9,7 @@ import { colors } from '../theme';
 
 const CLOSED_COMPOSER_BOTTOM = 38;
 const KEYBOARD_GAP = 34;
+const MESSAGE_LIST_BOTTOM_GAP = 24;
 const MOCK_RESPONSE_DELAY_MS = 850;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
@@ -32,6 +33,8 @@ export function AurenHomeScreen() {
   const [inputFocused, setInputFocused] = useState(false);
   const [messages, setMessages] = useState<AurenMessage[]>([]);
   const [assistantThinking, setAssistantThinking] = useState(false);
+  const [composerHeight, setComposerHeight] = useState(116);
+  const [composerBottomInset, setComposerBottomInset] = useState(CLOSED_COMPOSER_BOTTOM);
   const composerBottom = useRef(new Animated.Value(CLOSED_COMPOSER_BOTTOM)).current;
   const quickActionsProgress = useRef(new Animated.Value(1)).current;
   const heroTranslateY = useRef(new Animated.Value(0)).current;
@@ -42,6 +45,10 @@ export function AurenHomeScreen() {
   const quickActionsTranslateY = quickActionsProgress.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] });
   const quickActionsScale = quickActionsProgress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
   const startContentOpacity = quickActionsProgress;
+  const messageListBottomInset = useMemo(
+    () => composerHeight + composerBottomInset + MESSAGE_LIST_BOTTOM_GAP,
+    [composerBottomInset, composerHeight],
+  );
 
   function handleSend() {
     const nextContent = draft.trim();
@@ -109,6 +116,7 @@ export function AurenHomeScreen() {
         keyboardHeight - insets.bottom + KEYBOARD_GAP,
       );
 
+      setComposerBottomInset(nextBottom);
       Animated.timing(composerBottom, {
         toValue: nextBottom,
         duration,
@@ -119,6 +127,7 @@ export function AurenHomeScreen() {
 
     const hideSub = Keyboard.addListener(hideEvent, (event) => {
       const duration = event.duration ?? 220;
+      setComposerBottomInset(CLOSED_COMPOSER_BOTTOM);
       Animated.timing(composerBottom, {
         toValue: CLOSED_COMPOSER_BOTTOM,
         duration,
@@ -147,7 +156,7 @@ export function AurenHomeScreen() {
 
       {hasMessages || assistantThinking ? (
         <Pressable style={styles.chatContent} onPress={dismissKeyboard}>
-          <AurenMessageList messages={messages} thinking={assistantThinking} />
+          <AurenMessageList messages={messages} thinking={assistantThinking} bottomInset={messageListBottomInset} />
         </Pressable>
       ) : (
         <Pressable style={styles.content} onPress={dismissKeyboard}>
@@ -188,6 +197,7 @@ export function AurenHomeScreen() {
           onFocus={() => setInputFocused(true)}
           onBlur={() => setInputFocused(false)}
           onSend={handleSend}
+          onHeightChange={setComposerHeight}
         />
       </Animated.View>
     </SafeAreaView>

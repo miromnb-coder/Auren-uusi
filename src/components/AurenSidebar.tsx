@@ -73,20 +73,25 @@ export function AurenSidebar({ open, children, onClose, onNewChat }: AurenSideba
         ]}
       >
         <View style={styles.drawerInner}>
-          <View style={styles.brandArea}>
+          <View style={styles.topBar}>
             <Text style={styles.brand}>Auren</Text>
             <Text style={styles.subtitle}>Your study assistant</Text>
           </View>
 
-          <View style={styles.primaryNav}>
-            <SidebarItem icon="home-outline" label="Home" />
-            <SidebarItem icon="chatbubble-ellipses-outline" label="New chat" onPress={onNewChat} />
-            <SidebarItem icon="book-outline" label="Study modes" />
-          </View>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            bounces
+          >
+            <View style={styles.primaryNav}>
+              <SidebarItem icon="home-outline" label="Home" />
+              <SidebarItem icon="chatbubble-ellipses-outline" label="New chat" onPress={onNewChat} />
+              <SidebarItem icon="book-outline" label="Study modes" />
+            </View>
 
-          <View style={styles.divider} />
+            <View style={styles.divider} />
 
-          <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             <Text style={styles.sectionLabel}>Recent chats</Text>
             <View style={styles.recentList}>
               {recentChats.map((chat) => (
@@ -105,7 +110,7 @@ export function AurenSidebar({ open, children, onClose, onNewChat }: AurenSideba
             </View>
           </ScrollView>
 
-          <View style={styles.bottomArea}>
+          <View style={styles.bottomBar}>
             <Pressable style={({ pressed }) => [styles.profilePill, pressed && styles.pressed]}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>M</Text>
@@ -178,8 +183,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     paddingBottom: 36,
   },
-  brandArea: {
-    marginBottom: 50,
+  topBar: {
+    flexShrink: 0,
+    paddingBottom: 44,
+    backgroundColor: '#fbfbfa',
   },
   brand: {
     color: colors.text,
@@ -195,6 +202,12 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     fontWeight: '500',
     letterSpacing: -0.16,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 28,
   },
   primaryNav: {
     gap: 25,
@@ -220,12 +233,6 @@ const styles = StyleSheet.create({
     marginTop: 36,
     marginBottom: 28,
     backgroundColor: 'rgba(17,24,39,0.08)',
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 26,
   },
   sectionLabel: {
     color: colors.muted,
@@ -258,12 +265,15 @@ const styles = StyleSheet.create({
   secondaryNav: {
     gap: 24,
   },
-  bottomArea: {
+  bottomBar: {
+    flexShrink: 0,
     minHeight: 58,
+    paddingTop: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 20,
+    backgroundColor: '#fbfbfa',
   },
   profilePill: {
     height: 54,

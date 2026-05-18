@@ -1,23 +1,31 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, shadows, spacing } from '../theme';
+import { colors, shadows } from '../theme';
 
 export function AurenComposer() {
   return (
-    <View style={styles.wrapper}>
-      <View style={styles.composer}>
-        <Text style={styles.placeholder}>Ask Auren about school...</Text>
+    <View style={styles.composer}>
+      <Text style={styles.placeholder}>Ask anything about your studies</Text>
 
-        <View style={styles.controlsRow}>
-          <View style={styles.leftControls}>
-            <ComposerButton label="+" accessibilityLabel="Add content" />
-            <ComposerButton label="≡" accessibilityLabel="Open tools" />
-          </View>
+      <View style={styles.controlsRow}>
+        <View style={styles.leftControls}>
+          <ComposerButton accessibilityLabel="Add content">
+            <Text style={styles.plusText}>+</Text>
+          </ComposerButton>
+          <ComposerButton accessibilityLabel="Open controls">
+            <SlidersIcon />
+          </ComposerButton>
+        </View>
 
-          <View style={styles.rightControls}>
-            <ComposerButton label="○" accessibilityLabel="Open chat mode" />
-            <ComposerButton label="⌁" accessibilityLabel="Use voice" />
-            <ComposerButton label="↑" accessibilityLabel="Send message" disabled />
-          </View>
+        <View style={styles.rightControls}>
+          <ComposerButton accessibilityLabel="Open chat mode">
+            <ChatIcon />
+          </ComposerButton>
+          <ComposerButton accessibilityLabel="Use voice">
+            <Text style={styles.micText}>♩</Text>
+          </ComposerButton>
+          <ComposerButton accessibilityLabel="Send message" disabled>
+            <Text style={styles.sendText}>↑</Text>
+          </ComposerButton>
         </View>
       </View>
     </View>
@@ -25,12 +33,12 @@ export function AurenComposer() {
 }
 
 type ComposerButtonProps = {
-  label: string;
   accessibilityLabel: string;
   disabled?: boolean;
+  children: React.ReactNode;
 };
 
-function ComposerButton({ label, accessibilityLabel, disabled = false }: ComposerButtonProps) {
+function ComposerButton({ accessibilityLabel, disabled = false, children }: ComposerButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -38,16 +46,30 @@ function ComposerButton({ label, accessibilityLabel, disabled = false }: Compose
       disabled={disabled}
       style={[styles.button, disabled && styles.buttonDisabled]}
     >
-      <Text style={[styles.buttonText, disabled && styles.buttonTextDisabled]}>{label}</Text>
+      {children}
     </Pressable>
   );
 }
 
+function SlidersIcon() {
+  return (
+    <View style={styles.slidersIcon}>
+      <View style={styles.sliderLine}><View style={[styles.sliderDot, styles.sliderDotLeft]} /></View>
+      <View style={styles.sliderLine}><View style={[styles.sliderDot, styles.sliderDotRight]} /></View>
+      <View style={styles.sliderLine}><View style={[styles.sliderDot, styles.sliderDotCenter]} /></View>
+    </View>
+  );
+}
+
+function ChatIcon() {
+  return (
+    <View style={styles.chatIcon}>
+      <View style={styles.chatTail} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  wrapper: {
-    paddingHorizontal: spacing.screenX,
-    paddingBottom: 18,
-  },
   composer: {
     minHeight: 142,
     borderRadius: 36,
@@ -56,15 +78,18 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
     backgroundColor: colors.surfaceStrong,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(17,24,39,0.035)',
     ...shadows.soft,
   },
   placeholder: {
     color: colors.mutedSoft,
-    fontSize: 18,
+    fontSize: 18.5,
+    lineHeight: 24,
+    letterSpacing: -0.25,
+    fontWeight: '500',
   },
   controlsRow: {
-    marginTop: 28,
+    marginTop: 26,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -78,24 +103,83 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   button: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.68)',
+    backgroundColor: 'rgba(255,255,255,0.72)',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(17,24,39,0.055)',
   },
   buttonDisabled: {
     backgroundColor: colors.disabled,
   },
-  buttonText: {
+  plusText: {
     color: colors.icon,
-    fontSize: 24,
+    fontSize: 34,
+    lineHeight: 38,
+    fontWeight: '300',
+  },
+  micText: {
+    marginTop: -4,
+    color: colors.icon,
+    fontSize: 34,
+    lineHeight: 38,
+    fontWeight: '500',
+    transform: [{ rotate: '180deg' }],
+  },
+  sendText: {
+    color: colors.mutedSoft,
+    fontSize: 30,
+    lineHeight: 34,
     fontWeight: '500',
   },
-  buttonTextDisabled: {
-    color: colors.mutedSoft,
+  slidersIcon: {
+    width: 25,
+    gap: 5,
+  },
+  sliderLine: {
+    height: 2,
+    borderRadius: 999,
+    backgroundColor: colors.icon,
+  },
+  sliderDot: {
+    position: 'absolute',
+    top: -3.5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.surfaceStrong,
+    borderWidth: 1.8,
+    borderColor: colors.icon,
+  },
+  sliderDotLeft: {
+    left: 3,
+  },
+  sliderDotRight: {
+    right: 3,
+  },
+  sliderDotCenter: {
+    left: 9,
+  },
+  chatIcon: {
+    width: 27,
+    height: 27,
+    borderRadius: 13.5,
+    borderWidth: 2.4,
+    borderColor: colors.icon,
+  },
+  chatTail: {
+    position: 'absolute',
+    left: 3,
+    bottom: -2,
+    width: 9,
+    height: 9,
+    borderLeftWidth: 2.4,
+    borderBottomWidth: 2.4,
+    borderColor: colors.icon,
+    transform: [{ rotate: '18deg' }],
+    backgroundColor: colors.surfaceStrong,
   },
 });

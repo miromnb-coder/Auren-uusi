@@ -1,0 +1,24 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Open Auren",
+      "type": "shell",
+      "command": "npm run start:clear",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Open Auren Web",
+      "type": "shell",
+      "command": "npm run web",
+      "problemMatcher": []
+    },
+    {
+      "label": "Check Auren",
+      "type": "shell",
+      "command": "npm run typecheck",
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,10 +1,17 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, shadows } from '../theme';
 
-const actions = [
-  { id: 'explain', icon: '▱', label: 'Explain a con...' },
-  { id: 'quiz', icon: '▤', label: 'Quiz me' },
-  { id: 'plan', icon: '▦', label: 'Make a study...' },
+type QuickAction = {
+  id: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+};
+
+const actions: QuickAction[] = [
+  { id: 'explain', icon: 'book-outline', label: 'Explain' },
+  { id: 'quiz', icon: 'help-circle-outline', label: 'Quiz me' },
+  { id: 'plan', icon: 'calendar-outline', label: 'Study plan' },
 ];
 
 export function AurenQuickActions() {
@@ -12,7 +19,7 @@ export function AurenQuickActions() {
     <View style={styles.container}>
       {actions.map((action) => (
         <Pressable key={action.id} accessibilityRole="button" style={styles.action}>
-          <Text style={styles.icon}>{action.icon}</Text>
+          <Ionicons name={action.icon} size={23} color="#858690" />
           <Text numberOfLines={1} style={styles.actionText}>{action.label}</Text>
         </Pressable>
       ))}
@@ -39,14 +46,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(17,24,39,0.045)',
     ...shadows.tiny,
   },
-  icon: {
-    color: '#858690',
-    fontSize: 23,
-    lineHeight: 24,
-    marginBottom: 8,
-    fontWeight: '500',
-  },
   actionText: {
+    marginTop: 7,
     maxWidth: 88,
     color: colors.text,
     fontSize: 14.5,

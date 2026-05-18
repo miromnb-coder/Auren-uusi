@@ -69,6 +69,6 @@ const styles = StyleSheet.create({
   },
   assistantText: {
     color: colors.text,
-    fontWeight: '450',
+    fontWeight: '400',
   },
 });

@@ -1,15 +1,45 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { colors, shadows } from '../theme';
 
 const COMPOSER_ICON_COLOR = colors.icon;
 const DISABLED_ICON_COLOR = colors.mutedSoft;
+const MIN_INPUT_HEIGHT = 22;
+const MAX_INPUT_HEIGHT = 110;
 
-export function AurenComposer() {
+type AurenComposerProps = {
+  value: string;
+  onChangeText: (value: string) => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  onSend?: () => void;
+};
+
+export function AurenComposer({ value, onChangeText, onFocus, onBlur, onSend }: AurenComposerProps) {
+  const canSend = value.trim().length > 0;
+  const inputHeight = Math.min(Math.max(MIN_INPUT_HEIGHT, value.split('\n').length * 22), MAX_INPUT_HEIGHT);
+  const inputCanScroll = inputHeight >= MAX_INPUT_HEIGHT;
+
+  function handleSend() {
+    if (!canSend) return;
+    onSend?.();
+  }
+
   return (
     <View style={styles.composer}>
-      <Text style={styles.placeholder}>Ask anything about your studies</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        multiline
+        scrollEnabled={inputCanScroll}
+        textAlignVertical="top"
+        placeholder="Ask anything about your studies"
+        placeholderTextColor={colors.mutedSoft}
+        style={[styles.input, { height: inputHeight }]}
+      />
 
       <View style={styles.controlsRow}>
         <View style={styles.leftControls}>
@@ -28,8 +58,8 @@ export function AurenComposer() {
           <ComposerButton accessibilityLabel="Use voice">
             <Ionicons name="mic-outline" size={25} color={COMPOSER_ICON_COLOR} />
           </ComposerButton>
-          <ComposerButton accessibilityLabel="Send message" disabled>
-            <Ionicons name="arrow-up-outline" size={25} color={DISABLED_ICON_COLOR} />
+          <ComposerButton accessibilityLabel="Send message" disabled={!canSend} onPress={handleSend} filled={canSend}>
+            <Ionicons name="arrow-up-outline" size={25} color={canSend ? '#ffffff' : DISABLED_ICON_COLOR} />
           </ComposerButton>
         </View>
       </View>
@@ -40,16 +70,19 @@ export function AurenComposer() {
 type ComposerButtonProps = {
   accessibilityLabel: string;
   disabled?: boolean;
+  filled?: boolean;
+  onPress?: () => void;
   children: ReactNode;
 };
 
-function ComposerButton({ accessibilityLabel, disabled = false, children }: ComposerButtonProps) {
+function ComposerButton({ accessibilityLabel, disabled = false, filled = false, onPress, children }: ComposerButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       disabled={disabled}
-      style={[styles.button, disabled && styles.buttonDisabled]}
+      onPress={onPress}
+      style={[styles.button, filled && styles.buttonFilled, disabled && styles.buttonDisabled]}
     >
       {children}
     </Pressable>
@@ -68,8 +101,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(17,24,39,0.032)',
     ...shadows.soft,
   },
-  placeholder: {
-    color: colors.mutedSoft,
+  input: {
+    padding: 0,
+    margin: 0,
+    color: colors.text,
     fontSize: 17.5,
     lineHeight: 22,
     letterSpacing: -0.2,
@@ -98,6 +133,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.72)',
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.052)',
+  },
+  buttonFilled: {
+    backgroundColor: colors.icon,
+    borderColor: colors.icon,
   },
   buttonDisabled: {
     backgroundColor: colors.disabled,

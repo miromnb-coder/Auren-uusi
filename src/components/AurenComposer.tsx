@@ -81,14 +81,14 @@ function MicIcon() {
 
 const styles = StyleSheet.create({
   composer: {
-    minHeight: 142,
+    minHeight: 138,
     borderRadius: 36,
-    paddingHorizontal: 20,
-    paddingTop: 22,
-    paddingBottom: 18,
+    paddingHorizontal: 18,
+    paddingTop: 21,
+    paddingBottom: 17,
     backgroundColor: colors.surfaceStrong,
     borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.035)',
+    borderColor: 'rgba(17,24,39,0.032)',
     ...shadows.soft,
   },
   placeholder: {
@@ -99,23 +99,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   controlsRow: {
-    marginTop: 26,
+    marginTop: 25,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   leftControls: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   rightControls: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   button: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.72)',
@@ -166,9 +166,9 @@ const styles = StyleSheet.create({
     left: 9,
   },
   chatIcon: {
-    width: 27,
-    height: 27,
-    borderRadius: 13.5,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     borderWidth: 2.4,
     borderColor: colors.icon,
   },

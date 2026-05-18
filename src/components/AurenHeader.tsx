@@ -3,10 +3,19 @@ import { colors, spacing } from '../theme';
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
-export function AurenHeader() {
+type AurenHeaderProps = {
+  onOpenMenu?: () => void;
+};
+
+export function AurenHeader({ onOpenMenu }: AurenHeaderProps) {
   return (
     <View style={styles.header}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Open menu" style={styles.menuButton}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open menu"
+        onPress={onOpenMenu}
+        style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]}
+      >
         <View style={styles.menuLine} />
         <View style={styles.menuLine} />
       </Pressable>
@@ -32,6 +41,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'center',
     gap: 8,
+  },
+  menuButtonPressed: {
+    opacity: 0.58,
   },
   menuLine: {
     width: 25,

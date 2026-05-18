@@ -160,7 +160,6 @@ export function AurenHomeScreen() {
             messages={messages}
             thinking={assistantThinking}
             bottomInset={messageListBottomInset}
-            onScrollBeginDrag={dismissKeyboard}
           />
         </View>
       ) : (

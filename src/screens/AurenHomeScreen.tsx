@@ -155,9 +155,14 @@ export function AurenHomeScreen() {
       <AurenHeader />
 
       {hasMessages || assistantThinking ? (
-        <Pressable style={styles.chatContent} onPress={dismissKeyboard}>
-          <AurenMessageList messages={messages} thinking={assistantThinking} bottomInset={messageListBottomInset} />
-        </Pressable>
+        <View style={styles.chatContent}>
+          <AurenMessageList
+            messages={messages}
+            thinking={assistantThinking}
+            bottomInset={messageListBottomInset}
+            onScrollBeginDrag={dismissKeyboard}
+          />
+        </View>
       ) : (
         <Pressable style={styles.content} onPress={dismissKeyboard}>
           <Animated.View

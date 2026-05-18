@@ -31,7 +31,7 @@ export function AurenMessageList({ messages, thinking = false, bottomInset = 190
       ref={scrollRef}
       style={styles.scroll}
       contentContainerStyle={[styles.content, { paddingBottom: bottomInset }]}
-      keyboardShouldPersistTaps="always"
+      keyboardShouldPersistTaps="handled"
       keyboardDismissMode="none"
       showsVerticalScrollIndicator={false}
     >

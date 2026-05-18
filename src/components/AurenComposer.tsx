@@ -14,9 +14,10 @@ type AurenComposerProps = {
   onFocus?: () => void;
   onBlur?: () => void;
   onSend?: () => void;
+  onHeightChange?: (height: number) => void;
 };
 
-export function AurenComposer({ value, onChangeText, onFocus, onBlur, onSend }: AurenComposerProps) {
+export function AurenComposer({ value, onChangeText, onFocus, onBlur, onSend, onHeightChange }: AurenComposerProps) {
   const canSend = value.trim().length > 0;
   const inputHeight = Math.min(Math.max(MIN_INPUT_HEIGHT, value.split('\n').length * 22), MAX_INPUT_HEIGHT);
   const inputCanScroll = inputHeight >= MAX_INPUT_HEIGHT;
@@ -27,7 +28,10 @@ export function AurenComposer({ value, onChangeText, onFocus, onBlur, onSend }: 
   }
 
   return (
-    <View style={styles.composer}>
+    <View
+      style={styles.composer}
+      onLayout={(event) => onHeightChange?.(event.nativeEvent.layout.height)}
+    >
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -96,7 +100,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 18,
     paddingBottom: 14,
-    backgroundColor: colors.surfaceStrong,
+    backgroundColor: '#fbfbfa',
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.032)',
     ...shadows.soft,
@@ -130,7 +134,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.052)',
   },

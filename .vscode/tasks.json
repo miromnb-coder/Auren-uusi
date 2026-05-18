@@ -2,22 +2,39 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Open Auren",
+      "label": "Open Auren in Expo Go",
       "type": "shell",
       "command": "npm run start:clear",
-      "group": "build",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
       "problemMatcher": []
     },
     {
-      "label": "Open Auren Web",
+      "label": "Open Auren on Web",
       "type": "shell",
       "command": "npm run web",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
       "problemMatcher": []
     },
     {
-      "label": "Check Auren",
+      "label": "Check Auren TypeScript",
       "type": "shell",
       "command": "npm run typecheck",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
       "problemMatcher": []
     }
   ]

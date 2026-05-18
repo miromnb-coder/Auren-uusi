@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Keyboard, Platform, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AurenComposer } from '../components/AurenComposer';
 import { AurenHeader } from '../components/AurenHeader';
@@ -7,8 +7,7 @@ import { AurenQuickActions } from '../components/AurenQuickActions';
 import { colors } from '../theme';
 
 const CLOSED_COMPOSER_BOTTOM = 38;
-const KEYBOARD_GAP = 12;
-const MAX_KEYBOARD_EXTRA_LIFT = 8;
+const KEYBOARD_GAP = 34;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 export function AurenHomeScreen() {
@@ -25,6 +24,10 @@ export function AurenHomeScreen() {
 
   function handleSend() {
     setDraft('');
+  }
+
+  function dismissKeyboard() {
+    Keyboard.dismiss();
   }
 
   useEffect(() => {
@@ -54,7 +57,7 @@ export function AurenHomeScreen() {
       const keyboardHeight = event.endCoordinates.height;
       const nextBottom = Math.max(
         CLOSED_COMPOSER_BOTTOM,
-        keyboardHeight - insets.bottom + KEYBOARD_GAP + MAX_KEYBOARD_EXTRA_LIFT,
+        keyboardHeight - insets.bottom + KEYBOARD_GAP,
       );
 
       Animated.timing(composerBottom, {
@@ -72,7 +75,7 @@ export function AurenHomeScreen() {
         duration,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: false,
-      }).start();
+      }).start(() => setInputFocused(false));
     });
 
     return () => {
@@ -85,7 +88,7 @@ export function AurenHomeScreen() {
     <SafeAreaView style={styles.screen}>
       <AurenHeader />
 
-      <View style={styles.content}>
+      <Pressable style={styles.content} onPress={dismissKeyboard}>
         <Animated.View style={[styles.hero, { transform: [{ translateY: heroTranslateY }] }]}>
           <Text style={styles.heroTitle}>{'Good evening,\nlet’s study smarter.'}</Text>
           <Text style={styles.heroSubtitle}>{'I’m here to help you focus, learn faster,\nand stay on track.'}</Text>
@@ -103,7 +106,7 @@ export function AurenHomeScreen() {
         >
           <AurenQuickActions />
         </Animated.View>
-      </View>
+      </Pressable>
 
       <Animated.View style={[styles.composerWrap, { bottom: composerBottom }]}> 
         <AurenComposer

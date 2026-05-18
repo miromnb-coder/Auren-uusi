@@ -70,8 +70,8 @@ const styles = StyleSheet.create({
   },
   composerWrap: {
     position: 'absolute',
-    left: 30,
-    right: 30,
-    bottom: 36,
+    left: 16,
+    right: 16,
+    bottom: 38,
   },
 });

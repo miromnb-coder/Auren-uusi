@@ -2,13 +2,36 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Install dependencies",
+      "type": "shell",
+      "command": "npm install",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Open Auren in Expo Go",
       "type": "shell",
-      "command": "npm run start:clear",
+      "command": "npx expo start --tunnel --clear",
       "group": {
         "kind": "build",
         "isDefault": true
       },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Start Auren locally",
+      "type": "shell",
+      "command": "npx expo start --clear",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",

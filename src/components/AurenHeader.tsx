@@ -1,5 +1,7 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing } from '../theme';
+
+const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 export function AurenHeader() {
   return (
@@ -18,33 +20,34 @@ export function AurenHeader() {
 
 const styles = StyleSheet.create({
   header: {
-    height: 56,
+    height: 82,
     paddingHorizontal: spacing.screenX,
     alignItems: 'center',
     justifyContent: 'space-between',
     flexDirection: 'row',
   },
   menuButton: {
-    width: 44,
-    height: 44,
+    width: 68,
+    height: 56,
     alignItems: 'flex-start',
     justifyContent: 'center',
-    gap: 7,
+    gap: 8,
   },
   menuLine: {
-    width: 24,
-    height: 2,
+    width: 25,
+    height: 2.2,
     borderRadius: 999,
-    backgroundColor: colors.icon,
+    backgroundColor: '#72737c',
   },
   title: {
     color: colors.text,
-    fontSize: 20,
-    fontWeight: '600',
-    letterSpacing: -0.2,
+    fontSize: 29,
+    lineHeight: 35,
+    letterSpacing: -0.9,
+    fontFamily: serifFont,
   },
   placeholder: {
-    width: 44,
-    height: 44,
+    width: 68,
+    height: 56,
   },
 });

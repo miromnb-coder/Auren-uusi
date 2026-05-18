@@ -1,9 +1,11 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AurenComposer } from '../components/AurenComposer';
 import { AurenHeader } from '../components/AurenHeader';
 import { AurenQuickActions } from '../components/AurenQuickActions';
-import { colors, spacing } from '../theme';
+import { colors } from '../theme';
+
+const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 export function AurenHomeScreen() {
   return (
@@ -12,14 +14,16 @@ export function AurenHomeScreen() {
 
       <View style={styles.content}>
         <View style={styles.hero}>
-          <Text style={styles.heroTitle}>Your next study move is ready.</Text>
-          <Text style={styles.heroMeta}>Today · Math · 25 min focus</Text>
+          <Text style={styles.heroTitle}>{'Good evening,\nlet’s study smarter.'}</Text>
+          <Text style={styles.heroSubtitle}>{'I’m here to help you focus, learn faster,\nand stay on track.'}</Text>
         </View>
 
         <AurenQuickActions />
       </View>
 
-      <AurenComposer />
+      <View style={styles.composerWrap}>
+        <AurenComposer />
+      </View>
     </SafeAreaView>
   );
 }
@@ -31,23 +35,37 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: spacing.screenX,
-    justifyContent: 'flex-end',
-    paddingBottom: 64,
-    gap: 88,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingHorizontal: 18,
+    paddingTop: 74,
+    paddingBottom: 210,
   },
   hero: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    maxWidth: 370,
   },
   heroTitle: {
-    color: colors.text,
-    fontSize: 25,
-    fontWeight: '500',
-    letterSpacing: -0.35,
+    color: '#686775',
+    fontSize: 33.5,
+    lineHeight: 40,
+    letterSpacing: -1.08,
+    textAlign: 'center',
+    fontFamily: serifFont,
   },
-  heroMeta: {
-    marginTop: 10,
+  heroSubtitle: {
+    marginTop: 15,
     color: colors.muted,
-    fontSize: 16,
+    fontSize: 15.8,
+    lineHeight: 22.5,
+    letterSpacing: -0.14,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  composerWrap: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 38,
   },
 });

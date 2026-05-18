@@ -58,11 +58,11 @@ function ComposerButton({ accessibilityLabel, disabled = false, children }: Comp
 
 const styles = StyleSheet.create({
   composer: {
-    minHeight: 138,
+    minHeight: 142,
     borderRadius: 36,
-    paddingHorizontal: 18,
-    paddingTop: 21,
-    paddingBottom: 17,
+    paddingHorizontal: 20,
+    paddingTop: 22,
+    paddingBottom: 18,
     backgroundColor: colors.surfaceStrong,
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.032)',
@@ -76,23 +76,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   controlsRow: {
-    marginTop: 25,
+    marginTop: 27,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   leftControls: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   rightControls: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
   },
   button: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.72)',

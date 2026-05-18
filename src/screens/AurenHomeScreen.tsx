@@ -18,7 +18,9 @@ export function AurenHomeScreen() {
           <Text style={styles.heroSubtitle}>{'I’m here to help you focus, learn faster,\nand stay on track.'}</Text>
         </View>
 
-        <AurenQuickActions />
+        <View style={styles.actionsWrap}>
+          <AurenQuickActions />
+        </View>
       </View>
 
       <View style={styles.composerWrap}>
@@ -38,8 +40,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     paddingHorizontal: 18,
-    paddingTop: 74,
-    paddingBottom: 210,
+    paddingTop: 104,
+    paddingBottom: 220,
   },
   hero: {
     alignItems: 'center',
@@ -47,8 +49,8 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     color: '#686775',
-    fontSize: 33.5,
-    lineHeight: 40,
+    fontSize: 34,
+    lineHeight: 40.5,
     letterSpacing: -1.08,
     textAlign: 'center',
     fontFamily: serifFont,
@@ -62,10 +64,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
+  actionsWrap: {
+    width: '100%',
+    marginTop: 42,
+  },
   composerWrap: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 38,
+    left: 30,
+    right: 30,
+    bottom: 36,
   },
 });

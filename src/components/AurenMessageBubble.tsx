@@ -11,7 +11,7 @@ export function AurenMessageBubble({ message }: AurenMessageBubbleProps) {
 
   return (
     <View style={[styles.row, isUser ? styles.userRow : styles.assistantRow]}>
-      <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantBubble]}>
+      <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantMessage]}>
         {!isUser ? <Text style={styles.assistantLabel}>Auren</Text> : null}
         <Text style={[styles.messageText, isUser ? styles.userText : styles.assistantText]}>
           {message.content}
@@ -35,20 +35,19 @@ const styles = StyleSheet.create({
   },
   bubble: {
     maxWidth: '82%',
+  },
+  userBubble: {
     borderRadius: 24,
     paddingHorizontal: 17,
     paddingVertical: 13,
-  },
-  userBubble: {
     backgroundColor: colors.surfaceStrong,
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.055)',
     ...shadows.tiny,
   },
-  assistantBubble: {
-    backgroundColor: 'rgba(255,255,255,0.58)',
-    borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.04)',
+  assistantMessage: {
+    paddingHorizontal: 2,
+    paddingVertical: 4,
   },
   assistantLabel: {
     marginBottom: 6,

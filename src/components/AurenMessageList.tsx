@@ -12,9 +12,10 @@ export type AurenMessage = {
 type AurenMessageListProps = {
   messages: AurenMessage[];
   thinking?: boolean;
+  bottomInset?: number;
 };
 
-export function AurenMessageList({ messages, thinking = false }: AurenMessageListProps) {
+export function AurenMessageList({ messages, thinking = false, bottomInset = 190 }: AurenMessageListProps) {
   const scrollRef = useRef<ScrollView | null>(null);
 
   useEffect(() => {
@@ -23,13 +24,13 @@ export function AurenMessageList({ messages, thinking = false }: AurenMessageLis
     }, 80);
 
     return () => clearTimeout(timeoutId);
-  }, [messages.length, thinking]);
+  }, [messages.length, thinking, bottomInset]);
 
   return (
     <ScrollView
       ref={scrollRef}
       style={styles.scroll}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: bottomInset }]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
@@ -53,7 +54,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingHorizontal: 18,
     paddingTop: 28,
-    paddingBottom: 190,
   },
   messagesStack: {
     width: '100%',

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { AurenMessageBubble } from './AurenMessageBubble';
 import { AurenThinkingBubble } from './AurenThinkingBubble';
 
@@ -13,10 +13,9 @@ type AurenMessageListProps = {
   messages: AurenMessage[];
   thinking?: boolean;
   bottomInset?: number;
-  onScrollBeginDrag?: () => void;
 };
 
-export function AurenMessageList({ messages, thinking = false, bottomInset = 190, onScrollBeginDrag }: AurenMessageListProps) {
+export function AurenMessageList({ messages, thinking = false, bottomInset = 190 }: AurenMessageListProps) {
   const scrollRef = useRef<ScrollView | null>(null);
 
   useEffect(() => {
@@ -32,9 +31,8 @@ export function AurenMessageList({ messages, thinking = false, bottomInset = 190
       ref={scrollRef}
       style={styles.scroll}
       contentContainerStyle={[styles.content, { paddingBottom: bottomInset }]}
-      keyboardShouldPersistTaps="handled"
-      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-      onScrollBeginDrag={onScrollBeginDrag}
+      keyboardShouldPersistTaps="always"
+      keyboardDismissMode="none"
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.messagesStack}>

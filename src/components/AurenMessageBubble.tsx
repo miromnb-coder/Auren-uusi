@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, shadows } from '../theme';
+import { AurenMarkdownText } from './AurenMarkdownText';
 import type { AurenMessage } from './AurenMessageList';
 
 type AurenMessageBubbleProps = {
@@ -13,9 +14,11 @@ export function AurenMessageBubble({ message }: AurenMessageBubbleProps) {
     <View style={[styles.row, isUser ? styles.userRow : styles.assistantRow]}>
       <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantMessage]}>
         {!isUser ? <Text style={styles.assistantLabel}>Auren</Text> : null}
-        <Text style={[styles.messageText, isUser ? styles.userText : styles.assistantText]}>
-          {message.content}
-        </Text>
+        {isUser ? (
+          <Text style={[styles.messageText, styles.userText]}>{message.content}</Text>
+        ) : (
+          <AurenMarkdownText>{message.content}</AurenMarkdownText>
+        )}
       </View>
     </View>
   );
@@ -65,9 +68,5 @@ const styles = StyleSheet.create({
   userText: {
     color: colors.text,
     fontWeight: '500',
-  },
-  assistantText: {
-    color: colors.text,
-    fontWeight: '400',
   },
 });

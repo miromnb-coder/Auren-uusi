@@ -5,26 +5,26 @@ import { AurenComposer } from '../components/AurenComposer';
 import { AurenHeader } from '../components/AurenHeader';
 import { AurenMessageList, type AurenMessage } from '../components/AurenMessageList';
 import { AurenQuickActions } from '../components/AurenQuickActions';
+import { sendAurenChatMessage } from '../lib/aurenAiClient';
 import { colors } from '../theme';
 
 const CLOSED_COMPOSER_BOTTOM = 38;
 const KEYBOARD_GAP = 34;
 const MESSAGE_LIST_BOTTOM_GAP = 24;
-const MOCK_RESPONSE_DELAY_MS = 850;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 function createMessageId(role: AurenMessage['role']) {
   return `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function createMockAurenResponse(message: string) {
+function createFallbackAurenResponse(message: string) {
   const cleanedMessage = message.trim();
 
   if (!cleanedMessage) {
     return 'Tell me what you want to study, and I’ll help you start with the simplest next step.';
   }
 
-  return `Got it — let’s work on “${cleanedMessage}”.\n\nI’ll keep this simple: first, I’ll explain the idea clearly. Then I can quiz you to check if it stuck.`;
+  return `I’m having trouble connecting to Auren AI right now, but we can still start.\n\nLet’s work on “${cleanedMessage}”. First, tell me what part feels confusing, and I’ll help you break it down.`;
 }
 
 export function AurenHomeScreen() {
@@ -38,7 +38,6 @@ export function AurenHomeScreen() {
   const composerBottom = useRef(new Animated.Value(CLOSED_COMPOSER_BOTTOM)).current;
   const quickActionsProgress = useRef(new Animated.Value(1)).current;
   const heroTranslateY = useRef(new Animated.Value(0)).current;
-  const mockResponseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hasMessages = messages.length > 0;
   const quickActionsOpacity = quickActionsProgress;
@@ -50,9 +49,9 @@ export function AurenHomeScreen() {
     [composerBottomInset, composerHeight],
   );
 
-  function handleSend() {
+  async function handleSend() {
     const nextContent = draft.trim();
-    if (!nextContent) return;
+    if (!nextContent || assistantThinking) return;
 
     const userMessage: AurenMessage = {
       id: createMessageId('user'),
@@ -60,26 +59,33 @@ export function AurenHomeScreen() {
       content: nextContent,
     };
 
-    if (mockResponseTimeoutRef.current) {
-      clearTimeout(mockResponseTimeoutRef.current);
-    }
+    const nextMessages = [...messages, userMessage];
 
-    setMessages((currentMessages) => [...currentMessages, userMessage]);
+    setMessages(nextMessages);
     setDraft('');
     setAssistantThinking(true);
     Keyboard.dismiss();
 
-    mockResponseTimeoutRef.current = setTimeout(() => {
+    try {
+      const answer = await sendAurenChatMessage(nextMessages);
       const assistantMessage: AurenMessage = {
         id: createMessageId('assistant'),
         role: 'assistant',
-        content: createMockAurenResponse(nextContent),
+        content: answer,
       };
 
       setMessages((currentMessages) => [...currentMessages, assistantMessage]);
+    } catch {
+      const fallbackMessage: AurenMessage = {
+        id: createMessageId('assistant'),
+        role: 'assistant',
+        content: createFallbackAurenResponse(nextContent),
+      };
+
+      setMessages((currentMessages) => [...currentMessages, fallbackMessage]);
+    } finally {
       setAssistantThinking(false);
-      mockResponseTimeoutRef.current = null;
-    }, MOCK_RESPONSE_DELAY_MS);
+    }
   }
 
   function dismissKeyboard() {
@@ -141,14 +147,6 @@ export function AurenHomeScreen() {
       hideSub.remove();
     };
   }, [composerBottom, insets.bottom]);
-
-  useEffect(() => {
-    return () => {
-      if (mockResponseTimeoutRef.current) {
-        clearTimeout(mockResponseTimeoutRef.current);
-      }
-    };
-  }, []);
 
   return (
     <SafeAreaView style={styles.screen}>

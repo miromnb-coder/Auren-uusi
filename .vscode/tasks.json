@@ -2,9 +2,9 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "1. Install dependencies",
+      "label": "1. Install dependencies safely",
       "type": "shell",
-      "command": "npm install",
+      "command": "npm cache clean --force; npm install --legacy-peer-deps --no-audit --no-fund",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -14,19 +14,7 @@
       "problemMatcher": []
     },
     {
-      "label": "2. Fix Expo Go tunnel support",
-      "type": "shell",
-      "command": "npm install @expo/ngrok@latest",
-      "group": "build",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "3. Stop old Expo servers",
+      "label": "2. Stop old Expo servers",
       "type": "shell",
       "command": "pkill -f \"expo start\" || true; pkill -f \"metro\" || true; rm -rf .expo",
       "group": "build",
@@ -38,7 +26,7 @@
       "problemMatcher": []
     },
     {
-      "label": "4. Open Auren in Expo Go - tunnel BEST",
+      "label": "3. Open Auren in Expo Go - tunnel BEST",
       "type": "shell",
       "command": "npx expo start --tunnel --clear --port 8081",
       "group": {
@@ -53,7 +41,7 @@
       "problemMatcher": []
     },
     {
-      "label": "5. Open Auren in Expo Go - tunnel backup",
+      "label": "4. Open Auren in Expo Go - tunnel backup",
       "type": "shell",
       "command": "npx expo start --tunnel --port 8082",
       "presentation": {
@@ -64,9 +52,20 @@
       "problemMatcher": []
     },
     {
-      "label": "6. Open Auren in Expo Go - local QR",
+      "label": "5. Open Auren in Expo Go - local QR",
       "type": "shell",
       "command": "npx expo start --clear --port 8081",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "6. Clean reinstall then open tunnel",
+      "type": "shell",
+      "command": "pkill -f \"expo start\" || true; pkill -f \"metro\" || true; rm -rf node_modules package-lock.json .expo; npm cache clean --force; npm install --legacy-peer-deps --no-audit --no-fund; npx expo start --tunnel --clear --port 8081",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -78,17 +77,6 @@
       "label": "Open Auren on Web",
       "type": "shell",
       "command": "npm run web",
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated",
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "Clean reinstall then open tunnel",
-      "type": "shell",
-      "command": "pkill -f \"expo start\" || true; pkill -f \"metro\" || true; rm -rf node_modules .expo package-lock.json; npm install; npm install @expo/ngrok@latest; npx expo start --tunnel --clear --port 8081",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",

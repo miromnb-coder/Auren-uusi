@@ -1,10 +1,14 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, shadows } from '../theme';
 
 type AurenWelcomeScreenProps = {
   onContinue: () => void;
 };
+
+const GOOGLE_ICON_URI =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAABmJLR0QA/wD/AP+gvaeTAAAJJElEQVR4nO2be1BU1x3Hv+fevcsuu8trEQW0gkhRUATi+9HEqonWJHbsqDO1akwzmUYnJtaoRM24xprxgYljfYQZUztpbByNNTFKpDHiI5pMFCL4QFFRUEAerrzZx733Pk9y9l3vgkLbu7suRKC85J3z7znnP+f3fd9n5/u8Z+65x2pJkiRJkiRJkiRJkiRJkiRJkiRJkiT9b0F3jKQA3oC7QDXgJfAo8AhQBOgE3AB+DfwM+AjYCLgGJAB7gE9AbeAZcAvYBdYDlwCvgRPAB+BfwAXgPyAI/AEsAGcBXwBNgB3AUsA84AtwGTgI/A2uAi8BG4H9gLrAWGAo8Bt4CZwAJwGrgHPAg8A9YB6wF3gUuAX8At4F3gT+E8o/6v4B3wNOAGcBz4CrwGfA08DnwEPgT8Bf4K7wKfA++BT4EvgMeBu4C7wIjABuA+8CXwJPADcDEwDNgPnApuAO8AWwCzgTnAHuA64C7wNnApeBf4GvAPcB44DFwBTgHnAWuBT8A3wP/A58Bf4BfgK8Bf4DvgE+Bf4G/gX+Cf8Jf4B/gb+BP8J/4R/gz/BH+GP8Bf4M/wt/hT/D3+Af8M/wt/hX/Dv+Ff8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3/Dv+Hf8O/4d/w7/h3DP8H/AL+WywU6Rr5TAAAAAElFTkSuQmCC';
 
 export function AurenWelcomeScreen({ onContinue }: AurenWelcomeScreenProps) {
   return (
@@ -23,12 +27,12 @@ export function AurenWelcomeScreen({ onContinue }: AurenWelcomeScreenProps) {
           </Pressable>
 
           <Pressable onPress={onContinue} style={({ pressed }) => [styles.lightButton, pressed && styles.pressed]}>
-            <Text style={styles.googleMark}>G</Text>
+            <Image source={{ uri: GOOGLE_ICON_URI }} style={styles.googleIcon} />
             <Text style={styles.lightButtonText}>Continue with Google</Text>
           </Pressable>
 
           <Pressable onPress={onContinue} style={({ pressed }) => [styles.lightButton, pressed && styles.pressed]}>
-            <Text style={styles.mailIcon}>✉</Text>
+            <Ionicons name="mail-outline" size={28} color={colors.icon} />
             <Text style={styles.lightButtonText}>Continue with Email</Text>
           </Pressable>
 
@@ -55,7 +59,7 @@ const styles = StyleSheet.create({
   hero: {
     width: '100%',
     alignItems: 'center',
-    paddingTop: 180,
+    paddingTop: 120,
   },
   wordmark: {
     color: '#151922',
@@ -152,18 +156,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: -0.2,
   },
-  googleMark: {
-    color: '#4285f4',
-    fontSize: 25,
-    lineHeight: 29,
-    fontWeight: '800',
-    letterSpacing: -1,
-  },
-  mailIcon: {
-    color: colors.icon,
-    fontSize: 25,
-    lineHeight: 29,
-    fontWeight: '500',
+  googleIcon: {
+    width: 28,
+    height: 28,
+    resizeMode: 'contain',
   },
   loginRow: {
     marginTop: 22,

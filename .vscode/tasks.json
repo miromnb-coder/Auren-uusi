@@ -14,9 +14,9 @@
       "problemMatcher": []
     },
     {
-      "label": "Open Auren in Expo Go",
+      "label": "Open Auren on Web",
       "type": "shell",
-      "command": "npx expo start --tunnel --clear",
+      "command": "npm run web",
       "group": {
         "kind": "build",
         "isDefault": true
@@ -29,9 +29,9 @@
       "problemMatcher": []
     },
     {
-      "label": "Start Auren locally",
+      "label": "Open Auren in Expo Go - tunnel",
       "type": "shell",
-      "command": "npx expo start --clear",
+      "command": "npx expo start --tunnel --clear",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",
@@ -40,9 +40,9 @@
       "problemMatcher": []
     },
     {
-      "label": "Open Auren on Web",
+      "label": "Start Auren locally - no tunnel",
       "type": "shell",
-      "command": "npm run web",
+      "command": "npx expo start --clear",
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",

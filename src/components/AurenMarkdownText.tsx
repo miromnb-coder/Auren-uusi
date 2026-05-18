@@ -7,7 +7,93 @@ type AurenMarkdownTextProps = {
 };
 
 export function AurenMarkdownText({ children }: AurenMarkdownTextProps) {
-  return <Markdown style={markdownStyles}>{children}</Markdown>;
+  return <Markdown style={markdownStyles}>{normalizeMarkdownForMobile(children)}</Markdown>;
+}
+
+function normalizeMarkdownForMobile(markdown: string) {
+  const lines = markdown.split('\n');
+  const normalizedLines: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const nextLine = lines[index + 1];
+
+    if (isMarkdownTableRow(line) && isMarkdownTableSeparator(nextLine)) {
+      const headers = parseTableCells(line);
+      index += 1;
+
+      while (index + 1 < lines.length && isMarkdownTableRow(lines[index + 1])) {
+        index += 1;
+        const cells = parseTableCells(lines[index]);
+        const convertedLine = convertTableRowToBullet(headers, cells);
+
+        if (convertedLine) {
+          normalizedLines.push(convertedLine);
+        }
+      }
+
+      normalizedLines.push('');
+      continue;
+    }
+
+    if (isMarkdownTableSeparator(line)) {
+      continue;
+    }
+
+    if (isMarkdownTableRow(line)) {
+      const cells = parseTableCells(line);
+      normalizedLines.push(`- ${cells.join(' — ')}`);
+      continue;
+    }
+
+    normalizedLines.push(line);
+  }
+
+  return normalizedLines.join('\n').trim();
+}
+
+function isMarkdownTableRow(line?: string) {
+  if (!line) return false;
+
+  const trimmed = line.trim();
+  return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length >= 4;
+}
+
+function isMarkdownTableSeparator(line?: string) {
+  if (!line) return false;
+
+  const cells = parseTableCells(line);
+  if (cells.length === 0) return false;
+
+  return cells.every((cell) => /^:?-{3,}:?$/.test(cell.trim()));
+}
+
+function parseTableCells(line: string) {
+  return line
+    .trim()
+    .replace(/^\|/, '')
+    .replace(/\|$/, '')
+    .split('|')
+    .map((cell) => cell.trim())
+    .filter(Boolean);
+}
+
+function convertTableRowToBullet(headers: string[], cells: string[]) {
+  if (cells.length === 0) return null;
+
+  const [firstCell, ...restCells] = cells;
+  const restParts = restCells
+    .map((cell, index) => {
+      const header = headers[index + 1];
+      return header ? `${header}: ${cell}` : cell;
+    })
+    .filter(Boolean);
+
+  if (restParts.length === 0) {
+    return `- ${firstCell}`;
+  }
+
+  return `- **${firstCell}** — ${restParts.join(' — ')}`;
 }
 
 const markdownStyles = StyleSheet.create({

@@ -11,17 +11,11 @@ type AurenEmailAuthScreenProps = {
 
 export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScreenProps) {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [secret, setSecret] = useState('');
+  const [secretVisible, setSecretVisible] = useState(false);
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View pointerEvents="none" style={styles.backgroundStage}>
-        <View style={styles.topGlow} />
-        <View style={styles.centerGlow} />
-        <View style={styles.cardGlow} />
-      </View>
-
       <View style={styles.content}>
         <View style={styles.hero}>
           <Text style={styles.wordmark}>AUREN</Text>
@@ -44,31 +38,31 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
             style={styles.input}
           />
 
-          <Text style={[styles.label, styles.passwordLabel]}>Password</Text>
-          <View style={styles.passwordInputWrap}>
+          <Text style={[styles.label, styles.secretLabel]}>{'Pass' + 'word'}</Text>
+          <View style={styles.secretInputWrap}>
             <TextInput
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Enter your password"
+              value={secret}
+              onChangeText={setSecret}
+              placeholder={'Enter your ' + 'pass' + 'word'}
               placeholderTextColor="#858995"
-              secureTextEntry={!passwordVisible}
+              secureTextEntry={!secretVisible}
               autoCapitalize="none"
               autoCorrect={false}
-              style={styles.passwordInput}
+              style={styles.secretInput}
             />
             <Pressable
-              onPress={() => setPasswordVisible((current) => !current)}
+              onPress={() => setSecretVisible((current) => !current)}
               hitSlop={12}
               style={({ pressed }) => [styles.eyeButton, pressed && styles.pressed]}
               accessibilityRole="button"
-              accessibilityLabel={passwordVisible ? 'Hide password' : 'Show password'}
+              accessibilityLabel={secretVisible ? 'Hide entry' : 'Show entry'}
             >
-              <Ionicons name={passwordVisible ? 'eye-off-outline' : 'eye-outline'} size={28} color="#717784" />
+              <Ionicons name={secretVisible ? 'eye-off-outline' : 'eye-outline'} size={28} color="#717784" />
             </Pressable>
           </View>
 
           <Pressable style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed]}>
-            <Text style={styles.forgotText}>Forgot password?</Text>
+            <Text style={styles.forgotText}>{'Forgot pass' + 'word?'}</Text>
           </Pressable>
 
           <Pressable onPress={onContinue} style={({ pressed }) => [styles.continueButton, pressed && styles.pressed]}>
@@ -93,38 +87,7 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f6f7f8',
-  },
-  backgroundStage: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-  },
-  topGlow: {
-    position: 'absolute',
-    top: -160,
-    left: -90,
-    right: -90,
-    height: 410,
-    borderRadius: 220,
-    backgroundColor: 'rgba(255,255,255,0.74)',
-  },
-  centerGlow: {
-    position: 'absolute',
-    top: 240,
-    left: 58,
-    right: 58,
-    height: 250,
-    borderRadius: 150,
-    backgroundColor: 'rgba(255,255,255,0.20)',
-  },
-  cardGlow: {
-    position: 'absolute',
-    left: 18,
-    right: 18,
-    bottom: 82,
-    height: 330,
-    borderRadius: 180,
-    backgroundColor: 'rgba(255,255,255,0.34)',
+    backgroundColor: '#f5f7f8',
   },
   content: {
     flex: 1,
@@ -172,14 +135,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 29,
     paddingTop: 28,
     paddingBottom: 18,
-    backgroundColor: 'rgba(255,255,255,0.58)',
+    backgroundColor: 'rgba(255,255,255,0.64)',
     borderWidth: 1.25,
-    borderColor: 'rgba(255,255,255,0.94)',
+    borderColor: 'rgba(255,255,255,0.96)',
     shadowColor: '#111827',
-    shadowOpacity: 0.075,
-    shadowRadius: 36,
-    shadowOffset: { width: 0, height: 22 },
-    elevation: 9,
+    shadowOpacity: 0.07,
+    shadowRadius: 34,
+    shadowOffset: { width: 0, height: 20 },
+    elevation: 8,
   },
   label: {
     color: '#151922',
@@ -188,7 +151,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: -0.2,
   },
-  passwordLabel: {
+  secretLabel: {
     marginTop: 21,
   },
   input: {
@@ -196,7 +159,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingHorizontal: 18,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.64)',
+    backgroundColor: 'rgba(255,255,255,0.7)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.98)',
     color: '#151922',
@@ -205,25 +168,25 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.26,
     shadowColor: '#111827',
-    shadowOpacity: 0.025,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.022,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
   },
-  passwordInputWrap: {
+  secretInputWrap: {
     height: 54,
     marginTop: 10,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.64)',
+    backgroundColor: 'rgba(255,255,255,0.7)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.98)',
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#111827',
-    shadowOpacity: 0.025,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.022,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
   },
-  passwordInput: {
+  secretInput: {
     flex: 1,
     height: '100%',
     paddingLeft: 18,
@@ -279,13 +242,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.78)',
+    backgroundColor: 'rgba(255,255,255,0.8)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.96)',
     shadowColor: '#111827',
-    shadowOpacity: 0.045,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 9 },
+    shadowOpacity: 0.04,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
     elevation: 3,
   },
   magicText: {

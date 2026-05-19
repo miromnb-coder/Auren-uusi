@@ -20,9 +20,21 @@ type GroqMessage = {
   >;
 };
 
+type VisionAnalysisResult = {
+  analysis: string;
+  model: string;
+};
+
 const TEXT_FAST_MODEL = 'openai/gpt-oss-20b';
 const TEXT_SMART_MODEL = 'openai/gpt-oss-120b';
-const VISION_MODEL = 'meta-llama/llama-4-maverick-17b-128e-instruct';
+
+// Groq access can differ by account/model. Try the most likely available vision models in order.
+const VISION_MODELS = [
+  'meta-llama/llama-4-scout-17b-16e-instruct',
+  'meta-llama/llama-4-maverick-17b-128e-instruct',
+  'llama-3.2-90b-vision-preview',
+  'llama-3.2-11b-vision-preview',
+];
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -178,7 +190,7 @@ async function analyzeImagesWithVisionModel(params: {
   apiKey: string;
   images: AurenImageAttachment[];
   userText: string;
-}) {
+}): Promise<VisionAnalysisResult | null> {
   const imageContent = params.images
     .slice(0, 3)
     .map(toImageUrl)
@@ -191,22 +203,35 @@ async function analyzeImagesWithVisionModel(params: {
     ? `The student wrote: ${params.userText}\n\nAnalyze the attached image for Auren.`
     : 'Analyze the attached image for Auren.';
 
-  return await callGroqChat({
-    apiKey: params.apiKey,
-    model: VISION_MODEL,
-    temperature: 0.2,
-    maxTokens: 800,
-    messages: [
-      { role: 'system', content: VISION_SYSTEM_PROMPT },
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: prompt },
-          ...imageContent,
+  const errors: string[] = [];
+
+  for (const model of VISION_MODELS) {
+    try {
+      const analysis = await callGroqChat({
+        apiKey: params.apiKey,
+        model,
+        temperature: 0.2,
+        maxTokens: 800,
+        messages: [
+          { role: 'system', content: VISION_SYSTEM_PROMPT },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              ...imageContent,
+            ],
+          },
         ],
-      },
-    ],
-  });
+      });
+
+      return { analysis, model };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(message);
+    }
+  }
+
+  throw new Error(`All Groq vision models failed:\n${errors.join('\n\n')}`);
 }
 
 function buildFinalMessages(messages: AurenChatMessage[], imageAnalysis: string | null): GroqMessage[] {
@@ -263,7 +288,7 @@ Deno.serve(async (request) => {
 
     selectedTextModel = selectTextModel(body, hasImages);
 
-    const imageAnalysis = hasImages
+    const visionResult = hasImages
       ? await analyzeImagesWithVisionModel({
           apiKey: groqApiKey,
           images,
@@ -271,7 +296,8 @@ Deno.serve(async (request) => {
         })
       : null;
 
-    if (imageAnalysis) usedVisionModel = VISION_MODEL;
+    const imageAnalysis = visionResult?.analysis ?? null;
+    usedVisionModel = visionResult?.model ?? null;
 
     const answer = await callGroqChat({
       apiKey: groqApiKey,

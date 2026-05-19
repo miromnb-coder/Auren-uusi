@@ -1,6 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRef, useState } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 
@@ -13,73 +23,102 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
   const [email, setEmail] = useState('');
   const [secret, setSecret] = useState('');
   const [secretVisible, setSecretVisible] = useState(false);
+  const secretInputRef = useRef<TextInput>(null);
+
+  const continueToApp = () => {
+    Keyboard.dismiss();
+    onContinue();
+  };
+
+  const goBack = () => {
+    Keyboard.dismiss();
+    onBack();
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.content}>
-        <View style={styles.hero}>
-          <Text style={styles.wordmark}>AUREN</Text>
-          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
-            Continue with Email
-          </Text>
-          <Text style={styles.subtitle}>{'Sign in or create your account to save\nyour study progress.'}</Text>
-        </View>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.content}>
+            <View style={styles.hero}>
+              <Text style={styles.wordmark}>AUREN</Text>
+              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
+                Continue with Email
+              </Text>
+              <Text style={styles.subtitle}>{'Sign in or create your account to save\nyour study progress.'}</Text>
+            </View>
 
-        <View style={styles.formCard}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            placeholderTextColor="#858995"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            style={styles.input}
-          />
+            <View style={styles.formCard}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor="#858995"
+                keyboardType="email-address"
+                textContentType="emailAddress"
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="next"
+                blurOnSubmit={false}
+                onSubmitEditing={() => secretInputRef.current?.focus()}
+                style={styles.input}
+              />
 
-          <Text style={[styles.label, styles.secretLabel]}>{'Pass' + 'word'}</Text>
-          <View style={styles.secretInputWrap}>
-            <TextInput
-              value={secret}
-              onChangeText={setSecret}
-              placeholder={'Enter your ' + 'pass' + 'word'}
-              placeholderTextColor="#858995"
-              secureTextEntry={!secretVisible}
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={styles.secretInput}
-            />
-            <Pressable
-              onPress={() => setSecretVisible((current) => !current)}
-              hitSlop={12}
-              style={({ pressed }) => [styles.eyeButton, pressed && styles.pressed]}
-              accessibilityRole="button"
-              accessibilityLabel={secretVisible ? 'Hide entry' : 'Show entry'}
-            >
-              <Ionicons name={secretVisible ? 'eye-off-outline' : 'eye-outline'} size={28} color="#717784" />
-            </Pressable>
+              <Text style={[styles.label, styles.secretLabel]}>{'Pass' + 'word'}</Text>
+              <View style={styles.secretInputWrap}>
+                <TextInput
+                  ref={secretInputRef}
+                  value={secret}
+                  onChangeText={setSecret}
+                  placeholder={'Enter your ' + 'pass' + 'word'}
+                  placeholderTextColor="#858995"
+                  secureTextEntry={!secretVisible}
+                  textContentType="password"
+                  autoComplete="password"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                  style={styles.secretInput}
+                />
+                <Pressable
+                  onPress={() => setSecretVisible((current) => !current)}
+                  hitSlop={12}
+                  style={({ pressed }) => [styles.eyeButton, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel={secretVisible ? 'Hide entry' : 'Show entry'}
+                >
+                  <Ionicons name={secretVisible ? 'eye-off-outline' : 'eye-outline'} size={28} color="#717784" />
+                </Pressable>
+              </View>
+
+              <Pressable onPress={Keyboard.dismiss} style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed]}>
+                <Text style={styles.forgotText}>{'Forgot pass' + 'word?'}</Text>
+              </Pressable>
+
+              <Pressable onPress={continueToApp} style={({ pressed }) => [styles.continueButton, pressed && styles.pressed]}>
+                <Text style={styles.continueText}>Continue</Text>
+              </Pressable>
+
+              <Pressable onPress={continueToApp} style={({ pressed }) => [styles.magicButton, pressed && styles.pressed]}>
+                <Text style={styles.magicText}>Send magic link</Text>
+              </Pressable>
+
+              <Pressable onPress={goBack} style={({ pressed }) => [styles.backRow, pressed && styles.pressed]}>
+                <View style={styles.backLine} />
+                <Text style={styles.backText}>Back to sign in</Text>
+                <View style={styles.backLine} />
+              </Pressable>
+            </View>
           </View>
-
-          <Pressable style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed]}>
-            <Text style={styles.forgotText}>{'Forgot pass' + 'word?'}</Text>
-          </Pressable>
-
-          <Pressable onPress={onContinue} style={({ pressed }) => [styles.continueButton, pressed && styles.pressed]}>
-            <Text style={styles.continueText}>Continue</Text>
-          </Pressable>
-
-          <Pressable onPress={onContinue} style={({ pressed }) => [styles.magicButton, pressed && styles.pressed]}>
-            <Text style={styles.magicText}>Send magic link</Text>
-          </Pressable>
-
-          <Pressable onPress={onBack} style={({ pressed }) => [styles.backRow, pressed && styles.pressed]}>
-            <View style={styles.backLine} />
-            <Text style={styles.backText}>Back to sign in</Text>
-            <View style={styles.backLine} />
-          </Pressable>
-        </View>
-      </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -88,6 +127,9 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#f5f7f8',
+  },
+  keyboardView: {
+    flex: 1,
   },
   content: {
     flex: 1,

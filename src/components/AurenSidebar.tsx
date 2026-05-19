@@ -272,18 +272,26 @@ const styles = StyleSheet.create({
     letterSpacing: -0.13,
   },
   recentList: {
-    marginTop: 25,
-    gap: 15,
+    marginTop: 22,
+    gap: 14,
   },
   recentRow: {
-    minHeight: 38,
+    minHeight: 42,
     justifyContent: 'center',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    marginHorizontal: -12,
+    borderRadius: 21,
+    paddingHorizontal: 15,
+    marginHorizontal: -8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0)',
   },
   activeRecentRow: {
-    backgroundColor: 'rgba(17,24,39,0.055)',
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    borderColor: 'rgba(17,24,39,0.055)',
+    shadowColor: '#111827',
+    shadowOpacity: 0.045,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   recentTitle: {
     color: colors.text,
@@ -293,6 +301,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.22,
   },
   activeRecentTitle: {
+    color: '#12151c',
     fontWeight: '700',
   },
   emptyRecentText: {

@@ -6,6 +6,7 @@ import { AurenHeader } from '../components/AurenHeader';
 import { AurenMessageList, type AurenMessage } from '../components/AurenMessageList';
 import { AurenQuickActions } from '../components/AurenQuickActions';
 import { AurenSidebar } from '../components/AurenSidebar';
+import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
 import { sendAurenChatMessage } from '../lib/aurenAiClient';
 import { colors } from '../theme';
 
@@ -33,6 +34,7 @@ export function AurenHomeScreen() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<AurenImageAttachment[]>([]);
   const [messages, setMessages] = useState<AurenMessage[]>([]);
   const [assistantThinking, setAssistantThinking] = useState(false);
   const [composerHeight, setComposerHeight] = useState(116);
@@ -42,6 +44,7 @@ export function AurenHomeScreen() {
   const heroTranslateY = useRef(new Animated.Value(0)).current;
 
   const hasMessages = messages.length > 0;
+  const hasSelectedImages = selectedImages.length > 0;
   const quickActionsOpacity = quickActionsProgress;
   const quickActionsTranslateY = quickActionsProgress.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] });
   const quickActionsScale = quickActionsProgress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
@@ -63,8 +66,20 @@ export function AurenHomeScreen() {
   function startNewChat() {
     setMessages([]);
     setDraft('');
+    setSelectedImages([]);
     setAssistantThinking(false);
     setSidebarOpen(false);
+  }
+
+  async function handleAddImage() {
+    const attachment = await pickAurenImageAttachment();
+    if (!attachment) return;
+    setSelectedImages([attachment]);
+    setInputFocused(true);
+  }
+
+  function handleRemoveAttachment(id: string) {
+    setSelectedImages((currentImages) => currentImages.filter((image) => image.id !== id));
   }
 
   async function handleSend() {
@@ -111,22 +126,22 @@ export function AurenHomeScreen() {
   }
 
   useEffect(() => {
-    const toValue = inputFocused || hasMessages ? 0 : 1;
+    const toValue = inputFocused || hasMessages || hasSelectedImages ? 0 : 1;
     Animated.parallel([
       Animated.timing(quickActionsProgress, {
         toValue,
-        duration: inputFocused || hasMessages ? 180 : 240,
+        duration: inputFocused || hasMessages || hasSelectedImages ? 180 : 240,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
       Animated.timing(heroTranslateY, {
-        toValue: inputFocused ? -18 : 0,
-        duration: inputFocused ? 220 : 260,
+        toValue: inputFocused || hasSelectedImages ? -18 : 0,
+        duration: inputFocused || hasSelectedImages ? 220 : 260,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
     ]).start();
-  }, [hasMessages, heroTranslateY, inputFocused, quickActionsProgress]);
+  }, [hasMessages, hasSelectedImages, heroTranslateY, inputFocused, quickActionsProgress]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
@@ -196,7 +211,7 @@ export function AurenHomeScreen() {
               </View>
 
               <Animated.View
-                pointerEvents={inputFocused ? 'none' : 'auto'}
+                pointerEvents={inputFocused || hasSelectedImages ? 'none' : 'auto'}
                 style={[
                   styles.actionsWrap,
                   {
@@ -214,7 +229,10 @@ export function AurenHomeScreen() {
         <Animated.View style={[styles.composerWrap, { bottom: composerBottom }]}> 
           <AurenComposer
             value={draft}
+            attachments={selectedImages}
             onChangeText={setDraft}
+            onAddImage={handleAddImage}
+            onRemoveAttachment={handleRemoveAttachment}
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
             onSend={handleSend}

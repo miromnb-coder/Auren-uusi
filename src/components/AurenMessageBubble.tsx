@@ -11,24 +11,31 @@ export function AurenMessageBubble({ message }: AurenMessageBubbleProps) {
   const isUser = message.role === 'user';
   const hasAttachments = Boolean(message.images?.length);
 
-  return (
-    <View style={[styles.row, isUser ? styles.userRow : styles.assistantRow]}>
-      <View style={[styles.bubble, isUser ? styles.userBubble : styles.assistantMessage, hasAttachments && styles.userBubbleWithAttachment]}>
-        {!isUser ? <Text style={styles.assistantLabel}>Auren</Text> : null}
+  if (isUser) {
+    return (
+      <View style={[styles.row, styles.userRow]}>
+        <View style={styles.userMessageGroup}>
+          {hasAttachments ? (
+            <View style={styles.attachmentStack}>
+              {message.images?.map((attachment) => (
+                <Image key={attachment.id} source={{ uri: attachment.uri }} style={styles.attachmentPreview} />
+              ))}
+            </View>
+          ) : null}
 
-        {isUser && hasAttachments ? (
-          <View style={styles.attachmentStack}>
-            {message.images?.map((attachment) => (
-              <Image key={attachment.id} source={{ uri: attachment.uri }} style={styles.attachmentPreview} />
-            ))}
+          <View style={[styles.bubble, styles.userBubble]}>
+            <Text style={[styles.messageText, styles.userText]}>{message.content}</Text>
           </View>
-        ) : null}
+        </View>
+      </View>
+    );
+  }
 
-        {isUser ? (
-          <Text style={[styles.messageText, styles.userText, hasAttachments && styles.userTextAfterAttachment]}>{message.content}</Text>
-        ) : (
-          <AurenMarkdownText>{message.content}</AurenMarkdownText>
-        )}
+  return (
+    <View style={[styles.row, styles.assistantRow]}>
+      <View style={[styles.bubble, styles.assistantMessage]}>
+        <Text style={styles.assistantLabel}>Auren</Text>
+        <AurenMarkdownText>{message.content}</AurenMarkdownText>
       </View>
     </View>
   );
@@ -46,6 +53,10 @@ const styles = StyleSheet.create({
   assistantRow: {
     justifyContent: 'flex-start',
   },
+  userMessageGroup: {
+    maxWidth: '82%',
+    alignItems: 'flex-end',
+  },
   bubble: {
     maxWidth: '82%',
   },
@@ -57,12 +68,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.055)',
     ...shadows.tiny,
-  },
-  userBubbleWithAttachment: {
-    maxWidth: '76%',
-    paddingHorizontal: 8,
-    paddingTop: 8,
-    paddingBottom: 13,
   },
   assistantMessage: {
     paddingHorizontal: 2,
@@ -77,11 +82,15 @@ const styles = StyleSheet.create({
     letterSpacing: -0.08,
   },
   attachmentStack: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
     gap: 8,
+    marginBottom: 10,
   },
   attachmentPreview: {
-    width: 226,
-    height: 170,
+    width: 112,
+    height: 112,
     borderRadius: 18,
     backgroundColor: colors.disabled,
   },
@@ -93,9 +102,5 @@ const styles = StyleSheet.create({
   userText: {
     color: colors.text,
     fontWeight: '500',
-  },
-  userTextAfterAttachment: {
-    marginTop: 10,
-    paddingHorizontal: 9,
   },
 });

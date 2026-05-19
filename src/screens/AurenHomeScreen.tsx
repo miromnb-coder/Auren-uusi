@@ -14,6 +14,7 @@ const CLOSED_COMPOSER_BOTTOM = 38;
 const KEYBOARD_GAP = 34;
 const MESSAGE_LIST_BOTTOM_GAP = 24;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
+const SHOW_AI_DEBUG_ERRORS = true;
 
 function createMessageId(role: AurenMessage['role']) {
   return `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -27,6 +28,11 @@ function createFallbackAurenResponse(message: string) {
   }
 
   return `I’m having trouble connecting to Auren AI right now, but we can still start.\n\nLet’s work on “${cleanedMessage}”. First, tell me what part feels confusing, and I’ll help you break it down.`;
+}
+
+function createDebugAurenResponse(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return `**Auren AI debug error:**\n\n${message}`;
 }
 
 export function AurenHomeScreen() {
@@ -113,11 +119,13 @@ export function AurenHomeScreen() {
       };
 
       setMessages((currentMessages) => [...currentMessages, assistantMessage]);
-    } catch {
+    } catch (error) {
+      console.log('Auren AI error:', error);
+
       const fallbackMessage: AurenMessage = {
         id: createMessageId('assistant'),
         role: 'assistant',
-        content: createFallbackAurenResponse(messageContent),
+        content: SHOW_AI_DEBUG_ERRORS ? createDebugAurenResponse(error) : createFallbackAurenResponse(messageContent),
       };
 
       setMessages((currentMessages) => [...currentMessages, fallbackMessage]);

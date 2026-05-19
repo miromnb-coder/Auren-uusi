@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 
@@ -16,7 +16,18 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
 
   return (
     <SafeAreaView style={styles.screen}>
-      <View style={styles.content}>
+      <View pointerEvents="none" style={styles.backgroundStage}>
+        <View style={styles.topGlow} />
+        <View style={styles.centerGlow} />
+        <View style={styles.cardGlow} />
+      </View>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.hero}>
           <Text style={styles.wordmark}>A U R E N</Text>
           <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
@@ -57,7 +68,7 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
               accessibilityRole="button"
               accessibilityLabel={passwordVisible ? 'Hide password' : 'Show password'}
             >
-              <Ionicons name={passwordVisible ? 'eye-off-outline' : 'eye-outline'} size={27} color="#717784" />
+              <Ionicons name={passwordVisible ? 'eye-off-outline' : 'eye-outline'} size={30} color="#717784" />
             </Pressable>
           </View>
 
@@ -79,7 +90,7 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
             <View style={styles.backLine} />
           </Pressable>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -87,177 +98,218 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f6f7f8',
+    backgroundColor: '#f2f4f6',
+  },
+  backgroundStage: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
+  },
+  topGlow: {
+    position: 'absolute',
+    top: -150,
+    left: -80,
+    right: -80,
+    height: 430,
+    borderRadius: 220,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+  },
+  centerGlow: {
+    position: 'absolute',
+    top: 210,
+    left: 34,
+    right: 34,
+    height: 280,
+    borderRadius: 160,
+    backgroundColor: 'rgba(255,255,255,0.36)',
+  },
+  cardGlow: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 58,
+    height: 360,
+    borderRadius: 190,
+    backgroundColor: 'rgba(255,255,255,0.42)',
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
-    flex: 1,
-    paddingHorizontal: 28,
+    flexGrow: 1,
     alignItems: 'center',
+    paddingHorizontal: 28,
+    paddingTop: 110,
+    paddingBottom: 54,
   },
   hero: {
     width: '100%',
     alignItems: 'center',
-    paddingTop: 106,
   },
   wordmark: {
     color: '#151922',
-    fontSize: 18,
-    lineHeight: 24,
-    letterSpacing: 11,
+    fontSize: 21,
+    lineHeight: 27,
+    letterSpacing: 12.8,
     fontWeight: '400',
     textAlign: 'center',
-    marginLeft: 11,
+    marginLeft: 12.8,
   },
   title: {
     width: '100%',
-    marginTop: 50,
+    marginTop: 52,
     color: '#151922',
-    fontSize: 38,
-    lineHeight: 46,
-    letterSpacing: -1.38,
+    fontSize: 41,
+    lineHeight: 48,
+    letterSpacing: -1.65,
     fontWeight: '800',
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: 16,
-    color: '#747985',
-    fontSize: 18,
-    lineHeight: 26,
-    letterSpacing: -0.34,
+    marginTop: 20,
+    marginBottom: 52,
+    color: '#737987',
+    fontSize: 20,
+    lineHeight: 30,
+    letterSpacing: -0.42,
     fontWeight: '400',
     textAlign: 'center',
   },
   formCard: {
-    position: 'absolute',
-    left: 28,
-    right: 28,
-    bottom: 60,
-    borderRadius: 34,
-    paddingHorizontal: 28,
-    paddingTop: 30,
-    paddingBottom: 20,
-    backgroundColor: 'rgba(255,255,255,0.58)',
-    borderWidth: 1.2,
-    borderColor: 'rgba(255,255,255,0.92)',
+    width: '100%',
+    borderRadius: 40,
+    paddingHorizontal: 31,
+    paddingTop: 34,
+    paddingBottom: 26,
+    backgroundColor: 'rgba(255,255,255,0.56)',
+    borderWidth: 1.35,
+    borderColor: 'rgba(255,255,255,0.94)',
     shadowColor: '#111827',
-    shadowOpacity: 0.07,
-    shadowRadius: 30,
-    shadowOffset: { width: 0, height: 18 },
-    elevation: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 44,
+    shadowOffset: { width: 0, height: 26 },
+    elevation: 10,
   },
   label: {
     color: '#151922',
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 18,
+    lineHeight: 23,
     fontWeight: '500',
-    letterSpacing: -0.2,
+    letterSpacing: -0.24,
   },
   passwordLabel: {
-    marginTop: 22,
+    marginTop: 28,
   },
   input: {
-    height: 53,
-    marginTop: 10,
-    paddingHorizontal: 18,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.96)',
+    height: 64,
+    marginTop: 14,
+    paddingHorizontal: 20,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.62)',
+    borderWidth: 1.15,
+    borderColor: 'rgba(255,255,255,0.98)',
     color: '#151922',
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 19,
+    lineHeight: 24,
     fontWeight: '400',
-    letterSpacing: -0.26,
+    letterSpacing: -0.3,
+    shadowColor: '#111827',
+    shadowOpacity: 0.025,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
   },
   passwordInputWrap: {
-    height: 53,
-    marginTop: 10,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.96)',
+    height: 64,
+    marginTop: 14,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.62)',
+    borderWidth: 1.15,
+    borderColor: 'rgba(255,255,255,0.98)',
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#111827',
+    shadowOpacity: 0.025,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
   },
   passwordInput: {
     flex: 1,
     height: '100%',
-    paddingLeft: 18,
+    paddingLeft: 20,
     paddingRight: 12,
     color: '#151922',
-    fontSize: 17,
-    lineHeight: 22,
+    fontSize: 19,
+    lineHeight: 24,
     fontWeight: '400',
-    letterSpacing: -0.26,
+    letterSpacing: -0.3,
   },
   eyeButton: {
-    width: 52,
-    height: 52,
+    width: 62,
+    height: 62,
     alignItems: 'center',
     justifyContent: 'center',
   },
   forgotButton: {
     alignSelf: 'flex-end',
-    marginTop: 12,
-    marginBottom: 16,
+    marginTop: 16,
+    marginBottom: 24,
   },
   forgotText: {
     color: '#747985',
-    fontSize: 16,
-    lineHeight: 21,
+    fontSize: 17,
+    lineHeight: 22,
     fontWeight: '400',
-    letterSpacing: -0.18,
+    letterSpacing: -0.22,
   },
   continueButton: {
-    height: 53,
-    borderRadius: 12,
+    height: 64,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#141414',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-    shadowColor: '#111827',
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 9 },
-    elevation: 8,
+    borderColor: 'rgba(255,255,255,0.2)',
+    shadowColor: '#000000',
+    shadowOpacity: 0.24,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 10,
   },
   continueText: {
     color: '#ffffff',
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 20,
+    lineHeight: 25,
     fontWeight: '500',
-    letterSpacing: -0.22,
+    letterSpacing: -0.3,
   },
   magicButton: {
-    height: 53,
-    marginTop: 13,
-    borderRadius: 12,
+    height: 64,
+    marginTop: 18,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
+    borderWidth: 1.15,
+    borderColor: 'rgba(255,255,255,0.96)',
     shadowColor: '#111827',
-    shadowOpacity: 0.04,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 19,
+    shadowOffset: { width: 0, height: 11 },
+    elevation: 4,
   },
   magicText: {
     color: colors.text,
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 20,
+    lineHeight: 25,
     fontWeight: '500',
-    letterSpacing: -0.22,
+    letterSpacing: -0.3,
   },
   backRow: {
-    marginTop: 18,
-    minHeight: 24,
+    marginTop: 24,
+    minHeight: 28,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 16,
+    gap: 18,
   },
   backLine: {
     flex: 1,
@@ -266,10 +318,10 @@ const styles = StyleSheet.create({
   },
   backText: {
     color: '#747985',
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 21,
     fontWeight: '400',
-    letterSpacing: -0.16,
+    letterSpacing: -0.18,
   },
   pressed: {
     opacity: 0.64,

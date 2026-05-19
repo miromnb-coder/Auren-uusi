@@ -84,23 +84,27 @@ export function AurenHomeScreen() {
 
   async function handleSend() {
     const nextContent = draft.trim();
-    if (!nextContent || assistantThinking) return;
+    if ((!nextContent && !hasSelectedImages) || assistantThinking) return;
+
+    const imagesForSend = selectedImages;
+    const messageContent = nextContent || 'Please explain this image.';
 
     const userMessage: AurenMessage = {
       id: createMessageId('user'),
       role: 'user',
-      content: nextContent,
+      content: messageContent,
     };
 
     const nextMessages = [...messages, userMessage];
 
     setMessages(nextMessages);
     setDraft('');
+    setSelectedImages([]);
     setAssistantThinking(true);
     Keyboard.dismiss();
 
     try {
-      const answer = await sendAurenChatMessage(nextMessages);
+      const answer = await sendAurenChatMessage(nextMessages, { images: imagesForSend });
       const assistantMessage: AurenMessage = {
         id: createMessageId('assistant'),
         role: 'assistant',
@@ -112,7 +116,7 @@ export function AurenHomeScreen() {
       const fallbackMessage: AurenMessage = {
         id: createMessageId('assistant'),
         role: 'assistant',
-        content: createFallbackAurenResponse(nextContent),
+        content: createFallbackAurenResponse(messageContent),
       };
 
       setMessages((currentMessages) => [...currentMessages, fallbackMessage]);

@@ -25,6 +25,8 @@ type AuthNotice = {
   message: string;
 } | null;
 
+type PendingAction = 'continue' | 'create' | 'reset' | null;
+
 function isValidEmail(value: string) {
   return /^\S+@\S+\.\S+$/.test(value.trim());
 }
@@ -37,6 +39,18 @@ function getAuthErrorMessage(error: unknown) {
     return 'Cannot reach Auren Cloud. Check your connection and try again.';
   }
 
+  if (normalized.includes('invalid login credentials')) {
+    return 'Wrong password or account not found. If you are new, tap Create account.';
+  }
+
+  if (normalized.includes('email not confirmed') || normalized.includes('not confirmed')) {
+    return 'This email is not confirmed yet. Check your email first, then try again.';
+  }
+
+  if (normalized.includes('already registered') || normalized.includes('already exists')) {
+    return 'This email already has an account. Use Continue to sign in.';
+  }
+
   if (normalized.includes('rate')) {
     return 'Too many attempts. Wait a moment and try again.';
   }
@@ -44,12 +58,17 @@ function getAuthErrorMessage(error: unknown) {
   return message;
 }
 
+function accountAlreadyExists(data: Awaited<ReturnType<typeof supabase.auth.signUp>>['data']) {
+  const identities = data.user?.identities;
+  return Array.isArray(identities) && identities.length === 0;
+}
+
 export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [notice, setNotice] = useState<AuthNotice>(null);
-  const [pendingAction, setPendingAction] = useState<'continue' | 'magic' | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const passwordInputRef = useRef<TextInput>(null);
 
   const cleanEmail = email.trim().toLowerCase();
@@ -70,38 +89,53 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
     return true;
   };
 
-  const continueWithEmail = async () => {
-    if (isBusy || !validateEmail()) {
-      return;
-    }
-
+  const validatePassword = () => {
     if (password.length < 6) {
       setNotice({ tone: 'error', message: 'Password must be at least 6 characters.' });
+      return false;
+    }
+
+    return true;
+  };
+
+  const continueWithEmail = async () => {
+    if (isBusy || !validateEmail() || !validatePassword()) {
       return;
     }
 
     Keyboard.dismiss();
     setPendingAction('continue');
-    setNotice({ tone: 'neutral', message: 'Signing in or creating your account...' });
+    setNotice({ tone: 'neutral', message: 'Signing in...' });
 
     try {
-      const credentials = { email: cleanEmail, password };
-      const signInResult = await supabase.auth.signInWithPassword(credentials);
+      const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
 
-      if (!signInResult.error) {
-        setNotice({ tone: 'success', message: 'Signed in. Opening Auren...' });
-        onContinue?.();
-        return;
+      if (error) {
+        throw error;
       }
 
-      const shouldTryCreateAccount = signInResult.error.message.toLowerCase().includes('invalid login credentials');
+      setNotice({ tone: 'success', message: 'Signed in. Opening Auren...' });
+      onContinue?.();
+    } catch (error) {
+      setNotice({ tone: 'error', message: getAuthErrorMessage(error) });
+    } finally {
+      setPendingAction(null);
+    }
+  };
 
-      if (!shouldTryCreateAccount) {
-        throw signInResult.error;
-      }
+  const createAccount = async () => {
+    if (isBusy || !validateEmail() || !validatePassword()) {
+      return;
+    }
 
-      const signUpResult = await supabase.auth.signUp({
-        ...credentials,
+    Keyboard.dismiss();
+    setPendingAction('create');
+    setNotice({ tone: 'neutral', message: 'Creating your account...' });
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: cleanEmail,
+        password,
         options: {
           data: {
             app_name: 'Auren',
@@ -109,15 +143,20 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
         },
       });
 
-      if (signUpResult.error) {
-        throw signUpResult.error;
+      if (error) {
+        throw error;
       }
 
-      if (signUpResult.data.session) {
+      if (accountAlreadyExists(data)) {
+        setNotice({ tone: 'error', message: 'This email already has an account. Use Continue to sign in.' });
+        return;
+      }
+
+      if (data.session) {
         setNotice({ tone: 'success', message: 'Account created. Opening Auren...' });
         onContinue?.();
       } else {
-        setNotice({ tone: 'success', message: 'Account created. Check your email to confirm it, then log in.' });
+        setNotice({ tone: 'success', message: 'Account created. Check your email once, then return here and press Continue.' });
       }
     } catch (error) {
       setNotice({ tone: 'error', message: getAuthErrorMessage(error) });
@@ -126,28 +165,23 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
     }
   };
 
-  const sendMagicLink = async () => {
+  const sendPasswordReset = async () => {
     if (isBusy || !validateEmail()) {
       return;
     }
 
     Keyboard.dismiss();
-    setPendingAction('magic');
-    setNotice({ tone: 'neutral', message: 'Sending magic link...' });
+    setPendingAction('reset');
+    setNotice({ tone: 'neutral', message: 'Sending password reset email...' });
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: cleanEmail,
-        options: {
-          shouldCreateUser: true,
-        },
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail);
 
       if (error) {
         throw error;
       }
 
-      setNotice({ tone: 'success', message: 'Magic link sent. Check your email to continue.' });
+      setNotice({ tone: 'success', message: 'Password reset email sent. Check your inbox.' });
     } catch (error) {
       setNotice({ tone: 'error', message: getAuthErrorMessage(error) });
     } finally {
@@ -232,8 +266,8 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
                 </Pressable>
               </View>
 
-              <Pressable onPress={Keyboard.dismiss} style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed]}>
-                <Text style={styles.forgotText}>Forgot password?</Text>
+              <Pressable onPress={sendPasswordReset} disabled={isBusy} style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed, isBusy && styles.disabled]}>
+                <Text style={styles.forgotText}>{pendingAction === 'reset' ? 'Sending...' : 'Forgot password?'}</Text>
               </Pressable>
 
               {notice ? <Text style={[styles.noticeText, styles[notice.tone]]}>{notice.message}</Text> : null}
@@ -247,11 +281,11 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
               </Pressable>
 
               <Pressable
-                onPress={sendMagicLink}
+                onPress={createAccount}
                 disabled={isBusy}
                 style={({ pressed }) => [styles.magicButton, pressed && styles.pressed, isBusy && styles.disabled]}
               >
-                <Text style={styles.magicText}>{pendingAction === 'magic' ? 'Sending...' : 'Send magic link'}</Text>
+                <Text style={styles.magicText}>{pendingAction === 'create' ? 'Creating...' : 'Create account'}</Text>
               </Pressable>
 
               <Pressable onPress={goBack} disabled={isBusy} style={({ pressed }) => [styles.backRow, pressed && styles.pressed]}>

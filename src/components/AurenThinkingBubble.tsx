@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme';
+import { AurenThinkingGlyph } from './AurenThinkingGlyph';
 
 type AurenThinkingBubbleProps = {
   lines?: string[];
@@ -10,6 +11,8 @@ export function AurenThinkingBubble({ lines = [] }: AurenThinkingBubbleProps) {
 
   return (
     <View style={styles.row}>
+      <AurenThinkingGlyph />
+
       <View style={styles.thinkingBlock}>
         <Text style={styles.label}>Auren</Text>
 
@@ -29,10 +32,13 @@ const styles = StyleSheet.create({
   row: {
     width: '100%',
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'flex-start',
+    gap: 10,
     marginBottom: 14,
   },
   thinkingBlock: {
+    flex: 1,
     maxWidth: '82%',
     paddingHorizontal: 2,
     paddingVertical: 4,

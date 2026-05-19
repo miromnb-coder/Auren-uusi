@@ -8,7 +8,11 @@ import { AurenMessageList, type AurenMessage } from '../components/AurenMessageL
 import { AurenQuickActions } from '../components/AurenQuickActions';
 import { AurenSidebar } from '../components/AurenSidebar';
 import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
-import { sendAurenChatMessage } from '../lib/aurenAiClient';
+import {
+  generateAurenThinkingTimeline,
+  sendAurenChatMessage,
+  type AurenThinkingStep,
+} from '../lib/aurenAiClient';
 import {
   createAurenConversation,
   createConversationTitle,
@@ -22,6 +26,7 @@ import { colors } from '../theme';
 const CLOSED_COMPOSER_BOTTOM = 38;
 const KEYBOARD_GAP = 34;
 const MESSAGE_LIST_BOTTOM_GAP = 24;
+const THINKING_STEP_DELAYS = [1450, 1900, 2400, 3000, 3600];
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const SHOW_AI_DEBUG_ERRORS = true;
 
@@ -86,12 +91,15 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const [conversations, setConversations] = useState<AurenConversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [assistantThinking, setAssistantThinking] = useState(false);
+  const [thinkingTimeline, setThinkingTimeline] = useState<AurenThinkingStep[]>([]);
+  const [thinkingStepIndex, setThinkingStepIndex] = useState(0);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [composerHeight, setComposerHeight] = useState(116);
   const [composerBottomInset, setComposerBottomInset] = useState(CLOSED_COMPOSER_BOTTOM);
   const composerBottom = useRef(new Animated.Value(CLOSED_COMPOSER_BOTTOM)).current;
   const quickActionsProgress = useRef(new Animated.Value(1)).current;
   const heroTranslateY = useRef(new Animated.Value(0)).current;
+  const thinkingRunRef = useRef(0);
 
   const hasMessages = messages.length > 0;
   const hasSelectedImages = selectedImages.length > 0;
@@ -99,6 +107,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const quickActionsTranslateY = quickActionsProgress.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] });
   const quickActionsScale = quickActionsProgress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
   const startContentOpacity = quickActionsProgress;
+  const currentThinkingLines = thinkingTimeline[thinkingStepIndex]?.lines ?? [];
   const messageListBottomInset = useMemo(
     () => composerHeight + composerBottomInset + MESSAGE_LIST_BOTTOM_GAP,
     [composerBottomInset, composerHeight],
@@ -119,12 +128,19 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setSidebarOpen(false);
   }
 
+  function stopThinkingTimeline() {
+    thinkingRunRef.current += 1;
+    setAssistantThinking(false);
+    setThinkingTimeline([]);
+    setThinkingStepIndex(0);
+  }
+
   function startNewChat() {
+    stopThinkingTimeline();
     setActiveConversationId(null);
     setMessages([]);
     setDraft('');
     setSelectedImages([]);
-    setAssistantThinking(false);
     setSidebarOpen(false);
   }
 
@@ -136,10 +152,10 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       return;
     }
 
+    stopThinkingTimeline();
     setActiveConversationId(conversationId);
     setDraft('');
     setSelectedImages([]);
-    setAssistantThinking(false);
 
     try {
       const storedMessages = await loadAurenMessages(conversationId);
@@ -173,6 +189,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
 
     const imagesForSend = selectedImages;
     const messageContent = nextContent || 'Please explain this image.';
+    const thinkingRunId = thinkingRunRef.current + 1;
+    thinkingRunRef.current = thinkingRunId;
 
     const optimisticUserMessage: AurenMessage = {
       id: createMessageId('user'),
@@ -186,8 +204,26 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setMessages(nextMessages);
     setDraft('');
     setSelectedImages([]);
+    setThinkingTimeline([]);
+    setThinkingStepIndex(0);
     setAssistantThinking(true);
     Keyboard.dismiss();
+
+    generateAurenThinkingTimeline({
+      message: messageContent,
+      hasImages: imagesForSend.length > 0,
+    })
+      .then((timeline) => {
+        if (thinkingRunRef.current !== thinkingRunId || timeline.length === 0) {
+          return;
+        }
+
+        setThinkingTimeline(timeline);
+        setThinkingStepIndex(0);
+      })
+      .catch((error) => {
+        console.log('Auren thinking timeline error:', error);
+      });
 
     let conversationIdForSave = activeConversationId;
 
@@ -261,7 +297,11 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
 
       setMessages((currentMessages) => [...currentMessages, fallbackMessage]);
     } finally {
-      setAssistantThinking(false);
+      if (thinkingRunRef.current === thinkingRunId) {
+        setAssistantThinking(false);
+        setThinkingTimeline([]);
+        setThinkingStepIndex(0);
+      }
     }
   }
 
@@ -292,6 +332,19 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       mounted = false;
     };
   }, [userId]);
+
+  useEffect(() => {
+    if (!assistantThinking || thinkingTimeline.length <= 1 || thinkingStepIndex >= thinkingTimeline.length - 1) {
+      return undefined;
+    }
+
+    const delay = THINKING_STEP_DELAYS[Math.min(thinkingStepIndex, THINKING_STEP_DELAYS.length - 1)];
+    const timeoutId = setTimeout(() => {
+      setThinkingStepIndex((currentIndex) => Math.min(currentIndex + 1, thinkingTimeline.length - 1));
+    }, delay);
+
+    return () => clearTimeout(timeoutId);
+  }, [assistantThinking, thinkingStepIndex, thinkingTimeline.length]);
 
   useEffect(() => {
     const toValue = inputFocused || hasMessages || hasSelectedImages ? 0 : 1;
@@ -369,6 +422,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
             <AurenMessageList
               messages={messages}
               thinking={assistantThinking}
+              thinkingLines={currentThinkingLines}
               bottomInset={messageListBottomInset}
             />
           </View>

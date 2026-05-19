@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import type { AurenConversation } from '../lib/aurenConversations';
 import { colors } from '../theme';
 
 type AurenSidebarProps = {
@@ -9,6 +10,12 @@ type AurenSidebarProps = {
   children: ReactNode;
   onClose: () => void;
   onNewChat?: () => void;
+  conversations?: AurenConversation[];
+  activeConversationId?: string | null;
+  profileName?: string;
+  avatarLetter?: string;
+  loadingConversations?: boolean;
+  onSelectConversation?: (conversationId: string) => void;
 };
 
 const DRAWER_WIDTH_RATIO = 0.78;
@@ -16,15 +23,18 @@ const DRAWER_MIN_WIDTH = 292;
 const DRAWER_MAX_WIDTH = 420;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
-const recentChats = [
-  'Vegan dinner ideas',
-  'Photosynthesis explained',
-  'Quiz me on biology',
-  'Math homework help',
-  'Study plan for exams',
-];
-
-export function AurenSidebar({ open, children, onClose, onNewChat }: AurenSidebarProps) {
+export function AurenSidebar({
+  open,
+  children,
+  onClose,
+  onNewChat,
+  conversations = [],
+  activeConversationId = null,
+  profileName = 'Auren user',
+  avatarLetter = 'A',
+  loadingConversations = false,
+  onSelectConversation,
+}: AurenSidebarProps) {
   const { width } = useWindowDimensions();
   const progress = useRef(new Animated.Value(open ? 1 : 0)).current;
 
@@ -85,7 +95,7 @@ export function AurenSidebar({ open, children, onClose, onNewChat }: AurenSideba
             bounces
           >
             <View style={styles.primaryNav}>
-              <SidebarItem icon="home-outline" label="Home" />
+              <SidebarItem icon="home-outline" label="Home" onPress={onClose} />
               <SidebarItem icon="chatbubble-ellipses-outline" label="New chat" onPress={onNewChat} />
               <SidebarItem icon="book-outline" label="Study modes" />
             </View>
@@ -94,11 +104,31 @@ export function AurenSidebar({ open, children, onClose, onNewChat }: AurenSideba
 
             <Text style={styles.sectionLabel}>Recent chats</Text>
             <View style={styles.recentList}>
-              {recentChats.map((chat) => (
-                <Pressable key={chat} style={({ pressed }) => [styles.recentRow, pressed && styles.pressed]}>
-                  <Text style={styles.recentTitle} numberOfLines={1}>{chat}</Text>
-                </Pressable>
-              ))}
+              {loadingConversations ? (
+                <Text style={styles.emptyRecentText}>Loading chats...</Text>
+              ) : conversations.length > 0 ? (
+                conversations.map((chat) => {
+                  const isActive = chat.id === activeConversationId;
+
+                  return (
+                    <Pressable
+                      key={chat.id}
+                      onPress={() => onSelectConversation?.(chat.id)}
+                      style={({ pressed }) => [
+                        styles.recentRow,
+                        isActive && styles.activeRecentRow,
+                        pressed && styles.pressed,
+                      ]}
+                    >
+                      <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
+                        {chat.title}
+                      </Text>
+                    </Pressable>
+                  );
+                })
+              ) : (
+                <Text style={styles.emptyRecentText}>Your chats will appear here.</Text>
+              )}
             </View>
 
             <View style={styles.dividerLower} />
@@ -113,9 +143,9 @@ export function AurenSidebar({ open, children, onClose, onNewChat }: AurenSideba
           <View style={styles.bottomBar}>
             <Pressable style={({ pressed }) => [styles.profilePill, pressed && styles.pressed]}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>M</Text>
+                <Text style={styles.avatarText}>{avatarLetter}</Text>
               </View>
-              <Text style={styles.profileName}>Miro</Text>
+              <Text style={styles.profileName} numberOfLines={1}>{profileName}</Text>
               <Ionicons name="chevron-down-outline" size={18} color="#858792" />
             </Pressable>
 
@@ -243,11 +273,17 @@ const styles = StyleSheet.create({
   },
   recentList: {
     marginTop: 25,
-    gap: 29,
+    gap: 15,
   },
   recentRow: {
-    minHeight: 27,
+    minHeight: 38,
     justifyContent: 'center',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    marginHorizontal: -12,
+  },
+  activeRecentRow: {
+    backgroundColor: 'rgba(17,24,39,0.055)',
   },
   recentTitle: {
     color: colors.text,
@@ -255,6 +291,16 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     fontWeight: '500',
     letterSpacing: -0.22,
+  },
+  activeRecentTitle: {
+    fontWeight: '700',
+  },
+  emptyRecentText: {
+    color: colors.muted,
+    fontSize: 15.5,
+    lineHeight: 21,
+    fontWeight: '500',
+    letterSpacing: -0.13,
   },
   dividerLower: {
     height: 1,
@@ -278,6 +324,8 @@ const styles = StyleSheet.create({
   profilePill: {
     height: 54,
     minWidth: 156,
+    maxWidth: 224,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
@@ -308,6 +356,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   profileName: {
+    flex: 1,
     color: colors.text,
     fontSize: 18.5,
     lineHeight: 23,

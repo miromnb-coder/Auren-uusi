@@ -1,4 +1,5 @@
 import type { AurenMessage } from '../components/AurenMessageList';
+import type { AurenImageAttachment } from './aurenAttachments';
 
 const DEFAULT_SUPABASE_PROJECT_REF = 'rssoaopfutmphxekagha';
 const DEFAULT_SUPABASE_FUNCTION_URL = `https://${DEFAULT_SUPABASE_PROJECT_REF}.supabase.co/functions/v1/auren-chat`;
@@ -18,7 +19,15 @@ type AurenChatResponse = {
   detail?: string;
 };
 
-export async function sendAurenChatMessage(messages: AurenMessage[]) {
+type SendAurenChatMessageOptions = {
+  images?: AurenImageAttachment[];
+  modelMode?: 'fast' | 'smart';
+};
+
+export async function sendAurenChatMessage(
+  messages: AurenMessage[],
+  options: SendAurenChatMessageOptions = {},
+) {
   const response = await fetch(SUPABASE_FUNCTION_URL, {
     method: 'POST',
     headers: {
@@ -27,9 +36,14 @@ export async function sendAurenChatMessage(messages: AurenMessage[]) {
       apikey: SUPABASE_ANON_KEY,
     },
     body: JSON.stringify({
+      modelMode: options.modelMode,
       messages: messages.map((message) => ({
         role: message.role,
         content: message.content,
+      })),
+      images: options.images?.map((image) => ({
+        mimeType: image.mimeType,
+        base64: image.base64,
       })),
     }),
   });

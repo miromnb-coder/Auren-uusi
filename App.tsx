@@ -52,7 +52,7 @@ export default function App() {
               <ActivityIndicator color="#151922" />
             </View>
           ) : session ? (
-            <AurenHomeScreen />
+            <AurenHomeScreen session={session} />
           ) : authView === 'email' ? (
             <AurenEmailAuthScreen onBack={() => setAuthView('welcome')} />
           ) : (

@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import type { AurenImageAttachment } from '../lib/aurenAttachments';
 import { colors, shadows } from '../theme';
+import { AurenAttachmentTray } from './AurenAttachmentTray';
 
 const COMPOSER_ICON_COLOR = colors.icon;
 const DISABLED_ICON_COLOR = colors.mutedSoft;
@@ -10,14 +12,27 @@ const MAX_INPUT_HEIGHT = 110;
 
 type AurenComposerProps = {
   value: string;
+  attachments?: AurenImageAttachment[];
   onChangeText: (value: string) => void;
+  onAddImage?: () => void;
+  onRemoveAttachment?: (id: string) => void;
   onFocus?: () => void;
   onBlur?: () => void;
   onSend?: () => void;
   onHeightChange?: (height: number) => void;
 };
 
-export function AurenComposer({ value, onChangeText, onFocus, onBlur, onSend, onHeightChange }: AurenComposerProps) {
+export function AurenComposer({
+  value,
+  attachments = [],
+  onChangeText,
+  onAddImage,
+  onRemoveAttachment,
+  onFocus,
+  onBlur,
+  onSend,
+  onHeightChange,
+}: AurenComposerProps) {
   const canSend = value.trim().length > 0;
   const inputHeight = Math.min(Math.max(MIN_INPUT_HEIGHT, value.split('\n').length * 22), MAX_INPUT_HEIGHT);
   const inputCanScroll = inputHeight >= MAX_INPUT_HEIGHT;
@@ -32,6 +47,11 @@ export function AurenComposer({ value, onChangeText, onFocus, onBlur, onSend, on
       style={styles.composer}
       onLayout={(event) => onHeightChange?.(event.nativeEvent.layout.height)}
     >
+      <AurenAttachmentTray
+        attachments={attachments}
+        onRemoveAttachment={(id) => onRemoveAttachment?.(id)}
+      />
+
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -40,14 +60,14 @@ export function AurenComposer({ value, onChangeText, onFocus, onBlur, onSend, on
         multiline
         scrollEnabled={inputCanScroll}
         textAlignVertical="top"
-        placeholder="Ask anything about your studies"
+        placeholder={attachments.length > 0 ? 'Ask Auren about this image' : 'Ask anything about your studies'}
         placeholderTextColor={colors.mutedSoft}
         style={[styles.input, { height: inputHeight }]}
       />
 
       <View style={styles.controlsRow}>
         <View style={styles.leftControls}>
-          <ComposerButton accessibilityLabel="Add content">
+          <ComposerButton accessibilityLabel="Add image" onPress={onAddImage} active={attachments.length > 0}>
             <Ionicons name="add-outline" size={27} color={COMPOSER_ICON_COLOR} />
           </ComposerButton>
           <ComposerButton accessibilityLabel="Open controls">
@@ -75,18 +95,19 @@ type ComposerButtonProps = {
   accessibilityLabel: string;
   disabled?: boolean;
   filled?: boolean;
+  active?: boolean;
   onPress?: () => void;
   children: ReactNode;
 };
 
-function ComposerButton({ accessibilityLabel, disabled = false, filled = false, onPress, children }: ComposerButtonProps) {
+function ComposerButton({ accessibilityLabel, disabled = false, filled = false, active = false, onPress, children }: ComposerButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       disabled={disabled}
       onPress={onPress}
-      style={[styles.button, filled && styles.buttonFilled, disabled && styles.buttonDisabled]}
+      style={[styles.button, filled && styles.buttonFilled, active && styles.buttonActive, disabled && styles.buttonDisabled]}
     >
       {children}
     </Pressable>
@@ -137,6 +158,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.052)',
+  },
+  buttonActive: {
+    backgroundColor: 'rgba(17,24,39,0.045)',
+    borderColor: 'rgba(17,24,39,0.09)',
   },
   buttonFilled: {
     backgroundColor: colors.icon,

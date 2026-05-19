@@ -14,10 +14,16 @@ export type AurenMessage = {
 type AurenMessageListProps = {
   messages: AurenMessage[];
   thinking?: boolean;
+  thinkingLines?: string[];
   bottomInset?: number;
 };
 
-export function AurenMessageList({ messages, thinking = false, bottomInset = 190 }: AurenMessageListProps) {
+export function AurenMessageList({
+  messages,
+  thinking = false,
+  thinkingLines = [],
+  bottomInset = 190,
+}: AurenMessageListProps) {
   const scrollRef = useRef<ScrollView | null>(null);
 
   useEffect(() => {
@@ -26,7 +32,7 @@ export function AurenMessageList({ messages, thinking = false, bottomInset = 190
     }, 80);
 
     return () => clearTimeout(timeoutId);
-  }, [messages.length, thinking, bottomInset]);
+  }, [messages.length, thinking, thinkingLines.join('|'), bottomInset]);
 
   return (
     <ScrollView
@@ -41,7 +47,7 @@ export function AurenMessageList({ messages, thinking = false, bottomInset = 190
         {messages.map((message) => (
           <AurenMessageBubble key={message.id} message={message} />
         ))}
-        {thinking ? <AurenThinkingBubble /> : null}
+        {thinking ? <AurenThinkingBubble lines={thinkingLines} /> : null}
       </View>
     </ScrollView>
   );

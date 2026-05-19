@@ -17,12 +17,32 @@ type AurenChatResponse = {
   answer?: string;
   error?: string;
   detail?: string;
+  model?: string;
+  routing?: {
+    textModel?: string;
+    visionModel?: string | null;
+    hasImages?: boolean;
+  };
 };
 
 type SendAurenChatMessageOptions = {
   images?: AurenImageAttachment[];
   modelMode?: 'fast' | 'smart';
 };
+
+function createDebugErrorMessage(response: Response, data: AurenChatResponse) {
+  const details = [
+    `HTTP ${response.status}`,
+    data.error ? `Error: ${data.error}` : null,
+    data.detail ? `Detail: ${data.detail}` : null,
+    data.model ? `Model: ${data.model}` : null,
+    data.routing?.textModel ? `Text model: ${data.routing.textModel}` : null,
+    data.routing?.visionModel ? `Vision model: ${data.routing.visionModel}` : null,
+    typeof data.routing?.hasImages === 'boolean' ? `Has images: ${data.routing.hasImages}` : null,
+  ].filter(Boolean);
+
+  return details.join('\n');
+}
 
 export async function sendAurenChatMessage(
   messages: AurenMessage[],
@@ -51,7 +71,7 @@ export async function sendAurenChatMessage(
   const data = (await response.json().catch(() => ({}))) as AurenChatResponse;
 
   if (!response.ok) {
-    throw new Error(data.error ?? 'Auren AI request failed');
+    throw new Error(createDebugErrorMessage(response, data));
   }
 
   if (!data.answer?.trim()) {

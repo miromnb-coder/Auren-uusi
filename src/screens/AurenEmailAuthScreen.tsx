@@ -12,22 +12,147 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../lib/supabase';
 import { colors } from '../theme';
 
 type AurenEmailAuthScreenProps = {
   onBack: () => void;
-  onContinue: () => void;
+  onContinue?: () => void;
 };
+
+type AuthNotice = {
+  tone: 'error' | 'success' | 'neutral';
+  message: string;
+} | null;
+
+function isValidEmail(value: string) {
+  return /^\S+@\S+\.\S+$/.test(value.trim());
+}
+
+function getAuthErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || 'Something went wrong. Please try again.');
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes('network request failed') || normalized.includes('failed to fetch')) {
+    return 'Cannot reach Auren Cloud. Check your connection and try again.';
+  }
+
+  if (normalized.includes('rate')) {
+    return 'Too many attempts. Wait a moment and try again.';
+  }
+
+  return message;
+}
 
 export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScreenProps) {
   const [email, setEmail] = useState('');
-  const [secret, setSecret] = useState('');
-  const [secretVisible, setSecretVisible] = useState(false);
-  const secretInputRef = useRef<TextInput>(null);
+  const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [notice, setNotice] = useState<AuthNotice>(null);
+  const [pendingAction, setPendingAction] = useState<'continue' | 'magic' | null>(null);
+  const passwordInputRef = useRef<TextInput>(null);
 
-  const continueToApp = () => {
+  const cleanEmail = email.trim().toLowerCase();
+  const isBusy = pendingAction !== null;
+
+  const clearError = () => {
+    if (notice?.tone === 'error') {
+      setNotice(null);
+    }
+  };
+
+  const validateEmail = () => {
+    if (!isValidEmail(cleanEmail)) {
+      setNotice({ tone: 'error', message: 'Enter a valid email address.' });
+      return false;
+    }
+
+    return true;
+  };
+
+  const continueWithEmail = async () => {
+    if (isBusy || !validateEmail()) {
+      return;
+    }
+
+    if (password.length < 6) {
+      setNotice({ tone: 'error', message: 'Password must be at least 6 characters.' });
+      return;
+    }
+
     Keyboard.dismiss();
-    onContinue();
+    setPendingAction('continue');
+    setNotice({ tone: 'neutral', message: 'Signing in or creating your account...' });
+
+    try {
+      const credentials = { email: cleanEmail, password };
+      const signInResult = await supabase.auth.signInWithPassword(credentials);
+
+      if (!signInResult.error) {
+        setNotice({ tone: 'success', message: 'Signed in. Opening Auren...' });
+        onContinue?.();
+        return;
+      }
+
+      const shouldTryCreateAccount = signInResult.error.message.toLowerCase().includes('invalid login credentials');
+
+      if (!shouldTryCreateAccount) {
+        throw signInResult.error;
+      }
+
+      const signUpResult = await supabase.auth.signUp({
+        ...credentials,
+        options: {
+          data: {
+            app_name: 'Auren',
+          },
+        },
+      });
+
+      if (signUpResult.error) {
+        throw signUpResult.error;
+      }
+
+      if (signUpResult.data.session) {
+        setNotice({ tone: 'success', message: 'Account created. Opening Auren...' });
+        onContinue?.();
+      } else {
+        setNotice({ tone: 'success', message: 'Account created. Check your email to confirm it, then log in.' });
+      }
+    } catch (error) {
+      setNotice({ tone: 'error', message: getAuthErrorMessage(error) });
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const sendMagicLink = async () => {
+    if (isBusy || !validateEmail()) {
+      return;
+    }
+
+    Keyboard.dismiss();
+    setPendingAction('magic');
+    setNotice({ tone: 'neutral', message: 'Sending magic link...' });
+
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: {
+          shouldCreateUser: true,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setNotice({ tone: 'success', message: 'Magic link sent. Check your email to continue.' });
+    } catch (error) {
+      setNotice({ tone: 'error', message: getAuthErrorMessage(error) });
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const goBack = () => {
@@ -56,7 +181,10 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
               <Text style={styles.label}>Email</Text>
               <TextInput
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(value) => {
+                  setEmail(value);
+                  clearError();
+                }}
                 placeholder="you@example.com"
                 placeholderTextColor="#858995"
                 keyboardType="email-address"
@@ -64,53 +192,69 @@ export function AurenEmailAuthScreen({ onBack, onContinue }: AurenEmailAuthScree
                 autoComplete="email"
                 autoCapitalize="none"
                 autoCorrect={false}
+                editable={!isBusy}
                 returnKeyType="next"
                 blurOnSubmit={false}
-                onSubmitEditing={() => secretInputRef.current?.focus()}
+                onSubmitEditing={() => passwordInputRef.current?.focus()}
                 style={styles.input}
               />
 
-              <Text style={[styles.label, styles.secretLabel]}>{'Pass' + 'word'}</Text>
-              <View style={styles.secretInputWrap}>
+              <Text style={[styles.label, styles.passwordLabel]}>Password</Text>
+              <View style={styles.passwordInputWrap}>
                 <TextInput
-                  ref={secretInputRef}
-                  value={secret}
-                  onChangeText={setSecret}
-                  placeholder={'Enter your ' + 'pass' + 'word'}
+                  ref={passwordInputRef}
+                  value={password}
+                  onChangeText={(value) => {
+                    setPassword(value);
+                    clearError();
+                  }}
+                  placeholder="Enter your password"
                   placeholderTextColor="#858995"
-                  secureTextEntry={!secretVisible}
+                  secureTextEntry={!passwordVisible}
                   textContentType="password"
-                  autoComplete="password"
+                  autoComplete="current-password"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!isBusy}
                   returnKeyType="done"
-                  onSubmitEditing={Keyboard.dismiss}
-                  style={styles.secretInput}
+                  onSubmitEditing={continueWithEmail}
+                  style={styles.passwordInput}
                 />
                 <Pressable
-                  onPress={() => setSecretVisible((current) => !current)}
+                  onPress={() => setPasswordVisible((current) => !current)}
                   hitSlop={12}
+                  disabled={isBusy}
                   style={({ pressed }) => [styles.eyeButton, pressed && styles.pressed]}
                   accessibilityRole="button"
-                  accessibilityLabel={secretVisible ? 'Hide entry' : 'Show entry'}
+                  accessibilityLabel={passwordVisible ? 'Hide password' : 'Show password'}
                 >
-                  <Ionicons name={secretVisible ? 'eye-off-outline' : 'eye-outline'} size={28} color="#717784" />
+                  <Ionicons name={passwordVisible ? 'eye-off-outline' : 'eye-outline'} size={28} color="#717784" />
                 </Pressable>
               </View>
 
               <Pressable onPress={Keyboard.dismiss} style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed]}>
-                <Text style={styles.forgotText}>{'Forgot pass' + 'word?'}</Text>
+                <Text style={styles.forgotText}>Forgot password?</Text>
               </Pressable>
 
-              <Pressable onPress={continueToApp} style={({ pressed }) => [styles.continueButton, pressed && styles.pressed]}>
-                <Text style={styles.continueText}>Continue</Text>
+              {notice ? <Text style={[styles.noticeText, styles[notice.tone]]}>{notice.message}</Text> : null}
+
+              <Pressable
+                onPress={continueWithEmail}
+                disabled={isBusy}
+                style={({ pressed }) => [styles.continueButton, pressed && styles.pressed, isBusy && styles.disabled]}
+              >
+                <Text style={styles.continueText}>{pendingAction === 'continue' ? 'Please wait...' : 'Continue'}</Text>
               </Pressable>
 
-              <Pressable onPress={continueToApp} style={({ pressed }) => [styles.magicButton, pressed && styles.pressed]}>
-                <Text style={styles.magicText}>Send magic link</Text>
+              <Pressable
+                onPress={sendMagicLink}
+                disabled={isBusy}
+                style={({ pressed }) => [styles.magicButton, pressed && styles.pressed, isBusy && styles.disabled]}
+              >
+                <Text style={styles.magicText}>{pendingAction === 'magic' ? 'Sending...' : 'Send magic link'}</Text>
               </Pressable>
 
-              <Pressable onPress={goBack} style={({ pressed }) => [styles.backRow, pressed && styles.pressed]}>
+              <Pressable onPress={goBack} disabled={isBusy} style={({ pressed }) => [styles.backRow, pressed && styles.pressed]}>
                 <View style={styles.backLine} />
                 <Text style={styles.backText}>Back to sign in</Text>
                 <View style={styles.backLine} />
@@ -193,7 +337,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: -0.2,
   },
-  secretLabel: {
+  passwordLabel: {
     marginTop: 21,
   },
   input: {
@@ -214,7 +358,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 7 },
   },
-  secretInputWrap: {
+  passwordInputWrap: {
     height: 54,
     marginTop: 10,
     borderRadius: 16,
@@ -228,7 +372,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 7 },
   },
-  secretInput: {
+  passwordInput: {
     flex: 1,
     height: '100%',
     paddingLeft: 18,
@@ -248,7 +392,7 @@ const styles = StyleSheet.create({
   forgotButton: {
     alignSelf: 'flex-end',
     marginTop: 10,
-    marginBottom: 14,
+    marginBottom: 10,
   },
   forgotText: {
     color: '#747985',
@@ -256,6 +400,23 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     fontWeight: '400',
     letterSpacing: -0.18,
+  },
+  noticeText: {
+    marginBottom: 12,
+    textAlign: 'center',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '500',
+    letterSpacing: -0.12,
+  },
+  error: {
+    color: '#9f3434',
+  },
+  success: {
+    color: '#35664d',
+  },
+  neutral: {
+    color: '#747985',
   },
   continueButton: {
     height: 54,
@@ -319,6 +480,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '400',
     letterSpacing: -0.16,
+  },
+  disabled: {
+    opacity: 0.62,
   },
   pressed: {
     opacity: 0.64,

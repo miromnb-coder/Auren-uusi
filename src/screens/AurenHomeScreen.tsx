@@ -93,6 +93,7 @@ export function AurenHomeScreen() {
       id: createMessageId('user'),
       role: 'user',
       content: messageContent,
+      images: imagesForSend,
     };
 
     const nextMessages = [...messages, userMessage];

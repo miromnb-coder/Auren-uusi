@@ -4,6 +4,11 @@
     "slug": "auren-uusi",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light"
+    "userInterfaceStyle": "light",
+    "ios": {
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Auren needs photo library access so you can attach study images and homework screenshots."
+      }
+    }
   }
 }

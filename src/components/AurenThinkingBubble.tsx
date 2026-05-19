@@ -33,12 +33,12 @@ export function AurenThinkingBubble({ lines = [] }: AurenThinkingBubbleProps) {
     return () => animation.stop();
   }, [pulse]);
 
-  const dotOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.32, 1] });
+  const dotOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.28, 0.9] });
   const dotScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1.08] });
 
   return (
     <View style={styles.row}>
-      <View style={styles.bubble}>
+      <View style={styles.thinkingBlock}>
         <View style={styles.headerRow}>
           <Text style={styles.label}>Auren</Text>
           <Animated.View style={[styles.liveDot, { opacity: dotOpacity, transform: [{ scale: dotScale }] }]} />
@@ -63,24 +63,13 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     marginBottom: 14,
   },
-  bubble: {
-    maxWidth: '86%',
-    minWidth: 170,
-    borderRadius: 25,
-    paddingHorizontal: 17,
-    paddingTop: 13,
-    paddingBottom: 15,
-    backgroundColor: 'rgba(255,255,255,0.66)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    shadowColor: '#111827',
-    shadowOpacity: 0.045,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 3,
+  thinkingBlock: {
+    maxWidth: '82%',
+    paddingHorizontal: 2,
+    paddingVertical: 4,
   },
   headerRow: {
-    marginBottom: 9,
+    marginBottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -89,20 +78,20 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 12,
     lineHeight: 15,
-    fontWeight: '700',
+    fontWeight: '600',
     letterSpacing: -0.08,
   },
   liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#8b8f9a',
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.mutedSoft,
   },
   linesStack: {
-    gap: 4,
+    gap: 3,
   },
   thinkingLine: {
-    color: '#343844',
+    color: '#565b66',
     fontSize: 15.5,
     lineHeight: 21,
     fontWeight: '500',

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import type { AurenImageAttachment } from '../lib/aurenAttachments';
 import { AurenMessageBubble } from './AurenMessageBubble';
 import { AurenThinkingBubble } from './AurenThinkingBubble';
 
@@ -7,6 +8,7 @@ export type AurenMessage = {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  images?: AurenImageAttachment[];
 };
 
 type AurenMessageListProps = {

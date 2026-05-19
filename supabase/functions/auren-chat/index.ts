@@ -5,7 +5,24 @@ type AurenChatMessage = {
   content: string;
 };
 
-const GROQ_MODEL = 'openai/gpt-oss-20b';
+type AurenImageAttachment = {
+  mimeType?: string;
+  base64?: string;
+  dataUrl?: string;
+  url?: string;
+};
+
+type GroqMessage = {
+  role: 'system' | 'user' | 'assistant';
+  content: string | Array<
+    | { type: 'text'; text: string }
+    | { type: 'image_url'; image_url: { url: string } }
+  >;
+};
+
+const TEXT_FAST_MODEL = 'openai/gpt-oss-20b';
+const TEXT_SMART_MODEL = 'openai/gpt-oss-120b';
+const VISION_MODEL = 'meta-llama/llama-4-maverick-17b-128e-instruct';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,6 +74,16 @@ Bad:
 | --- | --- | --- |
 `;
 
+const VISION_SYSTEM_PROMPT = `You are the vision layer for Auren, a study assistant.
+
+Your job:
+- Read and describe images for a text reasoning model.
+- Extract visible text, equations, homework questions, diagrams, tables, and relevant details.
+- If the image contains a school task, rewrite the task clearly.
+- If something is unclear, say what is unclear instead of guessing.
+- Do not solve the task fully unless it is necessary to describe the image.
+- Return a concise but complete image analysis in text.`;
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -78,6 +105,132 @@ function isValidMessage(message: unknown): message is AurenChatMessage {
   );
 }
 
+function isValidImage(image: unknown): image is AurenImageAttachment {
+  if (!image || typeof image !== 'object') return false;
+
+  const candidate = image as Partial<AurenImageAttachment>;
+  return (
+    typeof candidate.dataUrl === 'string' ||
+    typeof candidate.url === 'string' ||
+    typeof candidate.base64 === 'string'
+  );
+}
+
+function toImageUrl(image: AurenImageAttachment) {
+  if (image.dataUrl?.startsWith('data:image/')) return image.dataUrl;
+  if (image.url?.startsWith('http://') || image.url?.startsWith('https://')) return image.url;
+
+  if (image.base64) {
+    const mimeType = image.mimeType?.startsWith('image/') ? image.mimeType : 'image/jpeg';
+    return `data:${mimeType};base64,${image.base64}`;
+  }
+
+  return null;
+}
+
+function getLatestUserText(messages: AurenChatMessage[]) {
+  return [...messages].reverse().find((message) => message.role === 'user')?.content.trim() ?? '';
+}
+
+function selectTextModel(body: Record<string, unknown>, hasImages: boolean) {
+  if (hasImages) return TEXT_SMART_MODEL;
+  if (body.modelMode === 'fast' || body.task === 'fast') return TEXT_FAST_MODEL;
+  return TEXT_SMART_MODEL;
+}
+
+async function callGroqChat(params: {
+  apiKey: string;
+  model: string;
+  messages: GroqMessage[];
+  temperature: number;
+  maxTokens: number;
+}) {
+  const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${params.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: params.model,
+      temperature: params.temperature,
+      max_tokens: params.maxTokens,
+      messages: params.messages,
+    }),
+  });
+
+  if (!groqResponse.ok) {
+    const errorText = await groqResponse.text();
+    throw new Error(`Groq request failed for ${params.model}: ${errorText}`);
+  }
+
+  const data = await groqResponse.json();
+  const answer = data?.choices?.[0]?.message?.content?.trim();
+
+  if (!answer) {
+    throw new Error(`Groq returned an empty answer for ${params.model}`);
+  }
+
+  return answer;
+}
+
+async function analyzeImagesWithVisionModel(params: {
+  apiKey: string;
+  images: AurenImageAttachment[];
+  userText: string;
+}) {
+  const imageContent = params.images
+    .slice(0, 3)
+    .map(toImageUrl)
+    .filter((url): url is string => Boolean(url))
+    .map((url) => ({ type: 'image_url' as const, image_url: { url } }));
+
+  if (imageContent.length === 0) return null;
+
+  const prompt = params.userText
+    ? `The student wrote: ${params.userText}\n\nAnalyze the attached image for Auren.`
+    : 'Analyze the attached image for Auren.';
+
+  return await callGroqChat({
+    apiKey: params.apiKey,
+    model: VISION_MODEL,
+    temperature: 0.2,
+    maxTokens: 800,
+    messages: [
+      { role: 'system', content: VISION_SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          ...imageContent,
+        ],
+      },
+    ],
+  });
+}
+
+function buildFinalMessages(messages: AurenChatMessage[], imageAnalysis: string | null): GroqMessage[] {
+  const cleanMessages: GroqMessage[] = messages.map((message) => ({
+    role: message.role,
+    content: message.content.trim(),
+  }));
+
+  if (!imageAnalysis) {
+    return [
+      { role: 'system', content: AUREN_SYSTEM_PROMPT },
+      ...cleanMessages,
+    ];
+  }
+
+  return [
+    {
+      role: 'system',
+      content: `${AUREN_SYSTEM_PROMPT}\n\nThe student attached one or more images. A separate vision model has already analyzed them. Use the analysis below as visual context, but answer as Auren in the same language as the student.\n\nVision analysis:\n${imageAnalysis}`,
+    },
+    ...cleanMessages,
+  ];
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -86,6 +239,9 @@ Deno.serve(async (request) => {
   if (request.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
+
+  let selectedTextModel = TEXT_SMART_MODEL;
+  let usedVisionModel: string | null = null;
 
   try {
     const groqApiKey = Deno.env.get('GROQ_API_KEY');
@@ -96,47 +252,53 @@ Deno.serve(async (request) => {
 
     const body = await request.json();
     const rawMessages = Array.isArray(body?.messages) ? body.messages : [];
+    const rawImages = Array.isArray(body?.images) ? body.images : [];
     const messages = rawMessages.filter(isValidMessage).slice(-16);
+    const images = rawImages.filter(isValidImage).slice(0, 3);
+    const hasImages = images.length > 0;
 
     if (messages.length === 0) {
       return jsonResponse({ error: 'No valid messages provided' }, 400);
     }
 
-    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${groqApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        temperature: 0.45,
-        max_tokens: 650,
-        messages: [
-          { role: 'system', content: AUREN_SYSTEM_PROMPT },
-          ...messages.map((message) => ({
-            role: message.role,
-            content: message.content.trim(),
-          })),
-        ],
-      }),
+    selectedTextModel = selectTextModel(body, hasImages);
+
+    const imageAnalysis = hasImages
+      ? await analyzeImagesWithVisionModel({
+          apiKey: groqApiKey,
+          images,
+          userText: getLatestUserText(messages),
+        })
+      : null;
+
+    if (imageAnalysis) usedVisionModel = VISION_MODEL;
+
+    const answer = await callGroqChat({
+      apiKey: groqApiKey,
+      model: selectedTextModel,
+      temperature: selectedTextModel === TEXT_FAST_MODEL ? 0.35 : 0.45,
+      maxTokens: hasImages ? 850 : 650,
+      messages: buildFinalMessages(messages, imageAnalysis),
     });
 
-    if (!groqResponse.ok) {
-      const errorText = await groqResponse.text();
-      return jsonResponse({ error: 'Groq request failed', detail: errorText, model: GROQ_MODEL }, 502);
-    }
-
-    const data = await groqResponse.json();
-    const answer = data?.choices?.[0]?.message?.content?.trim();
-
-    if (!answer) {
-      return jsonResponse({ error: 'Groq returned an empty answer', model: GROQ_MODEL }, 502);
-    }
-
-    return jsonResponse({ answer, model: GROQ_MODEL });
+    return jsonResponse({
+      answer,
+      model: selectedTextModel,
+      routing: {
+        textModel: selectedTextModel,
+        visionModel: usedVisionModel,
+        hasImages,
+      },
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown function error';
-    return jsonResponse({ error: message, model: GROQ_MODEL }, 500);
+    return jsonResponse({
+      error: message,
+      model: selectedTextModel,
+      routing: {
+        textModel: selectedTextModel,
+        visionModel: usedVisionModel,
+      },
+    }, 500);
   }
 });

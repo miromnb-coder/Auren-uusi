@@ -1,3 +1,4 @@
+import type { Session } from '@supabase/supabase-js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +9,14 @@ import { AurenQuickActions } from '../components/AurenQuickActions';
 import { AurenSidebar } from '../components/AurenSidebar';
 import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
 import { sendAurenChatMessage } from '../lib/aurenAiClient';
+import {
+  createAurenConversation,
+  createConversationTitle,
+  listAurenConversations,
+  loadAurenMessages,
+  saveAurenMessage,
+  type AurenConversation,
+} from '../lib/aurenConversations';
 import { colors } from '../theme';
 
 const CLOSED_COMPOSER_BOTTOM = 38;
@@ -15,6 +24,10 @@ const KEYBOARD_GAP = 34;
 const MESSAGE_LIST_BOTTOM_GAP = 24;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const SHOW_AI_DEBUG_ERRORS = true;
+
+type AurenHomeScreenProps = {
+  session: Session;
+};
 
 function createMessageId(role: AurenMessage['role']) {
   return `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -35,14 +48,45 @@ function createDebugAurenResponse(error: unknown) {
   return `**Auren AI debug error:**\n\n${message}`;
 }
 
-export function AurenHomeScreen() {
+function toTitleCase(value: string) {
+  return value
+    .split(/[._\-\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function getSessionProfile(session: Session) {
+  const metadata = session.user.user_metadata ?? {};
+  const metadataName =
+    typeof metadata.full_name === 'string'
+      ? metadata.full_name
+      : typeof metadata.name === 'string'
+        ? metadata.name
+        : typeof metadata.display_name === 'string'
+          ? metadata.display_name
+          : '';
+
+  const emailName = session.user.email?.split('@')[0] ?? 'Auren user';
+  const profileName = metadataName.trim() || toTitleCase(emailName) || 'Auren user';
+  const avatarLetter = profileName.trim().charAt(0).toUpperCase() || 'A';
+
+  return { profileName, avatarLetter };
+}
+
+export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const insets = useSafeAreaInsets();
+  const userId = session.user.id;
+  const { profileName, avatarLetter } = useMemo(() => getSessionProfile(session), [session]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [selectedImages, setSelectedImages] = useState<AurenImageAttachment[]>([]);
   const [messages, setMessages] = useState<AurenMessage[]>([]);
+  const [conversations, setConversations] = useState<AurenConversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [assistantThinking, setAssistantThinking] = useState(false);
+  const [loadingConversations, setLoadingConversations] = useState(false);
   const [composerHeight, setComposerHeight] = useState(116);
   const [composerBottomInset, setComposerBottomInset] = useState(CLOSED_COMPOSER_BOTTOM);
   const composerBottom = useRef(new Animated.Value(CLOSED_COMPOSER_BOTTOM)).current;
@@ -60,6 +104,12 @@ export function AurenHomeScreen() {
     [composerBottomInset, composerHeight],
   );
 
+  async function refreshConversations() {
+    const nextConversations = await listAurenConversations(userId);
+    setConversations(nextConversations);
+    return nextConversations;
+  }
+
   function openSidebar() {
     Keyboard.dismiss();
     setSidebarOpen(true);
@@ -70,11 +120,40 @@ export function AurenHomeScreen() {
   }
 
   function startNewChat() {
+    setActiveConversationId(null);
     setMessages([]);
     setDraft('');
     setSelectedImages([]);
     setAssistantThinking(false);
     setSidebarOpen(false);
+  }
+
+  async function handleSelectConversation(conversationId: string) {
+    Keyboard.dismiss();
+    setSidebarOpen(false);
+
+    if (conversationId === activeConversationId) {
+      return;
+    }
+
+    setActiveConversationId(conversationId);
+    setDraft('');
+    setSelectedImages([]);
+    setAssistantThinking(false);
+
+    try {
+      const storedMessages = await loadAurenMessages(conversationId);
+      setMessages(storedMessages);
+    } catch (error) {
+      console.log('Auren conversation load error:', error);
+      setMessages([
+        {
+          id: createMessageId('assistant'),
+          role: 'assistant',
+          content: createDebugAurenResponse(error),
+        },
+      ]);
+    }
   }
 
   async function handleAddImage() {
@@ -95,14 +174,14 @@ export function AurenHomeScreen() {
     const imagesForSend = selectedImages;
     const messageContent = nextContent || 'Please explain this image.';
 
-    const userMessage: AurenMessage = {
+    const optimisticUserMessage: AurenMessage = {
       id: createMessageId('user'),
       role: 'user',
       content: messageContent,
       images: imagesForSend,
     };
 
-    const nextMessages = [...messages, userMessage];
+    const nextMessages = [...messages, optimisticUserMessage];
 
     setMessages(nextMessages);
     setDraft('');
@@ -110,22 +189,74 @@ export function AurenHomeScreen() {
     setAssistantThinking(true);
     Keyboard.dismiss();
 
+    let conversationIdForSave = activeConversationId;
+
     try {
-      const answer = await sendAurenChatMessage(nextMessages, { images: imagesForSend });
-      const assistantMessage: AurenMessage = {
+      if (!conversationIdForSave) {
+        const createdConversation = await createAurenConversation(userId, createConversationTitle(messageContent));
+        conversationIdForSave = createdConversation.id;
+        setActiveConversationId(createdConversation.id);
+        setConversations((currentConversations) => [
+          createdConversation,
+          ...currentConversations.filter((conversation) => conversation.id !== createdConversation.id),
+        ]);
+      }
+
+      const savedUserMessage = await saveAurenMessage({
+        conversationId: conversationIdForSave,
+        userId,
+        role: 'user',
+        content: messageContent,
+        images: imagesForSend,
+      });
+
+      setMessages((currentMessages) =>
+        currentMessages.map((message) =>
+          message.id === optimisticUserMessage.id ? { ...savedUserMessage, images: imagesForSend } : message,
+        ),
+      );
+
+      let answer: string;
+      try {
+        answer = await sendAurenChatMessage(nextMessages, { images: imagesForSend });
+      } catch (error) {
+        console.log('Auren AI error:', error);
+        answer = SHOW_AI_DEBUG_ERRORS ? createDebugAurenResponse(error) : createFallbackAurenResponse(messageContent);
+      }
+
+      const optimisticAssistantMessage: AurenMessage = {
         id: createMessageId('assistant'),
         role: 'assistant',
         content: answer,
       };
 
-      setMessages((currentMessages) => [...currentMessages, assistantMessage]);
+      setMessages((currentMessages) => [...currentMessages, optimisticAssistantMessage]);
+
+      try {
+        const savedAssistantMessage = await saveAurenMessage({
+          conversationId: conversationIdForSave,
+          userId,
+          role: 'assistant',
+          content: answer,
+        });
+
+        setMessages((currentMessages) =>
+          currentMessages.map((message) =>
+            message.id === optimisticAssistantMessage.id ? savedAssistantMessage : message,
+          ),
+        );
+      } catch (error) {
+        console.log('Auren assistant message save error:', error);
+      }
+
+      await refreshConversations();
     } catch (error) {
-      console.log('Auren AI error:', error);
+      console.log('Auren conversation save error:', error);
 
       const fallbackMessage: AurenMessage = {
         id: createMessageId('assistant'),
         role: 'assistant',
-        content: SHOW_AI_DEBUG_ERRORS ? createDebugAurenResponse(error) : createFallbackAurenResponse(messageContent),
+        content: createDebugAurenResponse(error),
       };
 
       setMessages((currentMessages) => [...currentMessages, fallbackMessage]);
@@ -137,6 +268,30 @@ export function AurenHomeScreen() {
   function dismissKeyboard() {
     Keyboard.dismiss();
   }
+
+  useEffect(() => {
+    let mounted = true;
+
+    setLoadingConversations(true);
+    listAurenConversations(userId)
+      .then((nextConversations) => {
+        if (mounted) {
+          setConversations(nextConversations);
+        }
+      })
+      .catch((error) => {
+        console.log('Auren conversations load error:', error);
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoadingConversations(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [userId]);
 
   useEffect(() => {
     const toValue = inputFocused || hasMessages || hasSelectedImages ? 0 : 1;
@@ -195,7 +350,17 @@ export function AurenHomeScreen() {
   }, [composerBottom, insets.bottom]);
 
   return (
-    <AurenSidebar open={sidebarOpen} onClose={closeSidebar} onNewChat={startNewChat}>
+    <AurenSidebar
+      open={sidebarOpen}
+      onClose={closeSidebar}
+      onNewChat={startNewChat}
+      conversations={conversations}
+      activeConversationId={activeConversationId}
+      profileName={profileName}
+      avatarLetter={avatarLetter}
+      loadingConversations={loadingConversations}
+      onSelectConversation={handleSelectConversation}
+    >
       <SafeAreaView style={styles.screen}>
         <AurenHeader onOpenMenu={openSidebar} />
 

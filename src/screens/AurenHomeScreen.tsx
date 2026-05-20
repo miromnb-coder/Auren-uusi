@@ -11,6 +11,7 @@ import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aure
 import {
   generateAurenThinkingTimeline,
   sendAurenChatMessage,
+  sendAurenChatMessageStream,
   type AurenThinkingStep,
 } from '../lib/aurenAiClient';
 import {
@@ -135,6 +136,16 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setThinkingStepIndex(0);
   }
 
+  function stopThinkingForRun(thinkingRunId: number) {
+    if (thinkingRunRef.current !== thinkingRunId) {
+      return;
+    }
+
+    setAssistantThinking(false);
+    setThinkingTimeline([]);
+    setThinkingStepIndex(0);
+  }
+
   function startNewChat() {
     stopThinkingTimeline();
     setActiveConversationId(null);
@@ -252,21 +263,65 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
         ),
       );
 
-      let answer: string;
-      try {
-        answer = await sendAurenChatMessage(nextMessages, { images: imagesForSend });
-      } catch (error) {
-        console.log('Auren AI error:', error);
-        answer = SHOW_AI_DEBUG_ERRORS ? createDebugAurenResponse(error) : createFallbackAurenResponse(messageContent);
-      }
-
       const optimisticAssistantMessage: AurenMessage = {
         id: createMessageId('assistant'),
         role: 'assistant',
-        content: answer,
+        content: '',
       };
 
       setMessages((currentMessages) => [...currentMessages, optimisticAssistantMessage]);
+
+      let firstChunkReceived = false;
+      let answer = '';
+
+      try {
+        answer = await sendAurenChatMessageStream(nextMessages, {
+          images: imagesForSend,
+          onChunk: (chunk) => {
+            if (thinkingRunRef.current !== thinkingRunId) {
+              return;
+            }
+
+            if (!firstChunkReceived) {
+              firstChunkReceived = true;
+              stopThinkingForRun(thinkingRunId);
+            }
+
+            setMessages((currentMessages) =>
+              currentMessages.map((message) =>
+                message.id === optimisticAssistantMessage.id
+                  ? { ...message, content: `${message.content}${chunk}` }
+                  : message,
+              ),
+            );
+          },
+        });
+
+        stopThinkingForRun(thinkingRunId);
+
+        setMessages((currentMessages) =>
+          currentMessages.map((message) =>
+            message.id === optimisticAssistantMessage.id ? { ...message, content: answer } : message,
+          ),
+        );
+      } catch (streamError) {
+        console.log('Auren stream error:', streamError);
+
+        try {
+          answer = await sendAurenChatMessage(nextMessages, { images: imagesForSend });
+        } catch (fallbackError) {
+          console.log('Auren AI error:', fallbackError);
+          answer = SHOW_AI_DEBUG_ERRORS ? createDebugAurenResponse(fallbackError) : createFallbackAurenResponse(messageContent);
+        }
+
+        stopThinkingForRun(thinkingRunId);
+
+        setMessages((currentMessages) =>
+          currentMessages.map((message) =>
+            message.id === optimisticAssistantMessage.id ? { ...message, content: answer } : message,
+          ),
+        );
+      }
 
       try {
         const savedAssistantMessage = await saveAurenMessage({
@@ -288,6 +343,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       await refreshConversations();
     } catch (error) {
       console.log('Auren conversation save error:', error);
+      stopThinkingForRun(thinkingRunId);
 
       const fallbackMessage: AurenMessage = {
         id: createMessageId('assistant'),

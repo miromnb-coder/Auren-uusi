@@ -1,3 +1,4 @@
+import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
@@ -96,7 +97,7 @@ export function AurenSidebar({
           >
             <View style={styles.primaryNav}>
               <SidebarItem icon="home-outline" label="Home" onPress={onClose} />
-              <SidebarItem icon="chatbubble-ellipses-outline" label="New chat" onPress={onNewChat} />
+              <SidebarItem variant="compose" label="New chat" onPress={onNewChat} />
               <SidebarItem icon="book-outline" label="Study modes" />
             </View>
 
@@ -123,6 +124,7 @@ export function AurenSidebar({
                       <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
                         {chat.title}
                       </Text>
+                      <Ionicons name="chevron-forward-outline" size={20} color={isActive ? '#81858f' : '#969aa5'} />
                     </Pressable>
                   );
                 })
@@ -130,27 +132,19 @@ export function AurenSidebar({
                 <Text style={styles.emptyRecentText}>Your chats will appear here.</Text>
               )}
             </View>
-
-            <View style={styles.dividerLower} />
-
-            <View style={styles.secondaryNav}>
-              <SidebarItem icon="bookmark-outline" label="Saved" />
-              <SidebarItem icon="settings-outline" label="Settings" />
-              <SidebarItem icon="help-circle-outline" label="Help & feedback" />
-            </View>
           </ScrollView>
 
           <View style={styles.bottomBar}>
-            <Pressable style={({ pressed }) => [styles.profilePill, pressed && styles.pressed]}>
+            <Pressable style={({ pressed }) => [styles.profileInline, pressed && styles.pressed]}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{avatarLetter}</Text>
               </View>
               <Text style={styles.profileName} numberOfLines={1}>{profileName}</Text>
-              <Ionicons name="chevron-down-outline" size={18} color="#858792" />
+              <Ionicons name="chevron-down-outline" size={19} color="#858792" />
             </Pressable>
 
             <Pressable onPress={onNewChat} style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Start a new chat">
-              <Ionicons name="pencil-outline" size={26} color={colors.icon} />
+              <AurenComposeGlyph size={31} color="#0f1115" />
             </Pressable>
           </View>
         </View>
@@ -160,18 +154,34 @@ export function AurenSidebar({
 }
 
 type SidebarItemProps = {
-  icon: keyof typeof Ionicons.glyphMap;
+  icon?: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress?: () => void;
+  variant?: 'compose';
 };
 
-function SidebarItem({ icon, label, onPress }: SidebarItemProps) {
+function SidebarItem({ icon, label, onPress, variant }: SidebarItemProps) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.navItem, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
-      <Ionicons name={icon} size={26} color={colors.icon} />
+      <View style={styles.navIconSlot}>
+        {variant === 'compose' ? (
+          <AurenComposeGlyph size={27} color={colors.icon} />
+        ) : icon ? (
+          <Ionicons name={icon} size={27} color={colors.icon} />
+        ) : null}
+      </View>
       <Text style={styles.navLabel}>{label}</Text>
     </Pressable>
   );
+}
+
+type AurenComposeGlyphProps = {
+  size?: number;
+  color?: string;
+};
+
+function AurenComposeGlyph({ size = 28, color = colors.icon }: AurenComposeGlyphProps) {
+  return <Feather name="edit-3" size={size} color={color} strokeWidth={2.35} />;
 }
 
 const styles = StyleSheet.create({
@@ -211,7 +221,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 92,
     paddingHorizontal: 28,
-    paddingBottom: 36,
+    paddingBottom: 24,
   },
   topBar: {
     flexShrink: 0,
@@ -237,7 +247,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 28,
+    paddingBottom: 18,
   },
   primaryNav: {
     gap: 25,
@@ -247,6 +257,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 24,
+  },
+  navIconSlot: {
+    width: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   navLabel: {
     color: colors.text,
@@ -272,37 +287,42 @@ const styles = StyleSheet.create({
     letterSpacing: -0.13,
   },
   recentList: {
-    marginTop: 22,
-    gap: 14,
+    marginTop: 20,
+    gap: 17,
   },
   recentRow: {
-    minHeight: 42,
-    justifyContent: 'center',
-    borderRadius: 21,
-    paddingHorizontal: 15,
-    marginHorizontal: -8,
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 17,
+    paddingLeft: 18,
+    paddingRight: 14,
+    marginHorizontal: -6,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0)',
   },
   activeRecentRow: {
-    backgroundColor: 'rgba(255,255,255,0.82)',
-    borderColor: 'rgba(17,24,39,0.055)',
+    backgroundColor: 'rgba(247,246,243,0.88)',
+    borderColor: 'rgba(17,24,39,0.035)',
     shadowColor: '#111827',
-    shadowOpacity: 0.045,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    shadowOpacity: 0.018,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 1,
   },
   recentTitle: {
+    flex: 1,
     color: colors.text,
-    fontSize: 17.5,
+    fontSize: 17.2,
     lineHeight: 23,
     fontWeight: '500',
     letterSpacing: -0.22,
+    paddingRight: 12,
   },
   activeRecentTitle: {
     color: '#12151c',
-    fontWeight: '700',
+    fontWeight: '500',
   },
   emptyRecentText: {
     color: colors.muted,
@@ -311,61 +331,42 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: -0.13,
   },
-  dividerLower: {
-    height: 1,
-    marginTop: 32,
-    marginBottom: 28,
-    backgroundColor: 'rgba(17,24,39,0.08)',
-  },
-  secondaryNav: {
-    gap: 24,
-  },
   bottomBar: {
     flexShrink: 0,
-    minHeight: 58,
-    paddingTop: 18,
+    minHeight: 64,
+    paddingTop: 14,
+    paddingBottom: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 20,
     backgroundColor: '#fbfbfa',
   },
-  profilePill: {
-    height: 54,
-    minWidth: 156,
-    maxWidth: 224,
+  profileInline: {
+    minWidth: 152,
+    maxWidth: 228,
     flex: 1,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 11,
-    paddingLeft: 13,
-    paddingRight: 16,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.06)',
-    shadowColor: '#111827',
-    shadowOpacity: 0.035,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    gap: 13,
   },
   avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#cf8230',
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 16.5,
     lineHeight: 20,
     fontWeight: '700',
   },
   profileName: {
-    flex: 1,
+    flexShrink: 1,
     color: colors.text,
     fontSize: 18.5,
     lineHeight: 23,
@@ -378,13 +379,13 @@ const styles = StyleSheet.create({
     borderRadius: 29,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    backgroundColor: 'rgba(255,255,255,0.74)',
     borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.06)',
+    borderColor: 'rgba(17,24,39,0.055)',
     shadowColor: '#111827',
-    shadowOpacity: 0.035,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 9 },
     elevation: 3,
   },
 });

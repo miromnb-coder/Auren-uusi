@@ -1,4 +1,3 @@
-import Feather from '@expo/vector-icons/Feather';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
@@ -140,11 +139,10 @@ export function AurenSidebar({
                 <Text style={styles.avatarText}>{avatarLetter}</Text>
               </View>
               <Text style={styles.profileName} numberOfLines={1}>{profileName}</Text>
-              <Ionicons name="chevron-down-outline" size={19} color="#858792" />
             </Pressable>
 
             <Pressable onPress={onNewChat} style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Start a new chat">
-              <AurenComposeGlyph size={31} color="#0f1115" />
+              <AurenComposeGlyph size={32} color="#0f1115" />
             </Pressable>
           </View>
         </View>
@@ -165,7 +163,7 @@ function SidebarItem({ icon, label, onPress, variant }: SidebarItemProps) {
     <Pressable onPress={onPress} style={({ pressed }) => [styles.navItem, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
       <View style={styles.navIconSlot}>
         {variant === 'compose' ? (
-          <AurenComposeGlyph size={27} color={colors.icon} />
+          <AurenComposeGlyph size={29} color={colors.icon} />
         ) : icon ? (
           <Ionicons name={icon} size={27} color={colors.icon} />
         ) : null}
@@ -180,8 +178,43 @@ type AurenComposeGlyphProps = {
   color?: string;
 };
 
-function AurenComposeGlyph({ size = 28, color = colors.icon }: AurenComposeGlyphProps) {
-  return <Feather name="edit-3" size={size} color={color} strokeWidth={2.35} />;
+function AurenComposeGlyph({ size = 30, color = colors.icon }: AurenComposeGlyphProps) {
+  const stroke = Math.max(2.1, size * 0.078);
+
+  return (
+    <View style={[styles.composeGlyph, { width: size, height: size }]}>
+      <View
+        style={[
+          styles.composeGlyphCurve,
+          {
+            width: size * 0.7,
+            height: size * 0.52,
+            left: size * 0.1,
+            top: size * 0.38,
+            borderColor: color,
+            borderWidth: stroke,
+            borderTopWidth: 0,
+            borderRadius: size * 0.28,
+            transform: [{ rotate: '-8deg' }],
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.composeGlyphStroke,
+          {
+            width: size * 0.5,
+            height: stroke,
+            left: size * 0.43,
+            top: size * 0.22,
+            borderRadius: stroke,
+            backgroundColor: color,
+            transform: [{ rotate: '-47deg' }],
+          },
+        ]}
+      />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -298,18 +331,19 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     paddingLeft: 18,
     paddingRight: 14,
-    marginHorizontal: -6,
+    marginLeft: 0,
+    marginRight: 2,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0)',
   },
   activeRecentRow: {
-    backgroundColor: 'rgba(247,246,243,0.88)',
-    borderColor: 'rgba(17,24,39,0.035)',
+    backgroundColor: 'rgba(247,246,243,0.72)',
+    borderColor: 'rgba(17,24,39,0.025)',
     shadowColor: '#111827',
-    shadowOpacity: 0.018,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 7 },
-    elevation: 1,
+    shadowOpacity: 0.008,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 0,
   },
   recentTitle: {
     flex: 1,
@@ -343,7 +377,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fbfbfa',
   },
   profileInline: {
-    minWidth: 152,
+    minWidth: 132,
     maxWidth: 228,
     flex: 1,
     minHeight: 52,
@@ -387,5 +421,15 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 9 },
     elevation: 3,
+  },
+  composeGlyph: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  composeGlyphCurve: {
+    position: 'absolute',
+  },
+  composeGlyphStroke: {
+    position: 'absolute',
   },
 });

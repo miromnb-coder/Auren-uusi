@@ -1,17 +1,11 @@
 import type { AurenMessage } from '../components/AurenMessageList';
 import type { AurenImageAttachment } from './aurenAttachments';
-
-const DEFAULT_SUPABASE_PROJECT_REF = 'rssoaopfutmphxekagha';
-const DEFAULT_SUPABASE_FUNCTION_URL = `https://${DEFAULT_SUPABASE_PROJECT_REF}.supabase.co/functions/v1/auren-chat`;
-
-// This is the public Supabase anon JWT. It is safe to use in the client app.
-// The newer sb_publishable key is not accepted by Edge Function verify_jwt as a Bearer JWT.
-const DEFAULT_SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzc29hb3BmdXRtcGh4ZWthZ2hhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxMDUyMDQsImV4cCI6MjA5NDY4MTIwNH0._uzi7q5nCff4vE0uo20RmVBrSH4aKvZK_a2IW8exfVg';
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase';
 
 const SUPABASE_FUNCTION_URL =
-  process.env.EXPO_PUBLIC_AUREN_CHAT_FUNCTION_URL ?? DEFAULT_SUPABASE_FUNCTION_URL;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_ANON_KEY;
+  process.env.EXPO_PUBLIC_AUREN_CHAT_FUNCTION_URL ?? `${SUPABASE_URL}/functions/v1/auren-chat`;
+const SUPABASE_STREAM_FUNCTION_URL =
+  process.env.EXPO_PUBLIC_AUREN_CHAT_STREAM_FUNCTION_URL ?? `${SUPABASE_URL}/functions/v1/auren-chat-stream`;
 
 export type AurenThinkingStep = {
   lines: string[];
@@ -34,10 +28,47 @@ type SendAurenChatMessageOptions = {
   modelMode?: 'fast' | 'smart';
 };
 
+type SendAurenChatMessageStreamOptions = SendAurenChatMessageOptions & {
+  onChunk: (chunk: string) => void;
+};
+
 type GenerateAurenThinkingTimelineInput = {
   message: string;
   hasImages?: boolean;
 };
+
+function createRequestBody(messages: AurenMessage[], options: SendAurenChatMessageOptions = {}) {
+  return JSON.stringify({
+    modelMode: options.modelMode,
+    messages: messages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    })),
+    images: options.images?.map((image) => ({
+      mimeType: image.mimeType,
+      base64: image.base64,
+    })),
+  });
+}
+
+function createHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    apikey: SUPABASE_ANON_KEY,
+  };
+}
+
+async function parseErrorResponse(response: Response) {
+  const rawText = await response.text().catch(() => '');
+
+  try {
+    const data = JSON.parse(rawText) as AurenChatResponse;
+    return createDebugErrorMessage(response, data);
+  } catch {
+    return `HTTP ${response.status}${rawText ? `\n${rawText}` : ''}`;
+  }
+}
 
 function createDebugErrorMessage(response: Response, data: AurenChatResponse) {
   const details = [
@@ -110,22 +141,8 @@ export async function sendAurenChatMessage(
 ) {
   const response = await fetch(SUPABASE_FUNCTION_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      apikey: SUPABASE_ANON_KEY,
-    },
-    body: JSON.stringify({
-      modelMode: options.modelMode,
-      messages: messages.map((message) => ({
-        role: message.role,
-        content: message.content,
-      })),
-      images: options.images?.map((image) => ({
-        mimeType: image.mimeType,
-        base64: image.base64,
-      })),
-    }),
+    headers: createHeaders(),
+    body: createRequestBody(messages, options),
   });
 
   const data = (await response.json().catch(() => ({}))) as AurenChatResponse;
@@ -139,6 +156,59 @@ export async function sendAurenChatMessage(
   }
 
   return data.answer.trim();
+}
+
+export async function sendAurenChatMessageStream(
+  messages: AurenMessage[],
+  options: SendAurenChatMessageStreamOptions,
+) {
+  const response = await fetch(SUPABASE_STREAM_FUNCTION_URL, {
+    method: 'POST',
+    headers: createHeaders(),
+    body: createRequestBody(messages, options),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseErrorResponse(response));
+  }
+
+  const reader = response.body?.getReader?.();
+
+  if (!reader) {
+    const fallbackAnswer = await sendAurenChatMessage(messages, options);
+    options.onChunk(fallbackAnswer);
+    return fallbackAnswer;
+  }
+
+  const decoder = new TextDecoder();
+  let fullAnswer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    const chunk = decoder.decode(value, { stream: true });
+
+    if (chunk.length > 0) {
+      fullAnswer += chunk;
+      options.onChunk(chunk);
+    }
+  }
+
+  const finalTail = decoder.decode();
+  if (finalTail.length > 0) {
+    fullAnswer += finalTail;
+    options.onChunk(finalTail);
+  }
+
+  if (!fullAnswer.trim()) {
+    throw new Error('Auren AI stream returned an empty answer');
+  }
+
+  return fullAnswer.trim();
 }
 
 export async function generateAurenThinkingTimeline({

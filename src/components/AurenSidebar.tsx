@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { AurenConversation } from '../lib/aurenConversations';
 import { colors } from '../theme';
+import { AurenComposeGlyph } from './AurenComposeGlyph';
 
 type AurenSidebarProps = {
   open: boolean;
@@ -142,7 +143,7 @@ export function AurenSidebar({
             </Pressable>
 
             <Pressable onPress={onNewChat} style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Start a new chat">
-              <AurenComposeGlyph size={34} color="#0f1115" backgroundColor="rgba(255,255,255,0.74)" />
+              <AurenComposeGlyph size={34} color="#0f1115" strokeWidth={2.9} />
             </Pressable>
           </View>
         </View>
@@ -163,84 +164,13 @@ function SidebarItem({ icon, label, onPress, variant }: SidebarItemProps) {
     <Pressable onPress={onPress} style={({ pressed }) => [styles.navItem, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
       <View style={styles.navIconSlot}>
         {variant === 'compose' ? (
-          <AurenComposeGlyph size={31} color={colors.icon} backgroundColor="#fbfbfa" />
+          <AurenComposeGlyph size={31} color={colors.icon} strokeWidth={2.85} />
         ) : icon ? (
           <Ionicons name={icon} size={27} color={colors.icon} />
         ) : null}
       </View>
       <Text style={styles.navLabel}>{label}</Text>
     </Pressable>
-  );
-}
-
-type AurenComposeGlyphProps = {
-  size?: number;
-  color?: string;
-  backgroundColor?: string;
-};
-
-function AurenComposeGlyph({ size = 31, color = colors.icon, backgroundColor = '#fbfbfa' }: AurenComposeGlyphProps) {
-  const stroke = Math.max(2.25, size * 0.082);
-
-  return (
-    <View style={[styles.composeGlyph, { width: size, height: size }]}>
-      <View
-        style={[
-          styles.composeGlyphLoop,
-          {
-            width: size * 0.78,
-            height: size * 0.58,
-            left: size * 0.05,
-            top: size * 0.38,
-            borderColor: color,
-            borderWidth: stroke,
-            borderTopWidth: 0,
-            borderRadius: size * 0.31,
-            transform: [{ rotate: '-7deg' }],
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.composeGlyphMask,
-          {
-            width: size * 0.28,
-            height: size * 0.26,
-            left: size * 0.58,
-            top: size * 0.34,
-            backgroundColor,
-            transform: [{ rotate: '-7deg' }],
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.composeGlyphPen,
-          {
-            width: size * 0.5,
-            height: stroke,
-            left: size * 0.44,
-            top: size * 0.2,
-            borderRadius: stroke,
-            backgroundColor: color,
-            transform: [{ rotate: '-47deg' }],
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.composeGlyphPenTip,
-          {
-            width: stroke * 1.08,
-            height: stroke * 1.08,
-            left: size * 0.42,
-            top: size * 0.46,
-            borderRadius: stroke,
-            backgroundColor: color,
-          },
-        ]}
-      />
-    </View>
   );
 }
 
@@ -448,22 +378,5 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 9 },
     elevation: 3,
-  },
-  composeGlyph: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  composeGlyphLoop: {
-    position: 'absolute',
-  },
-  composeGlyphMask: {
-    position: 'absolute',
-  },
-  composeGlyphPen: {
-    position: 'absolute',
-  },
-  composeGlyphPenTip: {
-    position: 'absolute',
   },
 });

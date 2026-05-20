@@ -31,6 +31,10 @@ export function AurenMessageBubble({ message }: AurenMessageBubbleProps) {
     );
   }
 
+  if (!message.content.trim()) {
+    return null;
+  }
+
   return (
     <View style={[styles.row, styles.assistantRow]}>
       <View style={[styles.bubble, styles.assistantMessage]}>

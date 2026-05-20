@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { AurenImageAttachment } from '../lib/aurenAttachments';
 import { colors, shadows } from '../theme';
@@ -8,7 +9,7 @@ import { AurenAttachmentTray } from './AurenAttachmentTray';
 const COMPOSER_ICON_COLOR = colors.icon;
 const DISABLED_ICON_COLOR = colors.mutedSoft;
 const MIN_INPUT_HEIGHT = 22;
-const MAX_INPUT_HEIGHT = 110;
+const MAX_INPUT_HEIGHT = 112;
 
 type AurenComposerProps = {
   value: string;
@@ -33,13 +34,31 @@ export function AurenComposer({
   onSend,
   onHeightChange,
 }: AurenComposerProps) {
-  const canSend = value.trim().length > 0;
-  const inputHeight = Math.min(Math.max(MIN_INPUT_HEIGHT, value.split('\n').length * 22), MAX_INPUT_HEIGHT);
-  const inputCanScroll = inputHeight >= MAX_INPUT_HEIGHT;
+  const [contentInputHeight, setContentInputHeight] = useState(MIN_INPUT_HEIGHT);
+  const canSend = value.trim().length > 0 || attachments.length > 0;
+  const inputHeight = Math.min(Math.max(MIN_INPUT_HEIGHT, contentInputHeight), MAX_INPUT_HEIGHT);
+  const inputCanScroll = contentInputHeight > MAX_INPUT_HEIGHT;
+
+  useEffect(() => {
+    if (value.length === 0) {
+      setContentInputHeight(MIN_INPUT_HEIGHT);
+    }
+  }, [value.length]);
 
   function handleSend() {
     if (!canSend) return;
     onSend?.();
+  }
+
+  function handleContentSizeChange(height: number) {
+    const nextHeight = Math.ceil(height);
+    setContentInputHeight((currentHeight) => {
+      if (Math.abs(currentHeight - nextHeight) < 1) {
+        return currentHeight;
+      }
+
+      return nextHeight;
+    });
   }
 
   return (
@@ -57,6 +76,7 @@ export function AurenComposer({
         onChangeText={onChangeText}
         onFocus={onFocus}
         onBlur={onBlur}
+        onContentSizeChange={(event) => handleContentSizeChange(event.nativeEvent.contentSize.height)}
         multiline
         scrollEnabled={inputCanScroll}
         textAlignVertical="top"

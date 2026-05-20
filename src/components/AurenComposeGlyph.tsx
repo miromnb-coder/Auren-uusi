@@ -10,19 +10,19 @@ type AurenComposeGlyphProps = {
 export function AurenComposeGlyph({
   size = 30,
   color = colors.icon,
-  strokeWidth = 2.85,
+  strokeWidth = 2.7,
 }: AurenComposeGlyphProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 36 36" fill="none">
       <Path
-        d="M24.55 13.35C27.05 14.65 28.55 16.95 28.55 20.05C28.55 26.25 23.6 30.35 17.1 30.35C10.75 30.35 6.45 27.15 6.45 22.15C6.45 17.9 9.9 15.15 14.55 15.15"
+        d="M16.45 12.25C11.05 12.55 6.75 16.65 6.75 21.8C6.75 27.35 11.6 30.55 18.1 30.55C24.75 30.55 30.25 27.25 31.1 21.45"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <Path
-        d="M17.45 18.05L29.55 5.95"
+        d="M17.2 20.8C18.35 17.4 22.3 13.9 26.6 9.6C29.25 6.95 32.15 8.75 31.3 11.55C30.65 13.65 28.15 16.1 24.9 18.85C21.7 21.55 18.05 22.95 17.2 20.8Z"
         stroke={color}
         strokeWidth={strokeWidth}
         strokeLinecap="round"

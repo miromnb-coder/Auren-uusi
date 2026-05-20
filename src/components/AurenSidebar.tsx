@@ -124,7 +124,6 @@ export function AurenSidebar({
                       <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
                         {chat.title}
                       </Text>
-                      <Ionicons name="chevron-forward-outline" size={20} color={isActive ? '#81858f' : '#969aa5'} />
                     </Pressable>
                   );
                 })
@@ -284,10 +283,9 @@ const styles = StyleSheet.create({
     minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     borderRadius: 17,
     paddingLeft: 18,
-    paddingRight: 14,
+    paddingRight: 18,
     marginLeft: 0,
     marginRight: 2,
     borderWidth: 1,
@@ -309,7 +307,6 @@ const styles = StyleSheet.create({
     lineHeight: 23,
     fontWeight: '500',
     letterSpacing: -0.22,
-    paddingRight: 12,
   },
   activeRecentTitle: {
     color: '#12151c',

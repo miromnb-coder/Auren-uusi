@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, Easing, Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { AurenConversation } from '../lib/aurenConversations';
 import { colors } from '../theme';
 
@@ -22,6 +22,8 @@ const DRAWER_WIDTH_RATIO = 0.78;
 const DRAWER_MIN_WIDTH = 292;
 const DRAWER_MAX_WIDTH = 420;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
+const COMPOSE_GLYPH_URI =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADkAAAA2CAYAAAB9TjFQAAACs0lEQVR4nO2Zz4dVYRjHP6X/IVPUpZQ2NxIjMS4tppRrDLNol0jaSMC3aDcpFrSIQrENgtK0jUsLP4Rk46AObMNFlDAMkE1+QEsrlvwhhqSBgTuuO8/7cs7c1b555nzPPM97/Nzfe53nOfe9770QbEeRkFoeBb4Gd4FNgO/AisA8498c89Qb4DzgHTFfjlLPeAPYCLwAn/GBp4FtgK3AUuB8YB+Z9YXEgAnwLHAY+0PY8sBiYGRYPsO4GdkOL62f7bdspH+oRtlgD1KpLeB24p3exG3gPGBM2TAOez/FrzddPCHpOPB2cCdyoRdo/DuQRCTWAz9hvlnZ7jtvofHL6Bm0r3PcDBgBpjdH0F3JjiAL6DN9C3tXgK3IvmOKBh4PItsHbLmF7hlAKeT2lzwr+FUZq+PrdohH2O4tUcFK13vgOnaNTU+2I/oKrAnIJD1FSRxvVTfjNfQ+YTf5wafAytW6+HjO85WSuSsyr2S7kxwHtiR0/UaLySDyNQzYEAUpiiJNpyXlT1Q8/CXwNJL0YWRE1TT9T02+DbQshndZXCZ3zQpUGGbtA0kbyqSr2WZQDk9mjoG0fQo4H5n2oi8PpNHYxJ3gg8BqYB/9rnncu1U0mFslUtb1GMBj4Psk6SlJGkl+S9JOkgyRpJkl3gQ8Bq1m+9wwnk8kWJ/ntyYlxvS2UcqokH0Jyqpd95lICVEa5jhfAo4B1wGtJ0t7j6kfuALsBJUayVR0pznsY6xQqun5XL9Zi4M7gKuBjVS8a3wH+BBYO03rJ8By4GxgxRmYJq7uYtVVAHXsmYtVfqgUfT0FvgsdnL3U1e/G3rIXk6Ohr/kWSIpJdkm5u/6iLFiQ/f6tQ1Zmb3at0HcCuoPybAayN0jV6oCk84ov2bgn6T/7twCni7Y6HbH0mXgbdJ0hvA60B7KXZ5lBZL1bH2QP2jOrM6hSYV3bxrVgyfgN4nyUNJ0rvAmMHZhh0z0X3QSJpkZcabBzUKRZD8PgzVsFIPxt+NT3C5vsxOcmZ/WOzff/2nx/Q0j+T/oMhnAFf/zfBCYzzgVf8BF2h5eAr4MWq36rQH+Cs4IAq7iFhpZDeyhv3jgEGA7wEXgO8BPwEmRrn/b5qnACx9B3wEeJIkrZWb2eE3NL3dP7mYwjz3eRfUAAAAAElFTkSuQmCC';
 
 export function AurenSidebar({
   open,
@@ -142,7 +144,7 @@ export function AurenSidebar({
             </Pressable>
 
             <Pressable onPress={onNewChat} style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Start a new chat">
-              <AurenComposeGlyph size={32} color="#0f1115" />
+              <AurenComposeGlyph size={33} />
             </Pressable>
           </View>
         </View>
@@ -163,7 +165,7 @@ function SidebarItem({ icon, label, onPress, variant }: SidebarItemProps) {
     <Pressable onPress={onPress} style={({ pressed }) => [styles.navItem, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
       <View style={styles.navIconSlot}>
         {variant === 'compose' ? (
-          <AurenComposeGlyph size={29} color={colors.icon} />
+          <AurenComposeGlyph size={30} />
         ) : icon ? (
           <Ionicons name={icon} size={27} color={colors.icon} />
         ) : null}
@@ -175,45 +177,16 @@ function SidebarItem({ icon, label, onPress, variant }: SidebarItemProps) {
 
 type AurenComposeGlyphProps = {
   size?: number;
-  color?: string;
 };
 
-function AurenComposeGlyph({ size = 30, color = colors.icon }: AurenComposeGlyphProps) {
-  const stroke = Math.max(2.1, size * 0.078);
-
+function AurenComposeGlyph({ size = 30 }: AurenComposeGlyphProps) {
   return (
-    <View style={[styles.composeGlyph, { width: size, height: size }]}>
-      <View
-        style={[
-          styles.composeGlyphCurve,
-          {
-            width: size * 0.7,
-            height: size * 0.52,
-            left: size * 0.1,
-            top: size * 0.38,
-            borderColor: color,
-            borderWidth: stroke,
-            borderTopWidth: 0,
-            borderRadius: size * 0.28,
-            transform: [{ rotate: '-8deg' }],
-          },
-        ]}
-      />
-      <View
-        style={[
-          styles.composeGlyphStroke,
-          {
-            width: size * 0.5,
-            height: stroke,
-            left: size * 0.43,
-            top: size * 0.22,
-            borderRadius: stroke,
-            backgroundColor: color,
-            transform: [{ rotate: '-47deg' }],
-          },
-        ]}
-      />
-    </View>
+    <Image
+      source={{ uri: COMPOSE_GLYPH_URI }}
+      style={{ width: size, height: size * 0.947 }}
+      resizeMode="contain"
+      fadeDuration={0}
+    />
   );
 }
 
@@ -421,15 +394,5 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 9 },
     elevation: 3,
-  },
-  composeGlyph: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  composeGlyphCurve: {
-    position: 'absolute',
-  },
-  composeGlyphStroke: {
-    position: 'absolute',
   },
 });

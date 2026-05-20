@@ -11,6 +11,7 @@ const TEXT_FAST_MODEL = 'openai/gpt-oss-20b';
 const TEXT_SMART_MODEL = 'openai/gpt-oss-120b';
 const ANSWER_MAX_TOKENS = 2200;
 const ANSWER_WITH_IMAGE_MAX_TOKENS = 2600;
+const FAST_FALLBACK_MAX_TOKENS = 1400;
 const VISION_MAX_TOKENS = 1200;
 const VISION_MODELS = [
   'meta-llama/llama-4-scout-17b-16e-instruct',
@@ -42,6 +43,11 @@ function jsonResponse(body: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+function isRateLimitError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return /rate[_\s-]?limit|tokens per minute|TPM|try again/i.test(message);
 }
 
 function isValidMessage(value: unknown): value is ChatMessage {
@@ -212,14 +218,30 @@ Deno.serve(async (request) => {
 
     selectedTextModel = selectTextModel(body, hasImages);
     const imageAnalysis = hasImages ? await analyzeImages(apiKey, images, latestUserText(messages)) : null;
+    const builtMessages = buildMessages(messages, imageAnalysis);
+    const maxTokens = hasImages ? ANSWER_WITH_IMAGE_MAX_TOKENS : ANSWER_MAX_TOKENS;
 
-    return await streamGroqText({
-      apiKey,
-      model: selectedTextModel,
-      temperature: selectedTextModel === TEXT_FAST_MODEL ? 0.45 : 0.62,
-      maxTokens: hasImages ? ANSWER_WITH_IMAGE_MAX_TOKENS : ANSWER_MAX_TOKENS,
-      messages: buildMessages(messages, imageAnalysis),
-    });
+    try {
+      return await streamGroqText({
+        apiKey,
+        model: selectedTextModel,
+        temperature: selectedTextModel === TEXT_FAST_MODEL ? 0.45 : 0.62,
+        maxTokens,
+        messages: builtMessages,
+      });
+    } catch (error) {
+      if (selectedTextModel !== TEXT_FAST_MODEL && isRateLimitError(error)) {
+        return await streamGroqText({
+          apiKey,
+          model: TEXT_FAST_MODEL,
+          temperature: 0.45,
+          maxTokens: Math.min(maxTokens, FAST_FALLBACK_MAX_TOKENS),
+          messages: builtMessages,
+        });
+      }
+
+      throw error;
+    }
   } catch (error) {
     return jsonResponse(
       {

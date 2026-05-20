@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { AurenImageAttachment } from '../lib/aurenAttachments';
 import { colors, shadows } from '../theme';
@@ -8,8 +8,10 @@ import { AurenAttachmentTray } from './AurenAttachmentTray';
 
 const COMPOSER_ICON_COLOR = colors.icon;
 const DISABLED_ICON_COLOR = colors.mutedSoft;
-const MIN_INPUT_HEIGHT = 22;
-const MAX_INPUT_HEIGHT = 112;
+const INPUT_LINE_HEIGHT = 22;
+const MIN_INPUT_HEIGHT = INPUT_LINE_HEIGHT;
+const MAX_INPUT_HEIGHT = 118;
+const ESTIMATED_CHARACTER_WIDTH = 8.4;
 
 type AurenComposerProps = {
   value: string;
@@ -23,6 +25,23 @@ type AurenComposerProps = {
   onHeightChange?: (height: number) => void;
 };
 
+function estimateWrappedInputHeight(text: string, inputWidth: number) {
+  if (!text.trim()) {
+    return MIN_INPUT_HEIGHT;
+  }
+
+  if (inputWidth <= 0) {
+    return Math.max(MIN_INPUT_HEIGHT, text.split('\n').length * INPUT_LINE_HEIGHT);
+  }
+
+  const charactersPerLine = Math.max(10, Math.floor(inputWidth / ESTIMATED_CHARACTER_WIDTH));
+  const estimatedLines = text
+    .split('\n')
+    .reduce((lineCount, line) => lineCount + Math.max(1, Math.ceil(line.length / charactersPerLine)), 0);
+
+  return Math.max(MIN_INPUT_HEIGHT, estimatedLines * INPUT_LINE_HEIGHT);
+}
+
 export function AurenComposer({
   value,
   attachments = [],
@@ -34,14 +53,20 @@ export function AurenComposer({
   onSend,
   onHeightChange,
 }: AurenComposerProps) {
-  const [contentInputHeight, setContentInputHeight] = useState(MIN_INPUT_HEIGHT);
+  const [measuredContentHeight, setMeasuredContentHeight] = useState(MIN_INPUT_HEIGHT);
+  const [inputWidth, setInputWidth] = useState(0);
   const canSend = value.trim().length > 0 || attachments.length > 0;
-  const inputHeight = Math.min(Math.max(MIN_INPUT_HEIGHT, contentInputHeight), MAX_INPUT_HEIGHT);
-  const inputCanScroll = contentInputHeight > MAX_INPUT_HEIGHT;
+  const estimatedInputHeight = useMemo(
+    () => estimateWrappedInputHeight(value, inputWidth),
+    [inputWidth, value],
+  );
+  const rawInputHeight = Math.max(MIN_INPUT_HEIGHT, measuredContentHeight, estimatedInputHeight);
+  const inputHeight = Math.min(rawInputHeight, MAX_INPUT_HEIGHT);
+  const inputCanScroll = rawInputHeight > MAX_INPUT_HEIGHT;
 
   useEffect(() => {
     if (value.length === 0) {
-      setContentInputHeight(MIN_INPUT_HEIGHT);
+      setMeasuredContentHeight(MIN_INPUT_HEIGHT);
     }
   }, [value.length]);
 
@@ -51,8 +76,9 @@ export function AurenComposer({
   }
 
   function handleContentSizeChange(height: number) {
-    const nextHeight = Math.ceil(height);
-    setContentInputHeight((currentHeight) => {
+    const nextHeight = Math.max(MIN_INPUT_HEIGHT, Math.ceil(height));
+
+    setMeasuredContentHeight((currentHeight) => {
       if (Math.abs(currentHeight - nextHeight) < 1) {
         return currentHeight;
       }
@@ -76,6 +102,7 @@ export function AurenComposer({
         onChangeText={onChangeText}
         onFocus={onFocus}
         onBlur={onBlur}
+        onLayout={(event) => setInputWidth(event.nativeEvent.layout.width)}
         onContentSizeChange={(event) => handleContentSizeChange(event.nativeEvent.contentSize.height)}
         multiline
         scrollEnabled={inputCanScroll}
@@ -151,7 +178,7 @@ const styles = StyleSheet.create({
     margin: 0,
     color: colors.text,
     fontSize: 17.5,
-    lineHeight: 22,
+    lineHeight: INPUT_LINE_HEIGHT,
     letterSpacing: -0.2,
     fontWeight: '500',
   },

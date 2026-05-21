@@ -307,8 +307,6 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
             <Text style={styles.addFilesLabel}>Add files</Text>
           </Pressable>
 
-          <View style={styles.sectionDivider} />
-
           <View style={styles.actionList}>
             {STUDY_ACTIONS(props).map((action) => (
               <ActionRow key={action.label} action={action} />

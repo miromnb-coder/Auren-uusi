@@ -1,9 +1,9 @@
-import { BookOpen, Home, SquarePen } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { AurenConversation } from '../lib/aurenConversations';
 import { colors } from '../theme';
+import { BookOpen, Home, SquarePen } from './AurenLucideIcons';
 
 type AurenSidebarProps = {
   open: boolean;

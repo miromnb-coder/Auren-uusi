@@ -1,6 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  PanResponder,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 
@@ -37,13 +47,13 @@ type Connector = {
 
 const TOP_ACTIONS = (props: AurenPlusSheetProps): TileAction[] => [
   { label: 'Camera', icon: 'camera-outline', onPress: props.onCamera },
-  { label: 'Photos', icon: 'image-outline', onPress: props.onPhotos },
-  { label: 'Files', icon: 'document-text-outline', onPress: props.onFiles },
+  { label: 'Photos', icon: 'images-outline', onPress: props.onPhotos },
+  { label: 'Files', icon: 'document-outline', onPress: props.onFiles },
 ];
 
 const STUDY_ACTIONS = (props: AurenPlusSheetProps): SheetAction[] => [
-  { label: 'Create flashcards', icon: 'albums-outline', onPress: props.onCreateFlashcards },
-  { label: 'Summarize notes', icon: 'menu-outline', onPress: props.onSummarizeNotes },
+  { label: 'Create flashcards', icon: 'copy-outline', onPress: props.onCreateFlashcards },
+  { label: 'Summarize notes', icon: 'reorder-three-outline', onPress: props.onSummarizeNotes },
   { label: 'Explain task', icon: 'scan-outline', onPress: props.onExplainTask },
   { label: 'Explain from image', icon: 'image-outline', onPress: props.onExplainFromImage },
   { label: 'Start study session', icon: 'time-outline', onPress: props.onStartStudySession },
@@ -60,15 +70,25 @@ const TILE_BACKGROUND = 'rgba(245,242,237,0.82)';
 const ICON_COLOR = 'rgba(25,25,27,0.84)';
 const CHEVRON_COLOR = 'rgba(55,55,58,0.34)';
 
+const CLOSE_DISTANCE = 92;
+const CLOSE_VELOCITY = 0.85;
+const DRAG_ACTIVATION_DISTANCE = 7;
+
 export function AurenPlusSheet(props: AurenPlusSheetProps) {
   const { visible, onClose } = props;
   const insets = useSafeAreaInsets();
+
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const dragTranslateY = useRef(new Animated.Value(0)).current;
+  const scrollYRef = useRef(0);
+
   const [mounted, setMounted] = useState(visible);
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
+      dragTranslateY.setValue(0);
+      scrollYRef.current = 0;
     }
 
     Animated.timing(progress, {
@@ -78,20 +98,77 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
       useNativeDriver: true,
     }).start(({ finished }) => {
       if (finished && !visible) {
+        dragTranslateY.setValue(0);
         setMounted(false);
       }
     });
-  }, [progress, visible]);
+  }, [dragTranslateY, progress, visible]);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+
+        onMoveShouldSetPanResponderCapture: (_, gesture) => {
+          const isAtTop = scrollYRef.current <= 0;
+          const isPullingDown = gesture.dy > DRAG_ACTIVATION_DISTANCE;
+          const isMostlyVertical = Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.2;
+
+          return visible && isAtTop && isPullingDown && isMostlyVertical;
+        },
+
+        onMoveShouldSetPanResponder: (_, gesture) => {
+          const isAtTop = scrollYRef.current <= 0;
+          const isPullingDown = gesture.dy > DRAG_ACTIVATION_DISTANCE;
+          const isMostlyVertical = Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.2;
+
+          return visible && isAtTop && isPullingDown && isMostlyVertical;
+        },
+
+        onPanResponderMove: (_, gesture) => {
+          const nextY = Math.max(0, gesture.dy);
+          dragTranslateY.setValue(nextY);
+        },
+
+        onPanResponderRelease: (_, gesture) => {
+          const shouldClose = gesture.dy > CLOSE_DISTANCE || gesture.vy > CLOSE_VELOCITY;
+
+          if (shouldClose) {
+            onClose();
+            return;
+          }
+
+          Animated.spring(dragTranslateY, {
+            toValue: 0,
+            tension: 95,
+            friction: 13,
+            useNativeDriver: true,
+          }).start();
+        },
+
+        onPanResponderTerminate: () => {
+          Animated.spring(dragTranslateY, {
+            toValue: 0,
+            tension: 95,
+            friction: 13,
+            useNativeDriver: true,
+          }).start();
+        },
+      }),
+    [dragTranslateY, onClose, visible],
+  );
 
   const overlayOpacity = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 0.47],
   });
 
-  const sheetTranslateY = progress.interpolate({
+  const baseSheetTranslateY = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [900, 0],
   });
+
+  const sheetTranslateY = Animated.add(baseSheetTranslateY, dragTranslateY);
 
   if (!mounted) {
     return null;
@@ -104,6 +181,7 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
       </Animated.View>
 
       <Animated.View
+        {...panResponder.panHandlers}
         style={[
           styles.sheet,
           {
@@ -117,7 +195,12 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
         <ScrollView
           showsVerticalScrollIndicator={false}
           bounces={false}
+          scrollEventThrottle={16}
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
+          onScroll={(event) => {
+            scrollYRef.current = Math.max(0, event.nativeEvent.contentOffset.y);
+          }}
         >
           <View style={styles.tileRow}>
             {TOP_ACTIONS(props).map((action) => (

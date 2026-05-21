@@ -69,6 +69,19 @@ const CLOSE_DISTANCE = 92;
 const CLOSE_VELOCITY = 0.85;
 const DRAG_ACTIVATION_DISTANCE = 7;
 
+function isRenderableImageUri(uri?: string | null) {
+  if (!uri) return false;
+
+  return (
+    uri.startsWith('file://') ||
+    uri.startsWith('content://') ||
+    uri.startsWith('asset://') ||
+    uri.startsWith('data:') ||
+    uri.startsWith('http://') ||
+    uri.startsWith('https://')
+  );
+}
+
 export function AurenPlusSheet(props: AurenPlusSheetProps) {
   const { visible, onClose } = props;
   const insets = useSafeAreaInsets();
@@ -121,12 +134,28 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
         mediaType: MediaLibrary.MediaType.photo,
       });
 
-      setRecentPhotos(
-        result.assets.map((asset) => ({
-          id: asset.id,
-          uri: asset.uri,
-        })),
+      const photos = await Promise.all(
+        result.assets.map(async (asset) => {
+          try {
+            const assetInfo = await MediaLibrary.getAssetInfoAsync(asset);
+            const renderableUri = isRenderableImageUri(assetInfo.localUri) ? assetInfo.localUri : null;
+
+            if (!renderableUri) {
+              return null;
+            }
+
+            return {
+              id: asset.id,
+              uri: renderableUri,
+            } satisfies RecentPhoto;
+          } catch (error) {
+            console.log('Auren media library asset info error:', error);
+            return null;
+          }
+        }),
       );
+
+      setRecentPhotos(photos.filter((photo): photo is RecentPhoto => photo !== null));
     } catch (error) {
       console.log('Auren media library preview error:', error);
       setRecentPhotos([]);

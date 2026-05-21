@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
@@ -63,14 +63,23 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
   const { visible, onClose } = props;
   const insets = useSafeAreaInsets();
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const [mounted, setMounted] = useState(visible);
 
   useEffect(() => {
+    if (visible) {
+      setMounted(true);
+    }
+
     Animated.timing(progress, {
       toValue: visible ? 1 : 0,
       duration: visible ? 250 : 190,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
-    }).start();
+    }).start(({ finished }) => {
+      if (finished && !visible) {
+        setMounted(false);
+      }
+    });
   }, [progress, visible]);
 
   const overlayOpacity = progress.interpolate({
@@ -80,8 +89,12 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
 
   const sheetTranslateY = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [520, 0],
+    outputRange: [900, 0],
   });
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <View pointerEvents={visible ? 'auto' : 'none'} style={styles.root}>

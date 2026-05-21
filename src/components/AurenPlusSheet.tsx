@@ -79,6 +79,17 @@ const CHEVRON_COLOR = 'rgba(55,55,58,0.34)';
 const CLOSE_DISTANCE = 92;
 const CLOSE_VELOCITY = 0.85;
 const DRAG_ACTIVATION_DISTANCE = 7;
+const HIDDEN_SHEET_HEIGHT_RATIO = 0.82;
+const HIDDEN_SHEET_EXTRA_OFFSET = 84;
+const OPEN_SPRING_CONFIG = {
+  damping: 24,
+  stiffness: 230,
+  mass: 0.9,
+  overshootClamping: true,
+  restDisplacementThreshold: 0.5,
+  restSpeedThreshold: 0.5,
+  useNativeDriver: true,
+} as const;
 
 function isRenderableImageUri(uri?: string | null) {
   if (!uri) return false;
@@ -117,15 +128,21 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
       dragTranslateY.setValue(0);
       resetSheetScrollPositions();
       loadRecentPhotos();
+
+      Animated.spring(progress, {
+        toValue: 1,
+        ...OPEN_SPRING_CONFIG,
+      }).start();
+      return;
     }
 
     Animated.timing(progress, {
-      toValue: visible ? 1 : 0,
-      duration: visible ? 260 : 190,
-      easing: Easing.out(Easing.cubic),
+      toValue: 0,
+      duration: 170,
+      easing: Easing.bezier(0.36, 0, 0.2, 1),
       useNativeDriver: true,
     }).start(({ finished }) => {
-      if (finished && !visible) {
+      if (finished) {
         dragTranslateY.setValue(0);
         resetSheetScrollPositions();
       }
@@ -238,7 +255,7 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
     outputRange: [0, 0.47],
   });
 
-  const hiddenSheetTranslateY = height + 120;
+  const hiddenSheetTranslateY = height * HIDDEN_SHEET_HEIGHT_RATIO + HIDDEN_SHEET_EXTRA_OFFSET;
   const baseSheetTranslateY = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [hiddenSheetTranslateY, 0],
@@ -248,7 +265,7 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
 
   return (
     <View pointerEvents={visible ? 'auto' : 'none'} style={styles.root}>
-      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}> 
+      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 

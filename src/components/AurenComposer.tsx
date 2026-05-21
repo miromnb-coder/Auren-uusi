@@ -201,7 +201,6 @@ export function AurenComposer({
             onChangeText={onChangeText}
             onFocus={handleFocus}
             onBlur={handleBlur}
-            onPressIn={activateComposer}
             onLayout={(event) => setInputWidth(event.nativeEvent.layout.width)}
             onContentSizeChange={(event) => handleContentSizeChange(event.nativeEvent.contentSize.height)}
             multiline

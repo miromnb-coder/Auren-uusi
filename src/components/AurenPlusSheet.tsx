@@ -1,8 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   PanResponder,
   Platform,
   Pressable,
@@ -27,12 +29,6 @@ type AurenPlusSheetProps = {
   onStartStudySession?: () => void;
 };
 
-type TileAction = {
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  onPress?: () => void;
-};
-
 type SheetAction = {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
@@ -45,11 +41,10 @@ type Connector = {
   markStyle: 'drive' | 'notion' | 'onedrive';
 };
 
-const TOP_ACTIONS = (props: AurenPlusSheetProps): TileAction[] => [
-  { label: 'Camera', icon: 'camera-outline', onPress: props.onCamera },
-  { label: 'Photos', icon: 'images-outline', onPress: props.onPhotos },
-  { label: 'Files', icon: 'document-outline', onPress: props.onFiles },
-];
+type RecentPhoto = {
+  id: string;
+  uri: string;
+};
 
 const STUDY_ACTIONS = (props: AurenPlusSheetProps): SheetAction[] => [
   { label: 'Create flashcards', icon: 'copy-outline', onPress: props.onCreateFlashcards },
@@ -66,7 +61,7 @@ const CONNECTORS: Connector[] = [
 ];
 
 const SHEET_BACKGROUND = '#fbfaf7';
-const TILE_BACKGROUND = 'rgba(245,242,237,0.82)';
+const PHOTO_CARD_BACKGROUND = 'rgba(245,242,237,0.82)';
 const ICON_COLOR = 'rgba(25,25,27,0.84)';
 const CHEVRON_COLOR = 'rgba(55,55,58,0.34)';
 
@@ -83,12 +78,14 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
   const scrollYRef = useRef(0);
 
   const [mounted, setMounted] = useState(visible);
+  const [recentPhotos, setRecentPhotos] = useState<RecentPhoto[]>([]);
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
       dragTranslateY.setValue(0);
       scrollYRef.current = 0;
+      loadRecentPhotos();
     }
 
     Animated.timing(progress, {
@@ -103,6 +100,38 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
       }
     });
   }, [dragTranslateY, progress, visible]);
+
+  async function loadRecentPhotos() {
+    try {
+      const currentPermission = await MediaLibrary.getPermissionsAsync();
+      let hasPermission = currentPermission.granted;
+
+      if (!hasPermission && currentPermission.canAskAgain) {
+        const requestedPermission = await MediaLibrary.requestPermissionsAsync();
+        hasPermission = requestedPermission.granted;
+      }
+
+      if (!hasPermission) {
+        setRecentPhotos([]);
+        return;
+      }
+
+      const result = await MediaLibrary.getAssetsAsync({
+        first: 8,
+        mediaType: MediaLibrary.MediaType.photo,
+      });
+
+      setRecentPhotos(
+        result.assets.map((asset) => ({
+          id: asset.id,
+          uri: asset.uri,
+        })),
+      );
+    } catch (error) {
+      console.log('Auren media library preview error:', error);
+      setRecentPhotos([]);
+    }
+  }
 
   const panResponder = useMemo(
     () =>
@@ -126,8 +155,7 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
         },
 
         onPanResponderMove: (_, gesture) => {
-          const nextY = Math.max(0, gesture.dy);
-          dragTranslateY.setValue(nextY);
+          dragTranslateY.setValue(Math.max(0, gesture.dy));
         },
 
         onPanResponderRelease: (_, gesture) => {
@@ -202,11 +230,55 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
             scrollYRef.current = Math.max(0, event.nativeEvent.contentOffset.y);
           }}
         >
-          <View style={styles.tileRow}>
-            {TOP_ACTIONS(props).map((action) => (
-              <TopTile key={action.label} action={action} />
-            ))}
+          <View style={styles.photosHeader}>
+            <Text style={styles.photosTitle}>Photos</Text>
+
+            <Pressable onPress={props.onPhotos} hitSlop={12}>
+              <Text style={styles.seeAllText}>See all</Text>
+            </Pressable>
           </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            bounces
+            contentContainerStyle={styles.photoStripContent}
+          >
+            <CameraCard onPress={props.onCamera} />
+
+            {recentPhotos.length > 0 ? (
+              recentPhotos.map((photo, index) => (
+                <PhotoPreviewCard
+                  key={photo.id}
+                  uri={photo.uri}
+                  selected={index === 1}
+                  onPress={props.onPhotos}
+                />
+              ))
+            ) : (
+              <>
+                <EmptyPhotoPreviewCard onPress={props.onPhotos} />
+                <EmptyPhotoPreviewCard onPress={props.onPhotos} />
+                <EmptyPhotoPreviewCard onPress={props.onPhotos} />
+              </>
+            )}
+          </ScrollView>
+
+          <View style={styles.sectionDivider} />
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add files"
+            onPress={props.onFiles}
+            style={({ pressed }) => [styles.addFilesRow, pressed && styles.pressed]}
+          >
+            <View style={styles.addFilesIconSlot}>
+              <Ionicons name="attach-outline" size={35} color={ICON_COLOR} />
+            </View>
+            <Text style={styles.addFilesLabel}>Add files</Text>
+          </Pressable>
+
+          <View style={styles.sectionDivider} />
 
           <View style={styles.actionList}>
             {STUDY_ACTIONS(props).map((action) => (
@@ -229,16 +301,57 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
   );
 }
 
-function TopTile({ action }: { action: TileAction }) {
+function CameraCard({ onPress }: { onPress?: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={action.label}
-      onPress={action.onPress}
-      style={({ pressed }) => [styles.topTile, pressed && styles.pressed]}
+      accessibilityLabel="Camera"
+      onPress={onPress}
+      style={({ pressed }) => [styles.cameraCard, pressed && styles.pressed]}
     >
-      <Ionicons name={action.icon} size={30} color={ICON_COLOR} />
-      <Text style={styles.topTileLabel}>{action.label}</Text>
+      <Ionicons name="camera-outline" size={36} color={ICON_COLOR} />
+      <Text style={styles.cameraLabel}>Camera</Text>
+    </Pressable>
+  );
+}
+
+function PhotoPreviewCard({
+  uri,
+  selected,
+  onPress,
+}: {
+  uri: string;
+  selected?: boolean;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Photo"
+      onPress={onPress}
+      style={({ pressed }) => [styles.photoPreviewCard, pressed && styles.pressed]}
+    >
+      <Image source={{ uri }} style={styles.photoPreviewImage} />
+      <View style={[styles.selectionRing, selected && styles.selectionRingSelected]} />
+    </Pressable>
+  );
+}
+
+function EmptyPhotoPreviewCard({ onPress }: { onPress?: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Photo"
+      onPress={onPress}
+      style={({ pressed }) => [styles.emptyPhotoPreviewCard, pressed && styles.pressed]}
+    >
+      <Text style={styles.emptyPreviewTitle}>{'Good evening,\nlet’s study smarter.'}</Text>
+      <View style={styles.emptyPreviewPills}>
+        <View style={styles.emptyPreviewPill} />
+        <View style={styles.emptyPreviewPill} />
+        <View style={styles.emptyPreviewPill} />
+      </View>
+      <View style={styles.selectionRing} />
     </Pressable>
   );
 }
@@ -296,7 +409,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    maxHeight: '72%',
+    maxHeight: '76%',
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
     backgroundColor: SHEET_BACKGROUND,
@@ -312,54 +425,174 @@ const styles = StyleSheet.create({
     width: 62,
     height: 8,
     borderRadius: 999,
-    marginTop: 19,
-    marginBottom: 24,
+    marginTop: 18,
+    marginBottom: 23,
     backgroundColor: 'rgba(37,37,38,0.23)',
   },
 
   scrollContent: {
-    paddingHorizontal: 31,
     paddingBottom: 8,
   },
 
-  tileRow: {
+  photosHeader: {
+    paddingHorizontal: 24,
+    marginBottom: 19,
     flexDirection: 'row',
-    gap: 14,
-    marginBottom: 26,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 
-  topTile: {
-    flex: 1,
-    height: 145,
+  photosTitle: {
+    color: colors.text,
+    fontSize: 29,
+    lineHeight: 35,
+    fontWeight: '700',
+    letterSpacing: -0.65,
+  },
+
+  seeAllText: {
+    color: '#3d6d94',
+    fontSize: 18.8,
+    lineHeight: 24,
+    fontWeight: '500',
+    letterSpacing: -0.2,
+  },
+
+  photoStripContent: {
+    paddingLeft: 24,
+    paddingRight: 24,
+    gap: 14,
+  },
+
+  cameraCard: {
+    width: 122,
+    height: 132,
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: TILE_BACKGROUND,
+    backgroundColor: PHOTO_CARD_BACKGROUND,
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.032)',
   },
 
-  topTileLabel: {
-    marginTop: 15,
+  cameraLabel: {
+    marginTop: 17,
     color: colors.text,
-    fontSize: 18.2,
+    fontSize: 18.4,
     lineHeight: 23,
-    fontWeight: '500',
-    letterSpacing: -0.22,
+    fontWeight: '400',
+    letterSpacing: -0.24,
+  },
+
+  photoPreviewCard: {
+    width: 122,
+    height: 132,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.62)',
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.07)',
+  },
+
+  photoPreviewImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+
+  emptyPhotoPreviewCard: {
+    width: 122,
+    height: 132,
+    borderRadius: 24,
+    overflow: 'hidden',
+    paddingHorizontal: 12,
+    paddingTop: 20,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.07)',
+  },
+
+  emptyPreviewTitle: {
+    color: 'rgba(74,73,82,0.72)',
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' }),
+    fontSize: 12.5,
+    lineHeight: 15,
+    textAlign: 'center',
+    letterSpacing: -0.2,
+  },
+
+  emptyPreviewPills: {
+    marginTop: 22,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+  },
+
+  emptyPreviewPill: {
+    width: 26,
+    height: 16,
+    borderRadius: 7,
+    backgroundColor: 'rgba(17,24,39,0.06)',
+  },
+
+  selectionRing: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.92)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+
+  selectionRingSelected: {
+    borderColor: '#ffffff',
+    backgroundColor: 'rgba(17,24,39,0.22)',
+  },
+
+  sectionDivider: {
+    height: 1,
+    marginTop: 20,
+    marginHorizontal: 24,
+    backgroundColor: 'rgba(17,24,39,0.09)',
+  },
+
+  addFilesRow: {
+    minHeight: 68,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+
+  addFilesIconSlot: {
+    width: 48,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+
+  addFilesLabel: {
+    color: colors.text,
+    fontSize: 22,
+    lineHeight: 27,
+    fontWeight: '400',
+    letterSpacing: -0.35,
   },
 
   actionList: {
+    paddingHorizontal: 24,
     gap: 0,
   },
 
   actionRow: {
-    minHeight: 69,
+    minHeight: 66,
     flexDirection: 'row',
     alignItems: 'center',
   },
 
   actionIconSlot: {
-    width: 49,
+    width: 48,
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
@@ -369,7 +602,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 18.7,
     lineHeight: 24,
-    fontWeight: '500',
+    fontWeight: '400',
     letterSpacing: -0.24,
   },
 
@@ -380,6 +613,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     marginTop: 14,
+    marginHorizontal: 24,
     marginBottom: 20,
     backgroundColor: 'rgba(17,24,39,0.105)',
   },
@@ -388,13 +622,15 @@ const styles = StyleSheet.create({
     color: 'rgba(67,68,74,0.82)',
     fontSize: 18.4,
     lineHeight: 24,
-    fontWeight: '500',
+    fontWeight: '400',
     letterSpacing: -0.18,
-    marginBottom: 16,
+    marginBottom: 15,
+    paddingHorizontal: 24,
   },
 
   connectorsList: {
     gap: 4,
+    paddingHorizontal: 24,
   },
 
   connectorRow: {
@@ -443,7 +679,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 18.5,
     lineHeight: 24,
-    fontWeight: '500',
+    fontWeight: '400',
     letterSpacing: -0.2,
   },
 

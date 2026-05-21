@@ -21,7 +21,8 @@ type AurenSidebarProps = {
 const DRAWER_WIDTH_RATIO = 0.78;
 const DRAWER_MIN_WIDTH = 292;
 const DRAWER_MAX_WIDTH = 420;
-const ICON_STROKE_WIDTH = 2.35;
+const SIDEBAR_ICON_COLOR = 'rgba(15,17,21,0.84)';
+const ICON_STROKE_WIDTH = 1.9;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 function sidebarIcon(icon: ReactNode) {
@@ -101,17 +102,17 @@ export function AurenSidebar({
           >
             <View style={styles.primaryNav}>
               <SidebarItem
-                icon={sidebarIcon(<Home size={30} color={colors.icon} strokeWidth={ICON_STROKE_WIDTH} />)}
+                icon={sidebarIcon(<Home size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
                 label="Home"
                 onPress={onClose}
               />
               <SidebarItem
-                icon={sidebarIcon(<SquarePen size={29} color={colors.icon} strokeWidth={ICON_STROKE_WIDTH} />)}
+                icon={sidebarIcon(<SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
                 label="New chat"
                 onPress={onNewChat}
               />
               <SidebarItem
-                icon={sidebarIcon(<BookOpen size={30} color={colors.icon} strokeWidth={ICON_STROKE_WIDTH} />)}
+                icon={sidebarIcon(<BookOpen size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
                 label="Study modes"
               />
             </View>
@@ -157,7 +158,7 @@ export function AurenSidebar({
             </Pressable>
 
             <Pressable onPress={onNewChat} style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Start a new chat">
-              <SquarePen size={32} color="#0f1115" strokeWidth={2.4} />
+              <SquarePen size={28} color={SIDEBAR_ICON_COLOR} strokeWidth={1.95} />
             </Pressable>
           </View>
         </View>

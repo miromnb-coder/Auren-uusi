@@ -1,4 +1,4 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { ArrowUp, Mic, Plus } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -8,6 +8,7 @@ import { AurenAttachmentTray } from './AurenAttachmentTray';
 
 const COMPOSER_ICON_COLOR = colors.icon;
 const DISABLED_ICON_COLOR = colors.mutedSoft;
+const ICON_STROKE_WIDTH = 2.25;
 
 const INPUT_LINE_HEIGHT = 22;
 const MIN_INPUT_HEIGHT = INPUT_LINE_HEIGHT;
@@ -215,7 +216,7 @@ export function AurenComposer({
           {!isActive ? (
             <View style={styles.idleLeftSlot} pointerEvents="box-none">
               <ComposerButton accessibilityLabel="Add image" onPress={onAddImage} active={hasAttachments} size="idle">
-                <Ionicons name="add-outline" size={30} color={COMPOSER_ICON_COLOR} />
+                <Plus size={30} color={COMPOSER_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
               </ComposerButton>
             </View>
           ) : null}
@@ -225,13 +226,13 @@ export function AurenComposer({
           <View style={styles.controlsRow}>
             <View style={styles.leftControls}>
               <ComposerButton accessibilityLabel="Add image" onPress={onAddImage} active={hasAttachments}>
-                <Ionicons name="add-outline" size={28} color={COMPOSER_ICON_COLOR} />
+                <Plus size={28} color={COMPOSER_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
               </ComposerButton>
             </View>
 
             <View style={styles.rightControls}>
               <ComposerButton accessibilityLabel="Use voice">
-                <Ionicons name="mic-outline" size={25} color={COMPOSER_ICON_COLOR} />
+                <Mic size={24} color={COMPOSER_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
               </ComposerButton>
 
               <ComposerButton
@@ -241,7 +242,7 @@ export function AurenComposer({
                 filled={canSend}
                 send
               >
-                <Ionicons name="arrow-up-outline" size={25} color={canSend ? '#ffffff' : DISABLED_ICON_COLOR} />
+                <ArrowUp size={25} color={canSend ? '#ffffff' : DISABLED_ICON_COLOR} strokeWidth={2.35} />
               </ComposerButton>
             </View>
           </View>

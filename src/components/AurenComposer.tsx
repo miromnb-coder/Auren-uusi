@@ -219,12 +219,6 @@ export function AurenComposer({
               </ComposerButton>
             </View>
           ) : null}
-
-          {!isActive ? (
-            <Pressable accessibilityRole="button" accessibilityLabel="Use voice" style={styles.voiceIdleButton}>
-              <VoiceGlyph />
-            </Pressable>
-          ) : null}
         </View>
 
         {isActive ? (
@@ -299,18 +293,6 @@ function ComposerButton({
   );
 }
 
-function VoiceGlyph() {
-  return (
-    <View style={styles.voiceGlyph}>
-      <View style={[styles.voiceBar, { height: 11 }]} />
-      <View style={[styles.voiceBar, { height: 19 }]} />
-      <View style={[styles.voiceBar, { height: 27 }]} />
-      <View style={[styles.voiceBar, { height: 19 }]} />
-      <View style={[styles.voiceBar, { height: 11 }]} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   composer: {
     backgroundColor: '#fbfbfa',
@@ -350,7 +332,7 @@ const styles = StyleSheet.create({
   inputIdle: {
     width: '100%',
     paddingLeft: 66,
-    paddingRight: 52,
+    paddingRight: 10,
     paddingTop: 1,
     fontWeight: '400',
   },
@@ -430,31 +412,5 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(17,24,39,0.06)',
     shadowOpacity: 0,
     elevation: 0,
-  },
-
-  voiceIdleButton: {
-    position: 'absolute',
-    right: 0,
-    top: 1,
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  voiceGlyph: {
-    height: 30,
-    width: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-  },
-
-  voiceBar: {
-    width: 3,
-    borderRadius: 99,
-    backgroundColor: COMPOSER_ICON_COLOR,
   },
 });

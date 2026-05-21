@@ -1,10 +1,10 @@
-import { ArrowUp, Mic, Plus } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { AurenImageAttachment } from '../lib/aurenAttachments';
 import { colors, shadows } from '../theme';
 import { AurenAttachmentTray } from './AurenAttachmentTray';
+import { ArrowUp, Mic, Plus } from './AurenLucideIcons';
 
 const COMPOSER_ICON_COLOR = colors.icon;
 const DISABLED_ICON_COLOR = colors.mutedSoft;

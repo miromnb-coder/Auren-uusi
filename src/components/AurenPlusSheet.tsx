@@ -56,8 +56,9 @@ const CONNECTORS: Connector[] = [
 ];
 
 const SHEET_BACKGROUND = '#fbfaf7';
-const TILE_BACKGROUND = 'rgba(245,242,237,0.78)';
-const ICON_COLOR = 'rgba(27,27,28,0.82)';
+const TILE_BACKGROUND = 'rgba(245,242,237,0.82)';
+const ICON_COLOR = 'rgba(25,25,27,0.84)';
+const CHEVRON_COLOR = 'rgba(55,55,58,0.34)';
 
 export function AurenPlusSheet(props: AurenPlusSheetProps) {
   const { visible, onClose } = props;
@@ -72,7 +73,7 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
 
     Animated.timing(progress, {
       toValue: visible ? 1 : 0,
-      duration: visible ? 250 : 190,
+      duration: visible ? 260 : 190,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     }).start(({ finished }) => {
@@ -84,7 +85,7 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
 
   const overlayOpacity = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 0.48],
+    outputRange: [0, 0.47],
   });
 
   const sheetTranslateY = progress.interpolate({
@@ -153,7 +154,7 @@ function TopTile({ action }: { action: TileAction }) {
       onPress={action.onPress}
       style={({ pressed }) => [styles.topTile, pressed && styles.pressed]}
     >
-      <Ionicons name={action.icon} size={29} color={ICON_COLOR} />
+      <Ionicons name={action.icon} size={30} color={ICON_COLOR} />
       <Text style={styles.topTileLabel}>{action.label}</Text>
     </Pressable>
   );
@@ -168,10 +169,12 @@ function ActionRow({ action }: { action: SheetAction }) {
       style={({ pressed }) => [styles.actionRow, pressed && styles.pressed]}
     >
       <View style={styles.actionIconSlot}>
-        <Ionicons name={action.icon} size={28} color={ICON_COLOR} />
+        <Ionicons name={action.icon} size={29} color={ICON_COLOR} />
       </View>
+
       <Text style={styles.actionLabel}>{action.label}</Text>
-      <Ionicons name="chevron-forward" size={23} color="rgba(55,55,58,0.34)" />
+
+      <Ionicons name="chevron-forward" size={24} color={CHEVRON_COLOR} />
     </Pressable>
   );
 }
@@ -199,53 +202,60 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 80,
   },
+
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#111111',
   },
+
   sheet: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
     maxHeight: '72%',
-    borderTopLeftRadius: 38,
-    borderTopRightRadius: 38,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
     backgroundColor: SHEET_BACKGROUND,
     shadowColor: '#111827',
-    shadowOpacity: 0.12,
-    shadowRadius: 30,
+    shadowOpacity: 0.13,
+    shadowRadius: 32,
     shadowOffset: { width: 0, height: -12 },
     elevation: 18,
   },
+
   handle: {
     alignSelf: 'center',
-    width: 64,
+    width: 62,
     height: 8,
     borderRadius: 999,
-    marginTop: 20,
-    marginBottom: 23,
-    backgroundColor: 'rgba(37,37,38,0.22)',
+    marginTop: 19,
+    marginBottom: 24,
+    backgroundColor: 'rgba(37,37,38,0.23)',
   },
+
   scrollContent: {
     paddingHorizontal: 31,
     paddingBottom: 8,
   },
+
   tileRow: {
     flexDirection: 'row',
     gap: 14,
-    marginBottom: 27,
+    marginBottom: 26,
   },
+
   topTile: {
     flex: 1,
-    height: 144,
+    height: 145,
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: TILE_BACKGROUND,
     borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.035)',
+    borderColor: 'rgba(17,24,39,0.032)',
   },
+
   topTileLabel: {
     marginTop: 15,
     color: colors.text,
@@ -254,81 +264,97 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: -0.22,
   },
+
   actionList: {
-    gap: 2,
+    gap: 0,
   },
+
   actionRow: {
-    minHeight: 67,
+    minHeight: 69,
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   actionIconSlot: {
-    width: 46,
+    width: 49,
     alignItems: 'flex-start',
     justifyContent: 'center',
   },
+
   actionLabel: {
     flex: 1,
     color: colors.text,
-    fontSize: 18.6,
+    fontSize: 18.7,
     lineHeight: 24,
     fontWeight: '500',
     letterSpacing: -0.24,
   },
+
   pressed: {
     opacity: 0.58,
   },
+
   divider: {
     height: 1,
-    marginTop: 15,
+    marginTop: 14,
     marginBottom: 20,
     backgroundColor: 'rgba(17,24,39,0.105)',
   },
+
   sectionTitle: {
     color: 'rgba(67,68,74,0.82)',
-    fontSize: 18.5,
+    fontSize: 18.4,
     lineHeight: 24,
     fontWeight: '500',
     letterSpacing: -0.18,
     marginBottom: 16,
   },
+
   connectorsList: {
-    gap: 6,
+    gap: 4,
   },
+
   connectorRow: {
-    minHeight: 61,
+    minHeight: 63,
     flexDirection: 'row',
     alignItems: 'center',
   },
+
   connectorMark: {
     width: 40,
     height: 40,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 17,
   },
+
   drive: {
     backgroundColor: 'rgba(52,168,83,0.08)',
   },
+
   notion: {
     backgroundColor: '#ffffff',
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.12)',
   },
+
   onedrive: {
     backgroundColor: 'rgba(0,120,212,0.1)',
   },
+
   connectorMarkText: {
     color: colors.text,
     fontSize: 21,
     lineHeight: 25,
     fontWeight: '800',
   },
+
   driveText: {
     color: '#2f8f4e',
     fontSize: 25,
   },
+
   connectorLabel: {
     flex: 1,
     color: colors.text,
@@ -337,6 +363,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: -0.2,
   },
+
   connectButton: {
     minWidth: 102,
     height: 46,
@@ -348,6 +375,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.065)',
   },
+
   connectButtonText: {
     color: colors.text,
     fontSize: 16.3,

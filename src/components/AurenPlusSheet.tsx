@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ImageSourcePropType } from 'react-native';
 import {
   Animated,
   Easing,
@@ -37,8 +38,7 @@ type SheetAction = {
 
 type Connector = {
   label: string;
-  mark: string;
-  markStyle: 'drive' | 'notion' | 'onedrive';
+  icon: ImageSourcePropType;
 };
 
 type RecentPhoto = {
@@ -55,9 +55,11 @@ const STUDY_ACTIONS = (props: AurenPlusSheetProps): SheetAction[] => [
 ];
 
 const CONNECTORS: Connector[] = [
-  { label: 'Google Drive', mark: '△', markStyle: 'drive' },
-  { label: 'Notion', mark: 'N', markStyle: 'notion' },
-  { label: 'OneDrive', mark: '☁', markStyle: 'onedrive' },
+  { label: 'Google Drive', icon: require('../assets/connectors/google-drive.PNG') },
+  { label: 'Gmail', icon: require('../assets/connectors/gmail.PNG') },
+  { label: 'Google Calendar', icon: require('../assets/connectors/google-calendar.PNG') },
+  { label: 'Outlook Calendar', icon: require('../assets/connectors/outlook-calendar.PNG') },
+  { label: 'Outlook Mail', icon: require('../assets/connectors/outlook-mail.PNG') },
 ];
 
 const SHEET_BACKGROUND = '#fbfaf7';
@@ -405,10 +407,8 @@ function ActionRow({ action }: { action: SheetAction }) {
 function ConnectorRow({ connector }: { connector: Connector }) {
   return (
     <View style={styles.connectorRow}>
-      <View style={[styles.connectorMark, styles[connector.markStyle]]}>
-        <Text style={[styles.connectorMarkText, connector.markStyle === 'drive' && styles.driveText]}>
-          {connector.mark}
-        </Text>
+      <View style={styles.connectorIconFrame}>
+        <Image source={connector.icon} style={styles.connectorIconImage} />
       </View>
 
       <Text style={styles.connectorLabel}>{connector.label}</Text>
@@ -656,49 +656,30 @@ const styles = StyleSheet.create({
   },
 
   connectorsList: {
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 24,
   },
 
   connectorRow: {
-    minHeight: 63,
+    minHeight: 65,
     flexDirection: 'row',
     alignItems: 'center',
   },
 
-  connectorMark: {
-    width: 40,
-    height: 40,
+  connectorIconFrame: {
+    width: 42,
+    height: 42,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 17,
+    marginRight: 16,
+    backgroundColor: 'rgba(255,255,255,0.72)',
   },
 
-  drive: {
-    backgroundColor: 'rgba(52,168,83,0.08)',
-  },
-
-  notion: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.12)',
-  },
-
-  onedrive: {
-    backgroundColor: 'rgba(0,120,212,0.1)',
-  },
-
-  connectorMarkText: {
-    color: colors.text,
-    fontSize: 21,
-    lineHeight: 25,
-    fontWeight: '800',
-  },
-
-  driveText: {
-    color: '#2f8f4e',
-    fontSize: 25,
+  connectorIconImage: {
+    width: 36,
+    height: 36,
+    resizeMode: 'contain',
   },
 
   connectorLabel: {

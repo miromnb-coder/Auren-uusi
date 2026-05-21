@@ -61,6 +61,7 @@ export function AurenComposer({
   const transition = useRef(new Animated.Value(0)).current;
 
   const [focused, setFocused] = useState(false);
+  const [forcedActive, setForcedActive] = useState(false);
   const [measuredContentHeight, setMeasuredContentHeight] = useState(MIN_INPUT_HEIGHT);
   const [stableInputHeight, setStableInputHeight] = useState(MIN_INPUT_HEIGHT);
   const [inputWidth, setInputWidth] = useState(0);
@@ -68,7 +69,7 @@ export function AurenComposer({
   const hasText = value.trim().length > 0;
   const hasAttachments = attachments.length > 0;
   const canSend = hasText || hasAttachments;
-  const isActive = focused || hasText || hasAttachments;
+  const isActive = forcedActive || focused || hasText || hasAttachments;
 
   const estimatedInputHeight = useMemo(
     () => estimateWrappedInputHeight(value, inputWidth),
@@ -83,7 +84,7 @@ export function AurenComposer({
   useEffect(() => {
     Animated.timing(transition, {
       toValue: isActive ? 1 : 0,
-      duration: isActive ? 230 : 190,
+      duration: isActive ? 220 : 180,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
@@ -113,13 +114,30 @@ export function AurenComposer({
     });
   }, [isActive, targetInputHeight, value.length]);
 
+  useEffect(() => {
+    if (!focused && !hasText && !hasAttachments) {
+      setForcedActive(false);
+    }
+  }, [focused, hasAttachments, hasText]);
+
+  function activateComposer() {
+    setForcedActive(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
+
   function handleFocus() {
+    setForcedActive(true);
     setFocused(true);
     onFocus?.();
   }
 
   function handleBlur() {
     setFocused(false);
+
+    if (!hasText && !hasAttachments) {
+      setForcedActive(false);
+    }
+
     onBlur?.();
   }
 
@@ -168,7 +186,7 @@ export function AurenComposer({
       style={[styles.composer, animatedComposerStyle]}
       onLayout={(event) => onHeightChange?.(event.nativeEvent.layout.height)}
     >
-      <Pressable style={styles.composerPressable} onPress={() => inputRef.current?.focus()}>
+      <Pressable style={styles.composerPressable} onPressIn={activateComposer}>
         {hasAttachments ? (
           <AurenAttachmentTray
             attachments={attachments}
@@ -176,72 +194,64 @@ export function AurenComposer({
           />
         ) : null}
 
-        {isActive ? (
-          <>
-            <TextInput
-              ref={inputRef}
-              value={value}
-              onChangeText={onChangeText}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              onLayout={(event) => setInputWidth(event.nativeEvent.layout.width)}
-              onContentSizeChange={(event) => handleContentSizeChange(event.nativeEvent.contentSize.height)}
-              multiline
-              scrollEnabled={inputCanScroll}
-              textAlignVertical="top"
-              placeholder={hasAttachments ? 'Ask Auren about this image' : 'Ask anything about your studies'}
-              placeholderTextColor={colors.mutedSoft}
-              style={[styles.input, styles.inputActive, { height: inputHeight }]}
-            />
+        <View style={[styles.inputShell, isActive ? styles.inputShellActive : styles.inputShellIdle]}>
+          <TextInput
+            ref={inputRef}
+            value={value}
+            onChangeText={onChangeText}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onPressIn={activateComposer}
+            onLayout={(event) => setInputWidth(event.nativeEvent.layout.width)}
+            onContentSizeChange={(event) => handleContentSizeChange(event.nativeEvent.contentSize.height)}
+            multiline
+            scrollEnabled={inputCanScroll}
+            textAlignVertical="top"
+            placeholder={hasAttachments ? 'Ask Auren about this image' : 'Ask anything about your studies'}
+            placeholderTextColor={colors.mutedSoft}
+            style={[styles.input, isActive ? styles.inputActive : styles.inputIdle, { height: inputHeight }]}
+          />
 
-            <View style={styles.controlsRow}>
-              <View style={styles.leftControls}>
-                <ComposerButton accessibilityLabel="Add image" onPress={onAddImage} active={hasAttachments}>
-                  <Ionicons name="add-outline" size={28} color={COMPOSER_ICON_COLOR} />
-                </ComposerButton>
-              </View>
-
-              <View style={styles.rightControls}>
-                <ComposerButton accessibilityLabel="Use voice">
-                  <Ionicons name="mic-outline" size={25} color={COMPOSER_ICON_COLOR} />
-                </ComposerButton>
-
-                <ComposerButton
-                  accessibilityLabel="Send message"
-                  disabled={!canSend}
-                  onPress={handleSend}
-                  filled={canSend}
-                  send
-                >
-                  <Ionicons name="arrow-up-outline" size={25} color={canSend ? '#ffffff' : DISABLED_ICON_COLOR} />
-                </ComposerButton>
-              </View>
+          {!isActive ? (
+            <View style={styles.idleLeftSlot} pointerEvents="box-none">
+              <ComposerButton accessibilityLabel="Add image" onPress={onAddImage} active={hasAttachments} size="idle">
+                <Ionicons name="add-outline" size={30} color={COMPOSER_ICON_COLOR} />
+              </ComposerButton>
             </View>
-          </>
-        ) : (
-          <View style={styles.idleRow}>
-            <ComposerButton accessibilityLabel="Add image" onPress={onAddImage} active={hasAttachments} size="idle">
-              <Ionicons name="add-outline" size={30} color={COMPOSER_ICON_COLOR} />
-            </ComposerButton>
+          ) : null}
 
-            <TextInput
-              ref={inputRef}
-              value={value}
-              onChangeText={onChangeText}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              multiline
-              scrollEnabled={false}
-              placeholder={hasAttachments ? 'Ask Auren about this image' : 'Ask anything about your studies'}
-              placeholderTextColor={colors.mutedSoft}
-              style={[styles.input, styles.inputIdle]}
-            />
-
+          {!isActive ? (
             <Pressable accessibilityRole="button" accessibilityLabel="Use voice" style={styles.voiceIdleButton}>
               <VoiceGlyph />
             </Pressable>
+          ) : null}
+        </View>
+
+        {isActive ? (
+          <View style={styles.controlsRow}>
+            <View style={styles.leftControls}>
+              <ComposerButton accessibilityLabel="Add image" onPress={onAddImage} active={hasAttachments}>
+                <Ionicons name="add-outline" size={28} color={COMPOSER_ICON_COLOR} />
+              </ComposerButton>
+            </View>
+
+            <View style={styles.rightControls}>
+              <ComposerButton accessibilityLabel="Use voice">
+                <Ionicons name="mic-outline" size={25} color={COMPOSER_ICON_COLOR} />
+              </ComposerButton>
+
+              <ComposerButton
+                accessibilityLabel="Send message"
+                disabled={!canSend}
+                onPress={handleSend}
+                filled={canSend}
+                send
+              >
+                <Ionicons name="arrow-up-outline" size={25} color={canSend ? '#ffffff' : DISABLED_ICON_COLOR} />
+              </ComposerButton>
+            </View>
           </View>
-        )}
+        ) : null}
       </Pressable>
     </Animated.View>
   );
@@ -313,10 +323,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  idleRow: {
+  inputShell: {
+    position: 'relative',
+    width: '100%',
+  },
+
+  inputShellIdle: {
     minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  inputShellActive: {
+    minHeight: MIN_INPUT_HEIGHT,
   },
 
   input: {
@@ -330,15 +348,21 @@ const styles = StyleSheet.create({
   },
 
   inputIdle: {
-    flex: 1,
-    height: 26,
-    marginHorizontal: 13,
+    width: '100%',
+    paddingLeft: 66,
+    paddingRight: 52,
     paddingTop: 1,
     fontWeight: '400',
   },
 
   inputActive: {
     width: '100%',
+  },
+
+  idleLeftSlot: {
+    position: 'absolute',
+    left: 0,
+    top: -1,
   },
 
   controlsRow: {
@@ -409,6 +433,9 @@ const styles = StyleSheet.create({
   },
 
   voiceIdleButton: {
+    position: 'absolute',
+    right: 0,
+    top: 1,
     width: 46,
     height: 46,
     borderRadius: 23,

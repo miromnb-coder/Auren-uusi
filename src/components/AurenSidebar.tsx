@@ -1,4 +1,4 @@
-import { BookOpen, Home, SquarePen } from 'lucide-react-native';
+import { BookOpen, Folder, Home, SquarePen } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -115,11 +115,14 @@ export function AurenSidebar({
                 icon={sidebarIcon(<BookOpen size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
                 label="Study modes"
               />
+              <SidebarItem
+                icon={sidebarIcon(<Folder size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                label="Projects"
+              />
             </View>
 
             <View style={styles.divider} />
 
-            <Text style={styles.sectionLabel}>Recent chats</Text>
             <View style={styles.recentList}>
               {loadingConversations ? (
                 <Text style={styles.emptyRecentText}>Loading chats...</Text>
@@ -217,13 +220,13 @@ const styles = StyleSheet.create({
   },
   drawerInner: {
     flex: 1,
-    paddingTop: 92,
+    paddingTop: 74,
     paddingHorizontal: 28,
     paddingBottom: 24,
   },
   topBar: {
     flexShrink: 0,
-    paddingBottom: 44,
+    paddingBottom: 32,
     backgroundColor: '#fbfbfa',
   },
   brand: {
@@ -273,19 +276,11 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginTop: 36,
+    marginTop: 34,
     marginBottom: 28,
     backgroundColor: 'rgba(17,24,39,0.08)',
   },
-  sectionLabel: {
-    color: colors.muted,
-    fontSize: 15.5,
-    lineHeight: 20,
-    fontWeight: '500',
-    letterSpacing: -0.13,
-  },
   recentList: {
-    marginTop: 20,
     gap: 17,
   },
   recentRow: {
@@ -301,12 +296,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0)',
   },
   activeRecentRow: {
-    backgroundColor: 'rgba(247,246,243,0.72)',
-    borderColor: 'rgba(17,24,39,0.025)',
-    shadowColor: '#111827',
-    shadowOpacity: 0.008,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0)',
+    shadowOpacity: 0,
     elevation: 0,
   },
   recentTitle: {
@@ -327,6 +319,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     fontWeight: '500',
     letterSpacing: -0.13,
+    paddingLeft: 18,
   },
   bottomBar: {
     flexShrink: 0,

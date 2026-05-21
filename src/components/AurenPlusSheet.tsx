@@ -12,6 +12,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -95,17 +96,16 @@ function isRenderableImageUri(uri?: string | null) {
 export function AurenPlusSheet(props: AurenPlusSheetProps) {
   const { visible, onClose } = props;
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
 
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const dragTranslateY = useRef(new Animated.Value(0)).current;
   const scrollYRef = useRef(0);
 
-  const [mounted, setMounted] = useState(visible);
   const [recentPhotos, setRecentPhotos] = useState<RecentPhoto[]>([]);
 
   useEffect(() => {
     if (visible) {
-      setMounted(true);
       dragTranslateY.setValue(0);
       scrollYRef.current = 0;
       loadRecentPhotos();
@@ -119,7 +119,6 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
     }).start(({ finished }) => {
       if (finished && !visible) {
         dragTranslateY.setValue(0);
-        setMounted(false);
       }
     });
   }, [dragTranslateY, progress, visible]);
@@ -230,20 +229,17 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
     outputRange: [0, 0.47],
   });
 
+  const hiddenSheetTranslateY = height + 120;
   const baseSheetTranslateY = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [900, 0],
+    outputRange: [hiddenSheetTranslateY, 0],
   });
 
   const sheetTranslateY = Animated.add(baseSheetTranslateY, dragTranslateY);
 
-  if (!mounted) {
-    return null;
-  }
-
   return (
     <View pointerEvents={visible ? 'auto' : 'none'} style={styles.root}>
-      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+      <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}> 
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       </Animated.View>
 
@@ -416,7 +412,7 @@ function ConnectorRow({ connector }: { connector: Connector }) {
   return (
     <View style={styles.connectorRow}>
       <View style={styles.connectorIconFrame}>
-        <Image source={connector.icon} style={styles.connectorIconImage} />
+        <Image source={connector.icon} style={styles.connectorIconImage} fadeDuration={0} />
       </View>
 
       <Text style={styles.connectorLabel}>{connector.label}</Text>

@@ -6,9 +6,9 @@ import type { AurenImageAttachment } from '../lib/aurenAttachments';
 import { colors, shadows } from '../theme';
 import { AurenAttachmentTray } from './AurenAttachmentTray';
 
-const COMPOSER_ICON_COLOR = colors.icon;
-const DISABLED_ICON_COLOR = colors.mutedSoft;
-const ICON_STROKE_WIDTH = 2.25;
+const COMPOSER_ICON_COLOR = 'rgba(15,17,21,0.84)';
+const DISABLED_ICON_COLOR = 'rgba(110,113,124,0.42)';
+const ICON_STROKE_WIDTH = 1.95;
 
 const INPUT_LINE_HEIGHT = 22;
 const MIN_INPUT_HEIGHT = INPUT_LINE_HEIGHT;
@@ -216,7 +216,7 @@ export function AurenComposer({
           {!isActive ? (
             <View style={styles.idleLeftSlot} pointerEvents="box-none">
               <ComposerButton accessibilityLabel="Add image" onPress={onAddImage} active={hasAttachments} size="idle">
-                <Plus size={30} color={COMPOSER_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
+                <Plus size={27} color={COMPOSER_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
               </ComposerButton>
             </View>
           ) : null}
@@ -226,13 +226,13 @@ export function AurenComposer({
           <View style={styles.controlsRow}>
             <View style={styles.leftControls}>
               <ComposerButton accessibilityLabel="Add image" onPress={onAddImage} active={hasAttachments}>
-                <Plus size={28} color={COMPOSER_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
+                <Plus size={25} color={COMPOSER_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
               </ComposerButton>
             </View>
 
             <View style={styles.rightControls}>
               <ComposerButton accessibilityLabel="Use voice">
-                <Mic size={24} color={COMPOSER_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
+                <Mic size={22} color={COMPOSER_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
               </ComposerButton>
 
               <ComposerButton
@@ -242,7 +242,7 @@ export function AurenComposer({
                 filled={canSend}
                 send
               >
-                <ArrowUp size={25} color={canSend ? '#ffffff' : DISABLED_ICON_COLOR} strokeWidth={2.35} />
+                <ArrowUp size={23} color={canSend ? '#ffffff' : DISABLED_ICON_COLOR} strokeWidth={2.05} />
               </ComposerButton>
             </View>
           </View>
@@ -389,28 +389,28 @@ const styles = StyleSheet.create({
   },
 
   buttonActive: {
-    backgroundColor: 'rgba(17,24,39,0.045)',
-    borderColor: 'rgba(17,24,39,0.09)',
+    backgroundColor: 'rgba(17,24,39,0.035)',
+    borderColor: 'rgba(17,24,39,0.07)',
   },
 
   sendButton: {
-    backgroundColor: 'rgba(17,24,39,0.08)',
-    borderColor: 'rgba(17,24,39,0.06)',
+    backgroundColor: 'rgba(17,24,39,0.065)',
+    borderColor: 'rgba(17,24,39,0.052)',
   },
 
   buttonFilled: {
     backgroundColor: '#111111',
     borderColor: '#111111',
     shadowColor: '#111827',
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
+    shadowOpacity: 0.12,
+    shadowRadius: 11,
     shadowOffset: { width: 0, height: 6 },
     elevation: 4,
   },
 
   buttonDisabled: {
-    backgroundColor: 'rgba(17,24,39,0.08)',
-    borderColor: 'rgba(17,24,39,0.06)',
+    backgroundColor: 'rgba(17,24,39,0.06)',
+    borderColor: 'rgba(17,24,39,0.045)',
     shadowOpacity: 0,
     elevation: 0,
   },

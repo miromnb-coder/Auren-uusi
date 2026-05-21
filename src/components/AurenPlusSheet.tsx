@@ -101,13 +101,21 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const dragTranslateY = useRef(new Animated.Value(0)).current;
   const scrollYRef = useRef(0);
+  const sheetScrollRef = useRef<ScrollView | null>(null);
+  const photoStripScrollRef = useRef<ScrollView | null>(null);
 
   const [recentPhotos, setRecentPhotos] = useState<RecentPhoto[]>([]);
+
+  function resetSheetScrollPositions() {
+    scrollYRef.current = 0;
+    sheetScrollRef.current?.scrollTo({ y: 0, animated: false });
+    photoStripScrollRef.current?.scrollTo({ x: 0, animated: false });
+  }
 
   useEffect(() => {
     if (visible) {
       dragTranslateY.setValue(0);
-      scrollYRef.current = 0;
+      resetSheetScrollPositions();
       loadRecentPhotos();
     }
 
@@ -119,6 +127,7 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
     }).start(({ finished }) => {
       if (finished && !visible) {
         dragTranslateY.setValue(0);
+        resetSheetScrollPositions();
       }
     });
   }, [dragTranslateY, progress, visible]);
@@ -256,6 +265,7 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
         <View style={styles.handle} />
 
         <ScrollView
+          ref={sheetScrollRef}
           showsVerticalScrollIndicator={false}
           bounces={false}
           scrollEventThrottle={16}
@@ -274,6 +284,7 @@ export function AurenPlusSheet(props: AurenPlusSheetProps) {
           </View>
 
           <ScrollView
+            ref={photoStripScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             bounces

@@ -13,6 +13,7 @@ const INPUT_LINE_HEIGHT = 22;
 const MIN_INPUT_HEIGHT = INPUT_LINE_HEIGHT;
 const MAX_INPUT_HEIGHT = 112;
 const ESTIMATED_CHARACTER_WIDTH = 8.4;
+const HEIGHT_REPORT_THRESHOLD = 8;
 
 const IDLE_COMPOSER_HEIGHT = 66;
 const ACTIVE_COMPOSER_MIN_HEIGHT = 112;
@@ -59,6 +60,7 @@ export function AurenComposer({
 }: AurenComposerProps) {
   const inputRef = useRef<TextInput>(null);
   const transition = useRef(new Animated.Value(0)).current;
+  const lastReportedHeightRef = useRef(0);
 
   const [focused, setFocused] = useState(false);
   const [forcedActive, setForcedActive] = useState(false);
@@ -84,7 +86,7 @@ export function AurenComposer({
   useEffect(() => {
     Animated.timing(transition, {
       toValue: isActive ? 1 : 0,
-      duration: isActive ? 220 : 180,
+      duration: isActive ? 130 : 145,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
@@ -122,7 +124,7 @@ export function AurenComposer({
 
   function activateComposer() {
     setForcedActive(true);
-    requestAnimationFrame(() => inputRef.current?.focus());
+    inputRef.current?.focus();
   }
 
   function handleFocus() {
@@ -158,6 +160,17 @@ export function AurenComposer({
     });
   }
 
+  function handleComposerLayout(height: number) {
+    const nextHeight = Math.ceil(height);
+
+    if (Math.abs(lastReportedHeightRef.current - nextHeight) < HEIGHT_REPORT_THRESHOLD) {
+      return;
+    }
+
+    lastReportedHeightRef.current = nextHeight;
+    onHeightChange?.(nextHeight);
+  }
+
   const animatedComposerStyle = {
     minHeight: transition.interpolate({
       inputRange: [0, 1],
@@ -184,7 +197,7 @@ export function AurenComposer({
   return (
     <Animated.View
       style={[styles.composer, animatedComposerStyle]}
-      onLayout={(event) => onHeightChange?.(event.nativeEvent.layout.height)}
+      onLayout={(event) => handleComposerLayout(event.nativeEvent.layout.height)}
     >
       <Pressable style={styles.composerPressable} onPressIn={activateComposer}>
         {hasAttachments ? (

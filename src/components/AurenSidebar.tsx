@@ -1,10 +1,9 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { BookOpen, Home, SquarePen } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { AurenConversation } from '../lib/aurenConversations';
 import { colors } from '../theme';
-import { AurenComposeGlyph } from './AurenComposeGlyph';
 
 type AurenSidebarProps = {
   open: boolean;
@@ -22,7 +21,12 @@ type AurenSidebarProps = {
 const DRAWER_WIDTH_RATIO = 0.78;
 const DRAWER_MIN_WIDTH = 292;
 const DRAWER_MAX_WIDTH = 420;
+const ICON_STROKE_WIDTH = 2.35;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
+
+function sidebarIcon(icon: ReactNode) {
+  return icon;
+}
 
 export function AurenSidebar({
   open,
@@ -96,9 +100,20 @@ export function AurenSidebar({
             bounces
           >
             <View style={styles.primaryNav}>
-              <SidebarItem icon="home-outline" label="Home" onPress={onClose} />
-              <SidebarItem variant="compose" label="New chat" onPress={onNewChat} />
-              <SidebarItem icon="book-outline" label="Study modes" />
+              <SidebarItem
+                icon={sidebarIcon(<Home size={30} color={colors.icon} strokeWidth={ICON_STROKE_WIDTH} />)}
+                label="Home"
+                onPress={onClose}
+              />
+              <SidebarItem
+                icon={sidebarIcon(<SquarePen size={29} color={colors.icon} strokeWidth={ICON_STROKE_WIDTH} />)}
+                label="New chat"
+                onPress={onNewChat}
+              />
+              <SidebarItem
+                icon={sidebarIcon(<BookOpen size={30} color={colors.icon} strokeWidth={ICON_STROKE_WIDTH} />)}
+                label="Study modes"
+              />
             </View>
 
             <View style={styles.divider} />
@@ -142,7 +157,7 @@ export function AurenSidebar({
             </Pressable>
 
             <Pressable onPress={onNewChat} style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Start a new chat">
-              <AurenComposeGlyph size={34} color="#0f1115" strokeWidth={2.9} />
+              <SquarePen size={32} color="#0f1115" strokeWidth={2.4} />
             </Pressable>
           </View>
         </View>
@@ -152,22 +167,15 @@ export function AurenSidebar({
 }
 
 type SidebarItemProps = {
-  icon?: keyof typeof Ionicons.glyphMap;
+  icon?: ReactNode;
   label: string;
   onPress?: () => void;
-  variant?: 'compose';
 };
 
-function SidebarItem({ icon, label, onPress, variant }: SidebarItemProps) {
+function SidebarItem({ icon, label, onPress }: SidebarItemProps) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.navItem, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
-      <View style={styles.navIconSlot}>
-        {variant === 'compose' ? (
-          <AurenComposeGlyph size={31} color={colors.icon} strokeWidth={2.85} />
-        ) : icon ? (
-          <Ionicons name={icon} size={27} color={colors.icon} />
-        ) : null}
-      </View>
+      <View style={styles.navIconSlot}>{icon}</View>
       <Text style={styles.navLabel}>{label}</Text>
     </Pressable>
   );

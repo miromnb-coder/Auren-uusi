@@ -18,11 +18,11 @@ type AurenSidebarProps = {
   onSelectConversation?: (conversationId: string) => void;
 };
 
-const DRAWER_WIDTH_RATIO = 0.78;
+const DRAWER_WIDTH_RATIO = 0.79;
 const DRAWER_MIN_WIDTH = 292;
-const DRAWER_MAX_WIDTH = 420;
-const SIDEBAR_ICON_COLOR = 'rgba(15,17,21,0.84)';
-const ICON_STROKE_WIDTH = 1.9;
+const DRAWER_MAX_WIDTH = 440;
+const SIDEBAR_ICON_COLOR = 'rgba(34,27,23,0.84)';
+const ICON_STROKE_WIDTH = 1.82;
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 function sidebarIcon(icon: ReactNode) {
@@ -46,7 +46,7 @@ export function AurenSidebar({
 
   const drawerWidth = useMemo(() => {
     const measuredWidth = width * DRAWER_WIDTH_RATIO;
-    return Math.min(Math.max(measuredWidth, DRAWER_MIN_WIDTH), Math.min(DRAWER_MAX_WIDTH, width - 74));
+    return Math.min(Math.max(measuredWidth, DRAWER_MIN_WIDTH), Math.min(DRAWER_MAX_WIDTH, width - 70));
   }, [width]);
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export function AurenSidebar({
     outputRange: [0, drawerWidth],
   });
 
-  const visibleMainWidth = Math.max(width - drawerWidth, 74);
+  const visibleMainWidth = Math.max(width - drawerWidth, 70);
 
   return (
     <View style={styles.root}>
@@ -102,17 +102,17 @@ export function AurenSidebar({
           >
             <View style={styles.primaryNav}>
               <SidebarItem
-                icon={sidebarIcon(<Home size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                icon={sidebarIcon(<Home size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
                 label="Home"
                 onPress={onClose}
               />
               <SidebarItem
-                icon={sidebarIcon(<SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                icon={sidebarIcon(<SquarePen size={25} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
                 label="New chat"
                 onPress={onNewChat}
               />
               <SidebarItem
-                icon={sidebarIcon(<BookOpen size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                icon={sidebarIcon(<BookOpen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
                 label="Study modes"
               />
               <SidebarItem
@@ -161,7 +161,7 @@ export function AurenSidebar({
             </Pressable>
 
             <Pressable onPress={onNewChat} style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Start a new chat">
-              <SquarePen size={28} color={SIDEBAR_ICON_COLOR} strokeWidth={1.95} />
+              <SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={1.85} />
             </Pressable>
           </View>
         </View>
@@ -213,36 +213,36 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 30,
     backgroundColor: '#fbfbfa',
     shadowColor: '#111827',
-    shadowOpacity: 0.11,
+    shadowOpacity: 0.08,
     shadowRadius: 28,
-    shadowOffset: { width: 16, height: 0 },
+    shadowOffset: { width: 14, height: 0 },
     elevation: 12,
   },
   drawerInner: {
     flex: 1,
-    paddingTop: 74,
-    paddingHorizontal: 28,
+    paddingTop: 92,
+    paddingHorizontal: 36,
     paddingBottom: 24,
   },
   topBar: {
     flexShrink: 0,
-    paddingBottom: 32,
+    paddingBottom: 50,
     backgroundColor: '#fbfbfa',
   },
   brand: {
     color: colors.text,
     fontFamily: serifFont,
-    fontSize: 35,
-    lineHeight: 41,
-    letterSpacing: -1.05,
+    fontSize: 40,
+    lineHeight: 47,
+    letterSpacing: -1.2,
   },
   subtitle: {
     marginTop: 6,
     color: colors.muted,
-    fontSize: 16,
-    lineHeight: 21,
-    fontWeight: '500',
-    letterSpacing: -0.16,
+    fontSize: 16.5,
+    lineHeight: 22,
+    fontWeight: '400',
+    letterSpacing: -0.14,
   },
   scroll: {
     flex: 1,
@@ -251,48 +251,46 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
   },
   primaryNav: {
-    gap: 25,
+    gap: 29,
   },
   navItem: {
     minHeight: 34,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 24,
+    gap: 34,
   },
   navIconSlot: {
-    width: 34,
+    width: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
   navLabel: {
     color: colors.text,
-    fontSize: 18.5,
+    fontSize: 18,
     lineHeight: 24,
-    fontWeight: '500',
-    letterSpacing: -0.22,
+    fontWeight: '400',
+    letterSpacing: -0.18,
   },
   pressed: {
     opacity: 0.58,
   },
   divider: {
     height: 1,
-    marginTop: 34,
-    marginBottom: 28,
-    backgroundColor: 'rgba(17,24,39,0.08)',
+    marginTop: 42,
+    marginBottom: 30,
+    backgroundColor: 'rgba(17,24,39,0.075)',
   },
   recentList: {
-    gap: 17,
+    gap: 20,
   },
   recentRow: {
-    minHeight: 46,
+    minHeight: 42,
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 17,
-    paddingLeft: 18,
-    paddingRight: 18,
-    marginLeft: 0,
-    marginRight: 2,
-    borderWidth: 1,
+    borderRadius: 0,
+    paddingLeft: 4,
+    paddingRight: 6,
+    borderWidth: 0,
     borderColor: 'rgba(255,255,255,0)',
   },
   activeRecentRow: {
@@ -304,22 +302,22 @@ const styles = StyleSheet.create({
   recentTitle: {
     flex: 1,
     color: colors.text,
-    fontSize: 17.2,
-    lineHeight: 23,
-    fontWeight: '500',
-    letterSpacing: -0.22,
+    fontSize: 16.6,
+    lineHeight: 22,
+    fontWeight: '400',
+    letterSpacing: -0.15,
   },
   activeRecentTitle: {
-    color: '#12151c',
-    fontWeight: '500',
+    color: colors.text,
+    fontWeight: '400',
   },
   emptyRecentText: {
     color: colors.muted,
     fontSize: 15.5,
     lineHeight: 21,
-    fontWeight: '500',
+    fontWeight: '400',
     letterSpacing: -0.13,
-    paddingLeft: 18,
+    paddingLeft: 4,
   },
   bottomBar: {
     flexShrink: 0,
@@ -333,18 +331,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#fbfbfa',
   },
   profileInline: {
-    minWidth: 132,
-    maxWidth: 228,
-    flex: 1,
-    minHeight: 52,
+    width: 162,
+    minHeight: 56,
+    paddingLeft: 10,
+    paddingRight: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 13,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.055)',
+    shadowColor: '#111827',
+    shadowOpacity: 0.035,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#cf8230',
@@ -358,10 +365,10 @@ const styles = StyleSheet.create({
   profileName: {
     flexShrink: 1,
     color: colors.text,
-    fontSize: 18.5,
+    fontSize: 17.5,
     lineHeight: 23,
-    fontWeight: '500',
-    letterSpacing: -0.22,
+    fontWeight: '400',
+    letterSpacing: -0.18,
   },
   composeButton: {
     width: 58,

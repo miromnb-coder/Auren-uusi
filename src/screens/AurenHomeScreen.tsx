@@ -5,6 +5,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { AurenComposer } from '../components/AurenComposer';
 import { AurenHeader } from '../components/AurenHeader';
 import { AurenMessageList, type AurenMessage } from '../components/AurenMessageList';
+import { AurenPlusSheet } from '../components/AurenPlusSheet';
 import { AurenQuickActions } from '../components/AurenQuickActions';
 import { AurenSidebar } from '../components/AurenSidebar';
 import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
@@ -85,6 +86,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const userId = session.user.id;
   const { profileName, avatarLetter } = useMemo(() => getSessionProfile(session), [session]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [plusSheetOpen, setPlusSheetOpen] = useState(false);
   const [draft, setDraft] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [selectedImages, setSelectedImages] = useState<AurenImageAttachment[]>([]);
@@ -129,6 +131,21 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setSidebarOpen(false);
   }
 
+  function openPlusSheet() {
+    Keyboard.dismiss();
+    setPlusSheetOpen(true);
+  }
+
+  function closePlusSheet() {
+    setPlusSheetOpen(false);
+  }
+
+  function usePlusPrompt(prompt: string) {
+    setPlusSheetOpen(false);
+    setDraft(prompt);
+    setInputFocused(true);
+  }
+
   function stopThinkingTimeline() {
     thinkingRunRef.current += 1;
     setAssistantThinking(false);
@@ -153,6 +170,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setDraft('');
     setSelectedImages([]);
     setSidebarOpen(false);
+    setPlusSheetOpen(false);
   }
 
   async function handleSelectConversation(conversationId: string) {
@@ -188,6 +206,11 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     if (!attachment) return;
     setSelectedImages([attachment]);
     setInputFocused(true);
+  }
+
+  async function handlePickImageFromSheet() {
+    setPlusSheetOpen(false);
+    await handleAddImage();
   }
 
   function handleRemoveAttachment(id: string) {
@@ -519,7 +542,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
             value={draft}
             attachments={selectedImages}
             onChangeText={setDraft}
-            onAddImage={handleAddImage}
+            onAddImage={openPlusSheet}
             onRemoveAttachment={handleRemoveAttachment}
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
@@ -527,6 +550,19 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
             onHeightChange={setComposerHeight}
           />
         </Animated.View>
+
+        <AurenPlusSheet
+          visible={plusSheetOpen}
+          onClose={closePlusSheet}
+          onCamera={handlePickImageFromSheet}
+          onPhotos={handlePickImageFromSheet}
+          onFiles={closePlusSheet}
+          onCreateFlashcards={() => usePlusPrompt('Create flashcards from ')}
+          onSummarizeNotes={() => usePlusPrompt('Summarize these notes: ')}
+          onExplainTask={() => usePlusPrompt('Explain this task step by step: ')}
+          onExplainFromImage={handlePickImageFromSheet}
+          onStartStudySession={() => usePlusPrompt('Start a focused study session for ')}
+        />
       </SafeAreaView>
     </AurenSidebar>
   );

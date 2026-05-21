@@ -46,6 +46,14 @@ type RecentPhoto = {
   uri: string;
 };
 
+const CONNECTOR_ICONS = {
+  googleDrive: require('../assets/connectors/google-drive.PNG'),
+  gmail: require('../assets/connectors/gmail.PNG'),
+  googleCalendar: require('../assets/connectors/google-calendar.PNG'),
+  outlookCalendar: require('../assets/connectors/outlook-calendar.PNG'),
+  outlookMail: require('../assets/connectors/outlook-mail.PNG'),
+} satisfies Record<string, ImageSourcePropType>;
+
 const STUDY_ACTIONS = (props: AurenPlusSheetProps): SheetAction[] => [
   { label: 'Create flashcards', icon: 'copy-outline', onPress: props.onCreateFlashcards },
   { label: 'Summarize notes', icon: 'reorder-three-outline', onPress: props.onSummarizeNotes },
@@ -55,11 +63,11 @@ const STUDY_ACTIONS = (props: AurenPlusSheetProps): SheetAction[] => [
 ];
 
 const CONNECTORS: Connector[] = [
-  { label: 'Google Drive', icon: require('../assets/connectors/google-drive.PNG') },
-  { label: 'Gmail', icon: require('../assets/connectors/gmail.PNG') },
-  { label: 'Google Calendar', icon: require('../assets/connectors/google-calendar.PNG') },
-  { label: 'Outlook Calendar', icon: require('../assets/connectors/outlook-calendar.PNG') },
-  { label: 'Outlook Mail', icon: require('../assets/connectors/outlook-mail.PNG') },
+  { label: 'Google Drive', icon: CONNECTOR_ICONS.googleDrive },
+  { label: 'Gmail', icon: CONNECTOR_ICONS.gmail },
+  { label: 'Google Calendar', icon: CONNECTOR_ICONS.googleCalendar },
+  { label: 'Outlook Calendar', icon: CONNECTOR_ICONS.outlookCalendar },
+  { label: 'Outlook Mail', icon: CONNECTOR_ICONS.outlookMail },
 ];
 
 const SHEET_BACKGROUND = '#fbfaf7';

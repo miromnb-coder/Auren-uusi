@@ -34,7 +34,7 @@ const DRAWER_WIDTH_RATIO = 0.82;
 const DRAWER_MIN_WIDTH = 316;
 const DRAWER_MAX_WIDTH = 470;
 
-const DRAWER_BACKGROUND = '#fbfaf7';
+const DRAWER_BACKGROUND = '#fffefb';
 const SIDEBAR_ICON_COLOR = 'rgba(34,27,23,0.84)';
 const ICON_STROKE_WIDTH = 1.82;
 
@@ -389,13 +389,13 @@ const styles = StyleSheet.create({
   },
   drawerInner: {
     flex: 1,
-    paddingTop: 96,
+    paddingTop: 74,
     paddingHorizontal: 38,
     paddingBottom: 24,
   },
   topBar: {
     flexShrink: 0,
-    paddingBottom: 55,
+    paddingBottom: 44,
     backgroundColor: DRAWER_BACKGROUND,
   },
   brand: {
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   primaryNav: {
-    gap: 31,
+    gap: 26,
   },
   navItem: {
     minHeight: 38,
@@ -445,12 +445,12 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginTop: 44,
-    marginBottom: 31,
+    marginTop: 36,
+    marginBottom: 27,
     backgroundColor: 'rgba(17,24,39,0.085)',
   },
   recentList: {
-    gap: 21,
+    gap: 19,
   },
   recentRow: {
     minHeight: 43,

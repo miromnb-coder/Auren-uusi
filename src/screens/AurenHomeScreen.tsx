@@ -142,6 +142,23 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setSidebarOpen(false);
   }
 
+  function returnFromProjectsToSidebar() {
+    void aurenHaptics.panelOpen();
+    Keyboard.dismiss();
+    setPlusSheetOpen(false);
+    setActiveScreen('chat');
+    setSidebarOpen(true);
+  }
+
+  function handleSidebarOpen() {
+    if (activeScreen === 'projects') {
+      returnFromProjectsToSidebar();
+      return;
+    }
+
+    openSidebar();
+  }
+
   function openPlusSheet() {
     void aurenHaptics.panelOpen();
     Keyboard.dismiss();
@@ -162,8 +179,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   }
 
   function closeProjects() {
-    void aurenHaptics.selection();
-    setActiveScreen('chat');
+    returnFromProjectsToSidebar();
   }
 
   function handleCreateProject() {
@@ -547,12 +563,12 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   return (
     <AurenSidebar
       open={sidebarOpen}
-      onOpen={openSidebar}
+      onOpen={handleSidebarOpen}
       onClose={closeSidebar}
       onNewChat={startNewChat}
       onProjects={openProjects}
-      gesturesEnabled={!plusSheetOpen && activeScreen === 'chat'}
-      gestureBottomExclusion={sidebarGestureBottomExclusion}
+      gesturesEnabled={!plusSheetOpen}
+      gestureBottomExclusion={activeScreen === 'chat' ? sidebarGestureBottomExclusion : 0}
       conversations={conversations}
       activeConversationId={activeConversationId}
       profileName={profileName}

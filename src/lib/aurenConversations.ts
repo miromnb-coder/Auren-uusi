@@ -145,6 +145,27 @@ export async function createAurenConversation(userId: string, title: string) {
   return mapConversation(data as ConversationRow);
 }
 
+export async function updateAurenConversationTitle(conversationId: string, title: string) {
+  const trimmedTitle = title.trim();
+
+  if (!trimmedTitle) {
+    throw new Error('Conversation title is required.');
+  }
+
+  const { data, error } = await supabase
+    .from('conversations')
+    .update({ title: trimmedTitle, updated_at: new Date().toISOString() })
+    .eq('id', conversationId)
+    .select('id,user_id,title,created_at,updated_at,last_message_at')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapConversation(data as ConversationRow);
+}
+
 export async function listAurenProjects(userId: string) {
   const { data, error } = await supabase
     .from('projects')

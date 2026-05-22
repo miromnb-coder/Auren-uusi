@@ -1,7 +1,7 @@
 import { Folder, Search, Settings, SquarePen, Trash2, X } from 'lucide-react-native';
 import type { ElementRef, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing as ReanimatedEasing,
@@ -71,6 +71,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function getActionErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export function AurenSidebar({
   open,
   children,
@@ -92,12 +96,7 @@ export function AurenSidebar({
 }: AurenSidebarProps) {
   const { width, height } = useWindowDimensions();
   const [actionTarget, setActionTarget] = useState<ConversationContextTarget | null>(null);
-  const [renameConversation, setRenameConversation] = useState<AurenConversation | null>(null);
-  const [deleteConversation, setDeleteConversation] = useState<AurenConversation | null>(null);
-  const [renameDraft, setRenameDraft] = useState('');
-  const [renameError, setRenameError] = useState<string | null>(null);
-  const [renameSubmitting, setRenameSubmitting] = useState(false);
-  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const actionBusyRef = useRef(false);
   const conversationRowRefs = useRef<Record<string, ElementRef<typeof Pressable> | null>>({});
   const drawerProgress = useSharedValue(open ? 1 : 0);
   const openValue = useSharedValue(open ? 1 : 0);
@@ -152,64 +151,91 @@ export function AurenSidebar({
     setActionTarget(null);
   }
 
-  function openRenameConversation(conversation: AurenConversation) {
-    void aurenHaptics.selection();
-    setActionTarget(null);
-    setRenameError(null);
-    setRenameDraft(conversation.title);
-    setRenameConversation(conversation);
-  }
+  async function renameConversationWithNativeAlert(conversation: AurenConversation, nextTitle?: string) {
+    const trimmedTitle = nextTitle?.trim() ?? '';
 
-  function closeRenameConversation() {
-    if (renameSubmitting) return;
-    setRenameConversation(null);
-    setRenameDraft('');
-    setRenameError(null);
-  }
-
-  async function submitRenameConversation() {
-    if (!renameConversation || renameSubmitting) return;
-
-    const trimmedTitle = renameDraft.trim();
     if (!trimmedTitle) {
-      setRenameError('Chat name is required.');
+      Alert.alert('Rename chat', 'Chat name is required.');
       return;
     }
 
-    setRenameSubmitting(true);
-    setRenameError(null);
+    if (trimmedTitle === conversation.title) {
+      return;
+    }
+
+    if (actionBusyRef.current) {
+      return;
+    }
+
+    actionBusyRef.current = true;
     try {
-      await onRenameConversation?.(renameConversation, trimmedTitle);
-      setRenameConversation(null);
-      setRenameDraft('');
+      await onRenameConversation?.(conversation, trimmedTitle);
     } catch (error) {
-      setRenameError(error instanceof Error ? error.message : 'Could not rename this chat.');
+      Alert.alert('Could not rename chat', getActionErrorMessage(error, 'Please try again.'));
     } finally {
-      setRenameSubmitting(false);
+      actionBusyRef.current = false;
+    }
+  }
+
+  function openRenameConversation(conversation: AurenConversation) {
+    void aurenHaptics.selection();
+    setActionTarget(null);
+
+    if (Platform.OS === 'ios') {
+      Alert.prompt(
+        'Rename chat',
+        undefined,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Save',
+            onPress: (value) => {
+              void renameConversationWithNativeAlert(conversation, value);
+            },
+          },
+        ],
+        'plain-text',
+        conversation.title,
+      );
+      return;
+    }
+
+    Alert.alert('Rename chat', 'Renaming chats is currently available on iPhone.');
+  }
+
+  async function deleteConversationWithNativeAlert(conversation: AurenConversation) {
+    if (actionBusyRef.current) {
+      return;
+    }
+
+    actionBusyRef.current = true;
+    try {
+      await onDeleteConversation?.(conversation);
+    } catch (error) {
+      Alert.alert('Could not delete chat', getActionErrorMessage(error, 'Please try again.'));
+    } finally {
+      actionBusyRef.current = false;
     }
   }
 
   function openDeleteConversation(conversation: AurenConversation) {
     void aurenHaptics.selection();
     setActionTarget(null);
-    setDeleteConversation(conversation);
-  }
 
-  function closeDeleteConversation() {
-    if (deleteSubmitting) return;
-    setDeleteConversation(null);
-  }
-
-  async function confirmDeleteConversation() {
-    if (!deleteConversation || deleteSubmitting) return;
-
-    setDeleteSubmitting(true);
-    try {
-      await onDeleteConversation?.(deleteConversation);
-      setDeleteConversation(null);
-    } finally {
-      setDeleteSubmitting(false);
-    }
+    Alert.alert(
+      'Delete chat?',
+      'You won’t see this chat here anymore. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void deleteConversationWithNativeAlert(conversation);
+          },
+        },
+      ],
+    );
   }
 
   const rootGesture = useMemo(
@@ -224,29 +250,18 @@ export function AurenSidebar({
           rootGestureEligible.value = startsAboveComposer || openValue.value > 0.01 ? 1 : 0;
         })
         .onUpdate((event) => {
-          if (!rootGestureEligible.value) {
-            return;
-          }
+          if (!rootGestureEligible.value) return;
 
           const isMostlyHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY) * HORIZONTAL_DOMINANCE;
-          if (!isMostlyHorizontal) {
-            return;
-          }
+          if (!isMostlyHorizontal) return;
 
-          if (openValue.value < 0.01 && event.translationX < 0) {
-            return;
-          }
-
-          if (openValue.value > 0.01 && event.translationX > 0) {
-            return;
-          }
+          if (openValue.value < 0.01 && event.translationX < 0) return;
+          if (openValue.value > 0.01 && event.translationX > 0) return;
 
           drawerProgress.value = clampProgress(rootGestureStartProgress.value + event.translationX / drawerWidth);
         })
         .onEnd((event) => {
-          if (!rootGestureEligible.value) {
-            return;
-          }
+          if (!rootGestureEligible.value) return;
 
           const shouldOpen =
             event.velocityX > SWIPE_VELOCITY ||
@@ -266,9 +281,7 @@ export function AurenSidebar({
               if (!finished) return;
 
               if (nextOpen) {
-                if (onOpen) {
-                  runOnJS(onOpen)();
-                }
+                if (onOpen) runOnJS(onOpen)();
               } else {
                 runOnJS(onClose)();
               }
@@ -294,9 +307,7 @@ export function AurenSidebar({
           const isMostlyHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY) * HORIZONTAL_DOMINANCE;
           const isClosingDirection = event.translationX < 0;
 
-          if (!isMostlyHorizontal || !isClosingDirection) {
-            return;
-          }
+          if (!isMostlyHorizontal || !isClosingDirection) return;
 
           drawerProgress.value = clampProgress(drawerCloseGestureStartProgress.value + event.translationX / drawerWidth);
         })
@@ -313,10 +324,7 @@ export function AurenSidebar({
             },
             (finished) => {
               if (!finished) return;
-
-              if (shouldClose) {
-                runOnJS(onClose)();
-              }
+              if (shouldClose) runOnJS(onClose)();
             },
           );
         }),
@@ -334,25 +342,13 @@ export function AurenSidebar({
   return (
     <GestureDetector gesture={rootGesture}>
       <View style={styles.root}>
-        <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>
-          {children}
-        </Animated.View>
+        <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>{children}</Animated.View>
 
         <GestureDetector gesture={drawerCloseGesture}>
-          <Animated.View
-            pointerEvents={open ? 'auto' : 'none'}
-            style={[
-              styles.drawer,
-              drawerAnimatedStyle,
-              {
-                width: drawerWidth,
-              },
-            ]}
-          >
+          <Animated.View pointerEvents={open ? 'auto' : 'none'} style={[styles.drawer, drawerAnimatedStyle, { width: drawerWidth }]}>
             <View style={styles.drawerInner}>
               <View style={styles.headerRow}>
                 <Text style={styles.brand}>Auren</Text>
-
                 <Pressable
                   onPress={onClose}
                   style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
@@ -363,12 +359,7 @@ export function AurenSidebar({
                 </Pressable>
               </View>
 
-              <ScrollView
-                style={styles.scroll}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                bounces
-              >
+              <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces>
                 <View style={styles.primaryNav}>
                   <SidebarItem
                     icon={<SquarePen size={30} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
@@ -376,12 +367,10 @@ export function AurenSidebar({
                     onPress={onNewChat}
                     active={activeItem === 'newChat'}
                   />
-
                   <SidebarItem
                     icon={<Search size={32} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
                     label="Search chats"
                   />
-
                   <SidebarItem
                     icon={<Folder size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
                     label="Projects"
@@ -392,7 +381,6 @@ export function AurenSidebar({
 
                 <View style={styles.recentSection}>
                   <Text style={styles.recentHeader}>Recent</Text>
-
                   <View style={styles.recentList}>
                     {loadingConversations ? (
                       <Text style={styles.emptyRecentText}>Loading chats...</Text>
@@ -435,17 +423,9 @@ export function AurenSidebar({
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{avatarLetter}</Text>
                   </View>
-
-                  <Text style={styles.profileName} numberOfLines={1}>
-                    {profileName}
-                  </Text>
+                  <Text style={styles.profileName} numberOfLines={1}>{profileName}</Text>
                 </Pressable>
-
-                <Pressable
-                  style={({ pressed }) => [styles.settingsButton, pressed && styles.pressed]}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open settings"
-                >
+                <Pressable style={({ pressed }) => [styles.settingsButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Open settings">
                   <Settings size={30} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
                 </Pressable>
               </View>
@@ -460,23 +440,6 @@ export function AurenSidebar({
           onClose={closeConversationActions}
           onRename={openRenameConversation}
           onDelete={openDeleteConversation}
-        />
-
-        <RenameConversationModal
-          visible={Boolean(renameConversation)}
-          value={renameDraft}
-          error={renameError}
-          submitting={renameSubmitting}
-          onChangeText={setRenameDraft}
-          onCancel={closeRenameConversation}
-          onSubmit={submitRenameConversation}
-        />
-
-        <DeleteConversationModal
-          conversation={deleteConversation}
-          submitting={deleteSubmitting}
-          onCancel={closeDeleteConversation}
-          onConfirm={confirmDeleteConversation}
         />
       </View>
     </GestureDetector>
@@ -514,9 +477,7 @@ type ConversationActionMenuProps = {
 };
 
 function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, onRename, onDelete }: ConversationActionMenuProps) {
-  if (!target) {
-    return null;
-  }
+  if (!target) return null;
 
   const desiredPillLeft = target.x - CONTEXT_PILL_HORIZONTAL_INSET;
   const desiredPillWidth = target.width + CONTEXT_PILL_HORIZONTAL_INSET * 2;
@@ -535,28 +496,13 @@ function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, on
       <Pressable style={styles.contextOverlay} onPress={onClose}>
         <View
           pointerEvents="none"
-          style={[
-            styles.contextSelectedPill,
-            {
-              left: pillLeft,
-              top: pillTop,
-              width: pillWidth,
-              minHeight: pillHeight,
-            },
-          ]}
+          style={[styles.contextSelectedPill, { left: pillLeft, top: pillTop, width: pillWidth, minHeight: pillHeight }]}
         >
           <Text numberOfLines={1} style={styles.contextSelectedTitle}>{target.conversation.title}</Text>
         </View>
 
         <Pressable
-          style={[
-            styles.contextMenu,
-            {
-              left: menuLeft,
-              top: menuTop,
-              width: CONTEXT_MENU_WIDTH,
-            },
-          ]}
+          style={[styles.contextMenu, { left: menuLeft, top: menuTop, width: CONTEXT_MENU_WIDTH }]}
           onPress={(event) => event.stopPropagation()}
         >
           <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.contextMenuRowPressed]} onPress={() => onRename(target.conversation)}>
@@ -574,88 +520,9 @@ function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, on
   );
 }
 
-type RenameConversationModalProps = {
-  visible: boolean;
-  value: string;
-  error: string | null;
-  submitting: boolean;
-  onChangeText: (value: string) => void;
-  onCancel: () => void;
-  onSubmit: () => void;
-};
-
-function RenameConversationModal({ visible, value, error, submitting, onChangeText, onCancel, onSubmit }: RenameConversationModalProps) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
-        <View style={styles.renameCard}>
-          <Text style={styles.modalTitle}>Rename chat</Text>
-          <TextInput
-            value={value}
-            onChangeText={onChangeText}
-            autoFocus
-            selectTextOnFocus
-            editable={!submitting}
-            style={styles.renameInput}
-            placeholder="Chat name"
-            placeholderTextColor="rgba(104,103,117,0.55)"
-          />
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          <View style={styles.modalActions}>
-            <Pressable disabled={submitting} style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]} onPress={onCancel}>
-              <Text style={styles.cancelActionText}>Cancel</Text>
-            </Pressable>
-            <View style={styles.modalActionDivider} />
-            <Pressable disabled={submitting} style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]} onPress={onSubmit}>
-              <Text style={styles.confirmActionText}>{submitting ? 'Saving...' : 'Save'}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
-  );
-}
-
-type DeleteConversationModalProps = {
-  conversation: AurenConversation | null;
-  submitting: boolean;
-  onCancel: () => void;
-  onConfirm: () => void;
-};
-
-function DeleteConversationModal({ conversation, submitting, onCancel, onConfirm }: DeleteConversationModalProps) {
-  return (
-    <Modal visible={Boolean(conversation)} transparent animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.deleteCard}>
-          <Text style={styles.modalTitle}>Delete chat?</Text>
-          <Text style={styles.deleteMessage}>You won’t see this chat here anymore. This cannot be undone.</Text>
-          {conversation ? <Text numberOfLines={1} style={styles.deleteTitle}>{conversation.title}</Text> : null}
-          <View style={styles.modalActions}>
-            <Pressable disabled={submitting} style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]} onPress={onCancel}>
-              <Text style={styles.cancelActionText}>Cancel</Text>
-            </Pressable>
-            <View style={styles.modalActionDivider} />
-            <Pressable disabled={submitting} style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]} onPress={onConfirm}>
-              <Text style={styles.deleteActionText}>{submitting ? 'Deleting...' : 'Delete'}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
-
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    overflow: 'hidden',
-    backgroundColor: colors.background,
-  },
-  mainScreen: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.background,
-  },
+  root: { flex: 1, overflow: 'hidden', backgroundColor: colors.background },
+  mainScreen: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.background },
   drawer: {
     position: 'absolute',
     top: 0,
@@ -665,11 +532,7 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     backgroundColor: DRAWER_BACKGROUND,
   },
-  drawerInner: {
-    flex: 1,
-    paddingTop: 66,
-    paddingBottom: 20,
-  },
+  drawerInner: { flex: 1, paddingTop: 66, paddingBottom: 20 },
   headerRow: {
     height: 50,
     paddingHorizontal: 32,
@@ -691,17 +554,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scroll: {
-    flex: 1,
-    marginTop: 12,
-  },
-  scrollContent: {
-    paddingBottom: 34,
-  },
-  primaryNav: {
-    paddingHorizontal: 32,
-    gap: 12,
-  },
+  scroll: { flex: 1, marginTop: 12 },
+  scrollContent: { paddingBottom: 34 },
+  primaryNav: { paddingHorizontal: 32, gap: 12 },
   navItem: {
     minHeight: 54,
     flexDirection: 'row',
@@ -716,11 +571,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     backgroundColor: 'rgba(17,24,39,0.035)',
   },
-  navIconSlot: {
-    width: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  navIconSlot: { width: 38, alignItems: 'center', justifyContent: 'center' },
   navLabel: {
     color: colors.text,
     fontSize: 20.2,
@@ -728,13 +579,8 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.32,
   },
-  pressed: {
-    opacity: 0.58,
-  },
-  recentSection: {
-    marginTop: 30,
-    paddingHorizontal: 32,
-  },
+  pressed: { opacity: 0.58 },
+  recentSection: { marginTop: 30, paddingHorizontal: 32 },
   recentHeader: {
     color: colors.muted,
     fontSize: 16.8,
@@ -742,10 +588,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.22,
   },
-  recentList: {
-    marginTop: 18,
-    gap: 13,
-  },
+  recentList: { marginTop: 18, gap: 13 },
   recentRow: {
     minHeight: 39,
     flexDirection: 'row',
@@ -780,10 +623,7 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.18,
   },
-  activeRecentTitle: {
-    color: colors.text,
-    fontWeight: '400',
-  },
+  activeRecentTitle: { color: colors.text, fontWeight: '400' },
   emptyRecentText: {
     color: colors.muted,
     fontSize: 16,
@@ -818,12 +658,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#d89437',
   },
-  avatarText: {
-    color: '#ffffff',
-    fontSize: 17.5,
-    lineHeight: 21,
-    fontWeight: '700',
-  },
+  avatarText: { color: '#ffffff', fontSize: 17.5, lineHeight: 21, fontWeight: '700' },
   profileName: {
     flexShrink: 1,
     color: colors.text,
@@ -839,10 +674,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  contextOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(209,211,218,0.68)',
-  },
+  contextOverlay: { flex: 1, backgroundColor: 'rgba(209,211,218,0.68)' },
   contextMenu: {
     position: 'absolute',
     overflow: 'hidden',
@@ -864,9 +696,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 22,
   },
-  contextMenuRowPressed: {
-    backgroundColor: 'rgba(17,24,39,0.045)',
-  },
+  contextMenuRowPressed: { backgroundColor: 'rgba(17,24,39,0.045)' },
   contextMenuLabel: {
     color: colors.text,
     fontSize: 20,
@@ -874,13 +704,8 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.25,
   },
-  dangerText: {
-    color: DANGER_COLOR,
-  },
-  contextDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(17,24,39,0.12)',
-  },
+  dangerText: { color: DANGER_COLOR },
+  contextDivider: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(17,24,39,0.12)' },
   contextSelectedPill: {
     position: 'absolute',
     justifyContent: 'center',
@@ -901,110 +726,5 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: '400',
     letterSpacing: -0.2,
-  },
-  modalOverlay: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 28,
-    backgroundColor: 'rgba(20,22,28,0.22)',
-  },
-  renameCard: {
-    width: '100%',
-    maxWidth: 420,
-    overflow: 'hidden',
-    borderRadius: 20,
-    paddingTop: 28,
-    backgroundColor: 'rgba(250,250,250,0.98)',
-  },
-  deleteCard: {
-    width: '100%',
-    maxWidth: 420,
-    overflow: 'hidden',
-    borderRadius: 20,
-    paddingTop: 26,
-    backgroundColor: 'rgba(250,250,250,0.98)',
-  },
-  modalTitle: {
-    paddingHorizontal: 24,
-    color: colors.text,
-    fontSize: 22,
-    lineHeight: 28,
-    fontWeight: '700',
-    letterSpacing: -0.42,
-    textAlign: 'center',
-  },
-  renameInput: {
-    minHeight: 52,
-    marginTop: 24,
-    marginHorizontal: 24,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.18)',
-    borderRadius: 10,
-    backgroundColor: '#ffffff',
-    color: colors.text,
-    fontSize: 18,
-    lineHeight: 23,
-  },
-  errorText: {
-    marginTop: 10,
-    paddingHorizontal: 24,
-    color: DANGER_COLOR,
-    fontSize: 14,
-    lineHeight: 18,
-    textAlign: 'center',
-  },
-  deleteMessage: {
-    marginTop: 10,
-    paddingHorizontal: 28,
-    color: colors.text,
-    fontSize: 17,
-    lineHeight: 22,
-    fontWeight: '400',
-    letterSpacing: -0.12,
-    textAlign: 'center',
-  },
-  deleteTitle: {
-    marginTop: 14,
-    marginHorizontal: 28,
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  modalActions: {
-    minHeight: 64,
-    marginTop: 20,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(17,24,39,0.16)',
-    flexDirection: 'row',
-  },
-  modalActionButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalActionDivider: {
-    width: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(17,24,39,0.16)',
-  },
-  cancelActionText: {
-    color: '#147efb',
-    fontSize: 19,
-    lineHeight: 24,
-    fontWeight: '600',
-  },
-  confirmActionText: {
-    color: '#147efb',
-    fontSize: 19,
-    lineHeight: 24,
-    fontWeight: '600',
-  },
-  deleteActionText: {
-    color: DANGER_COLOR,
-    fontSize: 19,
-    lineHeight: 24,
-    fontWeight: '600',
   },
 });

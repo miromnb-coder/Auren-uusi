@@ -484,6 +484,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   return (
     <AurenSidebar
       open={sidebarOpen}
+      onOpen={openSidebar}
       onClose={closeSidebar}
       onNewChat={startNewChat}
       conversations={conversations}

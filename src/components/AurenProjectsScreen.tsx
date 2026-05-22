@@ -1,10 +1,9 @@
-import { ChevronLeft, FileText, Folder, Plus } from 'lucide-react-native';
+import { Check, ChevronLeft, Folder, Plus, Upload, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -70,9 +69,9 @@ export function AurenProjectsScreen({
           <Folder size={53} color="rgba(104,103,117,0.72)" strokeWidth={1.52} />
         </View>
 
-        <Text style={styles.emptyTitle}>{'Organize your chats, files,\nand study materials in one place'}</Text>
+        <Text style={styles.emptyTitle}>{'Keep your chats, files,\nand study resources in one place'}</Text>
 
-        <Text style={styles.emptySubtitle}>{'Everything related to a project\nstays together here.'}</Text>
+        <Text style={styles.emptySubtitle}>{'Everything for a project\nstays organized here.'}</Text>
 
         <Pressable
           accessibilityRole="button"
@@ -106,16 +105,17 @@ type CreateProjectSheetProps = {
 function CreateProjectSheet({ visible, submitting, error, onClose, onSubmit }: CreateProjectSheetProps) {
   const insets = useSafeAreaInsets();
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const keyboardLift = useRef(new Animated.Value(0)).current;
   const [mounted, setMounted] = useState(visible);
   const [projectName, setProjectName] = useState('');
-  const [description, setDescription] = useState('');
+  const [inputFocused, setInputFocused] = useState(false);
   const canSubmit = projectName.trim().length > 0 && !submitting;
 
   useEffect(() => {
     if (visible) {
       setMounted(true);
       setProjectName('');
-      setDescription('');
+      keyboardLift.setValue(0);
     }
 
     Animated.timing(progress, {
@@ -126,19 +126,59 @@ function CreateProjectSheet({ visible, submitting, error, onClose, onSubmit }: C
     }).start(({ finished }) => {
       if (finished && !visible) {
         setMounted(false);
+        setInputFocused(false);
+        keyboardLift.setValue(0);
       }
     });
-  }, [progress, visible]);
+  }, [keyboardLift, progress, visible]);
+
+  useEffect(() => {
+    if (!mounted) {
+      return undefined;
+    }
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      const keyboardHeight = event.endCoordinates.height;
+      const nextLift = Math.max(0, keyboardHeight - insets.bottom - 8);
+
+      Animated.timing(keyboardLift, {
+        toValue: nextLift,
+        duration: event.duration ?? 250,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    });
+
+    const hideSub = Keyboard.addListener(hideEvent, (event) => {
+      Animated.timing(keyboardLift, {
+        toValue: 0,
+        duration: event.duration ?? 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start(() => setInputFocused(false));
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, [insets.bottom, keyboardLift, mounted]);
 
   const overlayOpacity = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 0.46],
+    outputRange: [0, 0.47],
   });
 
   const sheetTranslateY = progress.interpolate({
     inputRange: [0, 1],
     outputRange: [720, 0],
   });
+
+  const keyboardTranslateY = Animated.multiply(keyboardLift, -1);
+  const combinedTranslateY = Animated.add(sheetTranslateY, keyboardTranslateY);
 
   function handleClose() {
     Keyboard.dismiss();
@@ -151,7 +191,7 @@ function CreateProjectSheet({ visible, submitting, error, onClose, onSubmit }: C
     Keyboard.dismiss();
     onSubmit({
       title: projectName.trim(),
-      description: description.trim() || null,
+      description: null,
     });
   }
 
@@ -163,11 +203,7 @@ function CreateProjectSheet({ visible, submitting, error, onClose, onSubmit }: C
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
       </Animated.View>
 
-      <KeyboardAvoidingView
-        pointerEvents="box-none"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.keyboardWrap}
-      >
+      <View pointerEvents="box-none" style={styles.keyboardWrap}>
         <Animated.View
           onStartShouldSetResponderCapture={() => {
             Keyboard.dismiss();
@@ -176,58 +212,25 @@ function CreateProjectSheet({ visible, submitting, error, onClose, onSubmit }: C
           style={[
             styles.createSheet,
             {
-              paddingBottom: Math.max(insets.bottom + 14, 34),
-              transform: [{ translateY: sheetTranslateY }],
+              paddingBottom: Math.max(insets.bottom + 26, 42),
+              transform: [{ translateY: combinedTranslateY }],
             },
           ]}
         >
           <View style={styles.sheetHandle} />
-          <Text style={styles.sheetTitle}>Create project</Text>
-          <Text style={styles.sheetSubtitle}>Organize chats, files, and study materials in one place.</Text>
 
-          <View style={styles.form}>
-            <Text style={styles.label}>Project name</Text>
-            <TextInput
-              value={projectName}
-              onChangeText={setProjectName}
-              placeholder="e.g., Biology 101"
-              placeholderTextColor="rgba(104,103,117,0.42)"
-              autoCapitalize="sentences"
-              autoCorrect
-              style={styles.input}
-            />
-
-            <Text style={[styles.label, styles.descriptionLabel]}>Description (optional)</Text>
-            <TextInput
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Add a short description..."
-              placeholderTextColor="rgba(104,103,117,0.42)"
-              autoCapitalize="sentences"
-              autoCorrect
-              multiline
-              textAlignVertical="top"
-              style={[styles.input, styles.descriptionInput]}
-            />
-
-            <View style={styles.hintRow}>
-              <FileText size={22} color="rgba(104,103,117,0.78)" strokeWidth={1.8} />
-              <Text style={styles.hintText}>Add first note or file later</Text>
-            </View>
-
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-          </View>
-
-          <View style={styles.actionsRow}>
+          <View style={styles.sheetHeader}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Cancel"
+              accessibilityLabel="Cancel project creation"
               onPress={handleClose}
               disabled={submitting}
-              style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed, submitting && styles.disabled]}
+              style={({ pressed }) => [styles.sheetIconButton, pressed && styles.pressed, submitting && styles.disabled]}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <X size={25} color={colors.text} strokeWidth={1.9} />
             </Pressable>
+
+            <Text style={styles.sheetTitle}>New project</Text>
 
             <Pressable
               accessibilityRole="button"
@@ -235,16 +238,49 @@ function CreateProjectSheet({ visible, submitting, error, onClose, onSubmit }: C
               onPress={handleSubmit}
               disabled={!canSubmit}
               style={({ pressed }) => [
-                styles.createButton,
-                pressed && canSubmit && styles.primaryPressed,
-                !canSubmit && styles.createButtonDisabled,
+                styles.sheetIconButton,
+                pressed && canSubmit && styles.pressed,
+                !canSubmit && styles.confirmButtonDisabled,
               ]}
             >
-              <Text style={styles.createButtonText}>{submitting ? 'Creating...' : 'Create project'}</Text>
+              <Check size={24} color={colors.text} strokeWidth={1.9} />
             </Pressable>
           </View>
+
+          <View style={styles.form}>
+            <TextInput
+              value={projectName}
+              onChangeText={setProjectName}
+              placeholder="Project title"
+              placeholderTextColor="rgba(104,103,117,0.42)"
+              autoCapitalize="sentences"
+              autoCorrect
+              returnKeyType="done"
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              onSubmitEditing={handleSubmit}
+              style={[styles.input, inputFocused && styles.inputFocused]}
+            />
+
+            <Text style={styles.materialsTitle}>Add resources</Text>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Upload files"
+              style={({ pressed }) => [styles.uploadBox, pressed && styles.pressed]}
+            >
+              <Upload size={30} color={colors.text} strokeWidth={1.55} />
+              <Text style={styles.uploadText}>Upload files</Text>
+            </Pressable>
+
+            <Text style={styles.helperText}>
+              Add notes, PDFs, or images to help Auren understand this project and give better support.
+            </Text>
+
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          </View>
         </Animated.View>
-      </KeyboardAvoidingView>
+      </View>
     </View>
   );
 }
@@ -297,7 +333,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyTitle: {
-    maxWidth: 340,
+    maxWidth: 348,
     color: '#686775',
     fontFamily: serifFont,
     fontSize: 24,
@@ -352,92 +388,104 @@ const styles = StyleSheet.create({
   },
   createSheet: {
     width: '100%',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    borderTopLeftRadius: 31,
+    borderTopRightRadius: 31,
     paddingTop: 28,
-    paddingHorizontal: 34,
+    paddingHorizontal: 30,
     backgroundColor: '#fffefb',
     shadowColor: '#111827',
-    shadowOpacity: 0.14,
+    shadowOpacity: 0.12,
     shadowRadius: 32,
     shadowOffset: { width: 0, height: -14 },
     elevation: 18,
   },
   sheetHandle: {
     alignSelf: 'center',
-    width: 58,
-    height: 7,
+    width: 48,
+    height: 6,
     borderRadius: 999,
-    marginBottom: 31,
-    backgroundColor: 'rgba(104,103,117,0.28)',
+    marginBottom: 26,
+    backgroundColor: 'rgba(104,103,117,0.22)',
+  },
+  sheetHeader: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sheetIconButton: {
+    width: 53,
+    height: 53,
+    borderRadius: 26.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(244,241,237,0.78)',
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.035)',
   },
   sheetTitle: {
+    position: 'absolute',
+    left: 70,
+    right: 70,
     color: colors.text,
     fontFamily: serifFont,
-    fontSize: 31,
-    lineHeight: 38,
+    fontSize: 24,
+    lineHeight: 30,
     fontWeight: '400',
-    letterSpacing: -0.74,
-    textAlign: 'center',
-  },
-  sheetSubtitle: {
-    marginTop: 14,
-    color: '#686775',
-    fontSize: 15.8,
-    lineHeight: 22,
-    fontWeight: '500',
-    letterSpacing: -0.14,
+    letterSpacing: -0.42,
     textAlign: 'center',
   },
   form: {
-    marginTop: 32,
-  },
-  label: {
-    color: colors.text,
-    fontSize: 15.7,
-    lineHeight: 21,
-    fontWeight: '500',
-    letterSpacing: -0.15,
-    marginBottom: 10,
-  },
-  descriptionLabel: {
-    marginTop: 24,
+    marginTop: 34,
   },
   input: {
-    minHeight: 58,
-    borderRadius: 14,
-    paddingHorizontal: 18,
+    minHeight: 67,
+    borderRadius: 18,
+    paddingHorizontal: 23,
     color: colors.text,
-    fontSize: 16.5,
-    lineHeight: 22,
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: '400',
+    letterSpacing: -0.22,
+    backgroundColor: 'rgba(250,249,247,0.86)',
+    borderWidth: 1,
+    borderColor: 'rgba(104,103,117,0.15)',
+  },
+  inputFocused: {
+    borderColor: 'rgba(104,103,117,0.34)',
+    backgroundColor: 'rgba(255,255,255,0.96)',
+  },
+  materialsTitle: {
+    marginTop: 31,
+    marginBottom: 18,
+    color: colors.text,
+    fontSize: 19,
+    lineHeight: 25,
+    fontWeight: '500',
+    letterSpacing: -0.2,
+  },
+  uploadBox: {
+    minHeight: 107,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 9,
+    backgroundColor: 'rgba(250,249,247,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(104,103,117,0.14)',
+  },
+  uploadText: {
+    color: colors.text,
+    fontSize: 17.5,
+    lineHeight: 23,
     fontWeight: '400',
     letterSpacing: -0.16,
-    backgroundColor: 'rgba(255,255,255,0.72)',
-    borderWidth: 1,
-    borderColor: 'rgba(104,103,117,0.26)',
   },
-  descriptionInput: {
-    minHeight: 66,
-    paddingTop: 17,
-    paddingBottom: 14,
-  },
-  hintRow: {
-    minHeight: 48,
-    marginTop: 24,
-    borderRadius: 999,
-    paddingHorizontal: 19,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    backgroundColor: 'rgba(255,255,255,0.56)',
-    borderWidth: 1,
-    borderColor: 'rgba(104,103,117,0.13)',
-  },
-  hintText: {
-    flex: 1,
-    color: '#686775',
+  helperText: {
+    marginTop: 25,
+    color: colors.muted,
     fontSize: 15.8,
-    lineHeight: 21,
+    lineHeight: 22.7,
     fontWeight: '500',
     letterSpacing: -0.12,
   },
@@ -449,51 +497,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: -0.08,
   },
-  actionsRow: {
-    marginTop: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 18,
-  },
-  cancelButton: {
-    flex: 0.84,
-    height: 58,
-    borderRadius: 29,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.62)',
-    borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.07)',
-  },
-  cancelButtonText: {
-    color: colors.text,
-    fontSize: 16.5,
-    lineHeight: 21,
-    fontWeight: '500',
-    letterSpacing: -0.13,
-  },
-  createButton: {
-    flex: 1.18,
-    height: 58,
-    borderRadius: 29,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1d1a18',
-    shadowColor: '#111827',
-    shadowOpacity: 0.12,
-    shadowRadius: 15,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 7,
-  },
-  createButtonDisabled: {
-    opacity: 0.38,
-  },
-  createButtonText: {
-    color: '#ffffff',
-    fontSize: 17.4,
-    lineHeight: 22,
-    fontWeight: '600',
-    letterSpacing: -0.18,
+  confirmButtonDisabled: {
+    opacity: 0.42,
   },
   pressed: {
     opacity: 0.6,

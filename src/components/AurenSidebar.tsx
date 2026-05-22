@@ -10,6 +10,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { AurenConversationSearchScreen } from './AurenConversationSearchScreen';
 import type { AurenConversation } from '../lib/aurenConversations';
 import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
@@ -97,6 +98,7 @@ export function AurenSidebar({
 }: AurenSidebarProps) {
   const { width, height } = useWindowDimensions();
   const [actionTarget, setActionTarget] = useState<ConversationContextTarget | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const actionBusyRef = useRef(false);
   const conversationRowRefs = useRef<Record<string, ElementRef<typeof Pressable> | null>>({});
   const drawerProgress = useSharedValue(open ? 1 : 0);
@@ -121,6 +123,24 @@ export function AurenSidebar({
       setActionTarget(null);
     }
   }, [actionTarget, open]);
+
+  function openSearchChats() {
+    void aurenHaptics.selection();
+    setActionTarget(null);
+    setSearchOpen(true);
+    onClose();
+  }
+
+  function closeSearchChatsToMenu() {
+    void aurenHaptics.selection();
+    setSearchOpen(false);
+    onOpen?.();
+  }
+
+  function selectConversationFromSearch(conversationId: string) {
+    setSearchOpen(false);
+    onSelectConversation?.(conversationId);
+  }
 
   function openConversationActions(conversation: AurenConversation) {
     void aurenHaptics.contextMenu();
@@ -242,7 +262,7 @@ export function AurenSidebar({
   const rootGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(gesturesEnabled)
+        .enabled(gesturesEnabled && !searchOpen)
         .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
         .failOffsetY([-28, 28])
         .onBegin((event) => {
@@ -292,13 +312,13 @@ export function AurenSidebar({
         .onFinalize(() => {
           rootGestureEligible.value = 0;
         }),
-    [drawerProgress, drawerWidth, gesturesEnabled, height, normalizedGestureBottomExclusion, onClose, onOpen, openValue, rootGestureEligible, rootGestureStartProgress],
+    [drawerProgress, drawerWidth, gesturesEnabled, height, normalizedGestureBottomExclusion, onClose, onOpen, openValue, rootGestureEligible, rootGestureStartProgress, searchOpen],
   );
 
   const drawerCloseGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(gesturesEnabled && open)
+        .enabled(gesturesEnabled && open && !searchOpen)
         .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
         .failOffsetY([-28, 28])
         .onBegin(() => {
@@ -329,7 +349,7 @@ export function AurenSidebar({
             },
           );
         }),
-    [drawerCloseGestureStartProgress, drawerProgress, drawerWidth, gesturesEnabled, onClose, open],
+    [drawerCloseGestureStartProgress, drawerProgress, drawerWidth, gesturesEnabled, onClose, open, searchOpen],
   );
 
   const mainAnimatedStyle = useAnimatedStyle(() => ({
@@ -371,6 +391,7 @@ export function AurenSidebar({
                   <SidebarItem
                     icon={<Search size={32} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
                     label="Search chats"
+                    onPress={openSearchChats}
                   />
                   <SidebarItem
                     icon={<Folder size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
@@ -442,6 +463,14 @@ export function AurenSidebar({
           onClose={closeConversationActions}
           onRename={openRenameConversation}
           onDelete={openDeleteConversation}
+        />
+
+        <AurenConversationSearchScreen
+          visible={searchOpen}
+          conversations={conversations}
+          loading={loadingConversations}
+          onBack={closeSearchChatsToMenu}
+          onSelectConversation={selectConversationFromSearch}
         />
       </View>
     </GestureDetector>

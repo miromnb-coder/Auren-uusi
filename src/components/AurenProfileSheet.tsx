@@ -33,7 +33,7 @@ export function AurenProfileSheet({ visible, profileName, avatarLetter, onClose 
   const { height } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const sheetHeight = useMemo(() => Math.min(height * 0.71, Math.max(540, height - 178)), [height]);
+  const sheetHeight = useMemo(() => Math.max(570, Math.min(height * 0.71, height - 244)), [height]);
 
   useEffect(() => {
     if (visible) {
@@ -76,8 +76,8 @@ export function AurenProfileSheet({ visible, profileName, avatarLetter, onClose 
           style={[
             styles.sheet,
             {
-              minHeight: sheetHeight,
-              paddingBottom: Math.max(insets.bottom, 18) + 12,
+              height: sheetHeight,
+              paddingBottom: Math.max(insets.bottom, 18) + 10,
               transform: [{ translateY }],
             },
           ]}
@@ -98,15 +98,15 @@ export function AurenProfileSheet({ visible, profileName, avatarLetter, onClose 
           </View>
 
           <View style={styles.groupCard}>
-            <ProfileRow icon={<User size={29} color={ICON_COLOR} strokeWidth={1.8} />} label="Account" />
-            <ProfileRow icon={<Moon size={30} color={ICON_COLOR} strokeWidth={1.8} />} label="Appearance" />
-            <ProfileRow icon={<Brain size={31} color={ICON_COLOR} strokeWidth={1.75} />} label="Memory" />
-            <ProfileRow icon={<Settings size={31} color={ICON_COLOR} strokeWidth={1.8} />} label="Settings" />
-            <ProfileRow icon={<HelpCircle size={31} color={ICON_COLOR} strokeWidth={1.8} />} label="Help" last />
+            <ProfileRow icon={<User size={27} color={ICON_COLOR} strokeWidth={1.8} />} label="Account" />
+            <ProfileRow icon={<Moon size={28} color={ICON_COLOR} strokeWidth={1.8} />} label="Appearance" />
+            <ProfileRow icon={<Brain size={29} color={ICON_COLOR} strokeWidth={1.75} />} label="Memory" />
+            <ProfileRow icon={<Settings size={29} color={ICON_COLOR} strokeWidth={1.8} />} label="Settings" />
+            <ProfileRow icon={<HelpCircle size={29} color={ICON_COLOR} strokeWidth={1.8} />} label="Help" last />
           </View>
 
           <View style={styles.signOutCard}>
-            <ProfileRow icon={<LogOut size={31} color={DANGER} strokeWidth={1.8} />} label="Sign out" danger last />
+            <ProfileRow icon={<LogOut size={29} color={DANGER} strokeWidth={1.8} />} label="Sign out" danger last />
           </View>
         </Animated.View>
       </View>
@@ -120,7 +120,7 @@ function ProfileRow({ icon, label, danger = false, last = false, onPress }: Prof
       <View style={styles.rowContent}>
         <View style={styles.iconSlot}>{icon}</View>
         <Text style={[styles.rowLabel, danger && styles.dangerText]}>{label}</Text>
-        <ChevronRight size={30} color={danger ? DANGER : ICON_COLOR} strokeWidth={1.75} />
+        <ChevronRight size={28} color={danger ? DANGER : ICON_COLOR} strokeWidth={1.75} />
       </View>
       {!last ? <View style={styles.divider} /> : null}
     </Pressable>
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 31,
     borderTopRightRadius: 31,
     backgroundColor: SHEET_BACKGROUND,
-    paddingTop: 24,
+    paddingTop: 26,
     paddingHorizontal: 26,
     shadowColor: '#111827',
     shadowOpacity: 0.12,
@@ -161,26 +161,26 @@ const styles = StyleSheet.create({
     backgroundColor: HANDLE_COLOR,
   },
   profileHeader: {
-    marginTop: 55,
-    marginBottom: 52,
+    marginTop: 51,
+    marginBottom: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 31,
+    gap: 27,
   },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#d89437',
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 34,
-    lineHeight: 40,
+    fontSize: 29,
+    lineHeight: 34,
     fontWeight: '700',
-    letterSpacing: -0.42,
+    letterSpacing: -0.36,
   },
   profileCopy: {
     flex: 1,
@@ -188,18 +188,18 @@ const styles = StyleSheet.create({
   },
   profileName: {
     color: colors.text,
-    fontSize: 26.5,
-    lineHeight: 32,
+    fontSize: 22.5,
+    lineHeight: 28,
     fontWeight: '500',
-    letterSpacing: -0.82,
+    letterSpacing: -0.68,
   },
   profileSubtitle: {
-    marginTop: 4,
+    marginTop: 2,
     color: colors.muted,
-    fontSize: 17.5,
-    lineHeight: 22,
+    fontSize: 15.6,
+    lineHeight: 20,
     fontWeight: '400',
-    letterSpacing: -0.18,
+    letterSpacing: -0.15,
   },
   groupCard: {
     overflow: 'hidden',
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     backgroundColor: CARD_BACKGROUND,
   },
   row: {
-    minHeight: 82,
+    minHeight: 64,
     backgroundColor: 'transparent',
   },
   rowPressed: {
@@ -225,32 +225,32 @@ const styles = StyleSheet.create({
   },
   rowContent: {
     flex: 1,
-    minHeight: 82,
-    paddingLeft: 32,
+    minHeight: 64,
+    paddingLeft: 31,
     paddingRight: 28,
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconSlot: {
-    width: 44,
+    width: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rowLabel: {
     flex: 1,
-    marginLeft: 24,
+    marginLeft: 22,
     color: colors.text,
-    fontSize: 21,
-    lineHeight: 27,
+    fontSize: 18.2,
+    lineHeight: 24,
     fontWeight: '400',
-    letterSpacing: -0.28,
+    letterSpacing: -0.24,
   },
   dangerText: {
     color: DANGER,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: 32,
+    marginLeft: 31,
     marginRight: 34,
     backgroundColor: DIVIDER,
   },

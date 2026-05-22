@@ -1,7 +1,7 @@
-import { Folder, Search, Settings, SquarePen, X } from 'lucide-react-native';
+import { Folder, Search, Settings, SquarePen, Trash2, X } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { useEffect, useMemo } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing as ReanimatedEasing,
@@ -31,10 +31,13 @@ type AurenSidebarProps = {
   avatarLetter?: string;
   loadingConversations?: boolean;
   onSelectConversation?: (conversationId: string) => void;
+  onRenameConversation?: (conversation: AurenConversation, title: string) => Promise<void> | void;
+  onDeleteConversation?: (conversation: AurenConversation) => Promise<void> | void;
 };
 
 const DRAWER_BACKGROUND = '#fbfbfb';
 const SIDEBAR_ICON_COLOR = 'rgba(15,17,21,0.88)';
+const DANGER_COLOR = '#ef4444';
 const ICON_STROKE_WIDTH = 1.78;
 
 const DRAG_ACTIVATION_DISTANCE = 8;
@@ -66,8 +69,17 @@ export function AurenSidebar({
   avatarLetter = 'A',
   loadingConversations = false,
   onSelectConversation,
+  onRenameConversation,
+  onDeleteConversation,
 }: AurenSidebarProps) {
   const { width, height } = useWindowDimensions();
+  const [actionConversation, setActionConversation] = useState<AurenConversation | null>(null);
+  const [renameConversation, setRenameConversation] = useState<AurenConversation | null>(null);
+  const [deleteConversation, setDeleteConversation] = useState<AurenConversation | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [renameSubmitting, setRenameSubmitting] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const drawerProgress = useSharedValue(open ? 1 : 0);
   const openValue = useSharedValue(open ? 1 : 0);
   const rootGestureStartProgress = useSharedValue(open ? 1 : 0);
@@ -84,6 +96,72 @@ export function AurenSidebar({
       easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
     });
   }, [drawerProgress, open, openValue]);
+
+  function openConversationActions(conversation: AurenConversation) {
+    setActionConversation(conversation);
+  }
+
+  function closeConversationActions() {
+    setActionConversation(null);
+  }
+
+  function openRenameConversation(conversation: AurenConversation) {
+    setActionConversation(null);
+    setRenameError(null);
+    setRenameDraft(conversation.title);
+    setRenameConversation(conversation);
+  }
+
+  function closeRenameConversation() {
+    if (renameSubmitting) return;
+    setRenameConversation(null);
+    setRenameDraft('');
+    setRenameError(null);
+  }
+
+  async function submitRenameConversation() {
+    if (!renameConversation || renameSubmitting) return;
+
+    const trimmedTitle = renameDraft.trim();
+    if (!trimmedTitle) {
+      setRenameError('Chat name is required.');
+      return;
+    }
+
+    setRenameSubmitting(true);
+    setRenameError(null);
+    try {
+      await onRenameConversation?.(renameConversation, trimmedTitle);
+      setRenameConversation(null);
+      setRenameDraft('');
+    } catch (error) {
+      setRenameError(error instanceof Error ? error.message : 'Could not rename this chat.');
+    } finally {
+      setRenameSubmitting(false);
+    }
+  }
+
+  function openDeleteConversation(conversation: AurenConversation) {
+    setActionConversation(null);
+    setDeleteConversation(conversation);
+  }
+
+  function closeDeleteConversation() {
+    if (deleteSubmitting) return;
+    setDeleteConversation(null);
+  }
+
+  async function confirmDeleteConversation() {
+    if (!deleteConversation || deleteSubmitting) return;
+
+    setDeleteSubmitting(true);
+    try {
+      await onDeleteConversation?.(deleteConversation);
+      setDeleteConversation(null);
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  }
 
   const rootGesture = useMemo(
     () =>
@@ -277,9 +355,12 @@ export function AurenSidebar({
                           <Pressable
                             key={chat.id}
                             onPress={() => onSelectConversation?.(chat.id)}
+                            onLongPress={() => openConversationActions(chat)}
+                            delayLongPress={330}
                             style={({ pressed }) => [
                               styles.recentRow,
                               isActive && styles.activeRecentRow,
+                              actionConversation?.id === chat.id && styles.contextRecentRow,
                               pressed && styles.pressed,
                             ]}
                           >
@@ -318,6 +399,30 @@ export function AurenSidebar({
             </View>
           </Animated.View>
         </GestureDetector>
+
+        <ConversationActionMenu
+          conversation={actionConversation}
+          onClose={closeConversationActions}
+          onRename={openRenameConversation}
+          onDelete={openDeleteConversation}
+        />
+
+        <RenameConversationModal
+          visible={Boolean(renameConversation)}
+          value={renameDraft}
+          error={renameError}
+          submitting={renameSubmitting}
+          onChangeText={setRenameDraft}
+          onCancel={closeRenameConversation}
+          onSubmit={submitRenameConversation}
+        />
+
+        <DeleteConversationModal
+          conversation={deleteConversation}
+          submitting={deleteSubmitting}
+          onCancel={closeDeleteConversation}
+          onConfirm={confirmDeleteConversation}
+        />
       </View>
     </GestureDetector>
   );
@@ -341,6 +446,113 @@ function SidebarItem({ icon, label, onPress, active = false }: SidebarItemProps)
       <View style={styles.navIconSlot}>{icon}</View>
       <Text style={styles.navLabel}>{label}</Text>
     </Pressable>
+  );
+}
+
+type ConversationActionMenuProps = {
+  conversation: AurenConversation | null;
+  onClose: () => void;
+  onRename: (conversation: AurenConversation) => void;
+  onDelete: (conversation: AurenConversation) => void;
+};
+
+function ConversationActionMenu({ conversation, onClose, onRename, onDelete }: ConversationActionMenuProps) {
+  return (
+    <Modal visible={Boolean(conversation)} transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.contextOverlay} onPress={onClose}>
+        <Pressable style={styles.contextContent} onPress={(event) => event.stopPropagation()}>
+          <View style={styles.contextMenu}>
+            <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.pressed]} onPress={() => conversation ? onRename(conversation) : undefined}>
+              <Text style={styles.contextMenuLabel}>Rename</Text>
+              <SquarePen size={23} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
+            </Pressable>
+            <View style={styles.contextDivider} />
+            <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.pressed]} onPress={() => conversation ? onDelete(conversation) : undefined}>
+              <Text style={[styles.contextMenuLabel, styles.dangerText]}>Delete</Text>
+              <Trash2 size={23} color={DANGER_COLOR} strokeWidth={1.9} />
+            </Pressable>
+          </View>
+
+          {conversation ? (
+            <View style={styles.contextSelectedPill}>
+              <Text numberOfLines={1} style={styles.contextSelectedTitle}>{conversation.title}</Text>
+            </View>
+          ) : null}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+type RenameConversationModalProps = {
+  visible: boolean;
+  value: string;
+  error: string | null;
+  submitting: boolean;
+  onChangeText: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+};
+
+function RenameConversationModal({ visible, value, error, submitting, onChangeText, onCancel, onSubmit }: RenameConversationModalProps) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalOverlay}>
+        <View style={styles.renameCard}>
+          <Text style={styles.modalTitle}>Rename chat</Text>
+          <TextInput
+            value={value}
+            onChangeText={onChangeText}
+            autoFocus
+            selectTextOnFocus
+            editable={!submitting}
+            style={styles.renameInput}
+            placeholder="Chat name"
+            placeholderTextColor="rgba(104,103,117,0.55)"
+          />
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <View style={styles.modalActions}>
+            <Pressable disabled={submitting} style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]} onPress={onCancel}>
+              <Text style={styles.cancelActionText}>Cancel</Text>
+            </Pressable>
+            <View style={styles.modalActionDivider} />
+            <Pressable disabled={submitting} style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]} onPress={onSubmit}>
+              <Text style={styles.confirmActionText}>{submitting ? 'Saving...' : 'Save'}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+type DeleteConversationModalProps = {
+  conversation: AurenConversation | null;
+  submitting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+};
+
+function DeleteConversationModal({ conversation, submitting, onCancel, onConfirm }: DeleteConversationModalProps) {
+  return (
+    <Modal visible={Boolean(conversation)} transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.deleteCard}>
+          <Text style={styles.modalTitle}>Delete chat?</Text>
+          <Text style={styles.deleteMessage}>You won’t see this chat here anymore. This cannot be undone.</Text>
+          {conversation ? <Text numberOfLines={1} style={styles.deleteTitle}>{conversation.title}</Text> : null}
+          <View style={styles.modalActions}>
+            <Pressable disabled={submitting} style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]} onPress={onCancel}>
+              <Text style={styles.cancelActionText}>Cancel</Text>
+            </Pressable>
+            <View style={styles.modalActionDivider} />
+            <Pressable disabled={submitting} style={({ pressed }) => [styles.modalActionButton, pressed && styles.pressed]} onPress={onConfirm}>
+              <Text style={styles.deleteActionText}>{submitting ? 'Deleting...' : 'Delete'}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -463,6 +675,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     elevation: 0,
   },
+  contextRecentRow: {
+    minHeight: 44,
+    marginLeft: -12,
+    paddingLeft: 12,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+  },
   recentTitle: {
     flex: 1,
     color: colors.text,
@@ -529,5 +748,173 @@ const styles = StyleSheet.create({
     marginRight: -2,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  contextOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 30,
+    backgroundColor: 'rgba(20,22,28,0.22)',
+  },
+  contextContent: {
+    width: '100%',
+    gap: 12,
+  },
+  contextMenu: {
+    alignSelf: 'flex-start',
+    minWidth: 228,
+    overflow: 'hidden',
+    borderRadius: 18,
+    backgroundColor: 'rgba(250,250,250,0.96)',
+    shadowColor: '#000',
+    shadowOpacity: 0.16,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+  },
+  contextMenuRow: {
+    minHeight: 58,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 22,
+  },
+  contextMenuLabel: {
+    color: colors.text,
+    fontSize: 20,
+    lineHeight: 25,
+    fontWeight: '400',
+    letterSpacing: -0.25,
+  },
+  dangerText: {
+    color: DANGER_COLOR,
+  },
+  contextDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(17,24,39,0.12)',
+  },
+  contextSelectedPill: {
+    minHeight: 58,
+    justifyContent: 'center',
+    borderRadius: 29,
+    paddingHorizontal: 26,
+    backgroundColor: 'rgba(255,255,255,0.96)',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  contextSelectedTitle: {
+    color: colors.text,
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: '400',
+    letterSpacing: -0.2,
+  },
+  modalOverlay: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+    backgroundColor: 'rgba(20,22,28,0.22)',
+  },
+  renameCard: {
+    width: '100%',
+    maxWidth: 420,
+    overflow: 'hidden',
+    borderRadius: 20,
+    paddingTop: 28,
+    backgroundColor: 'rgba(250,250,250,0.98)',
+  },
+  deleteCard: {
+    width: '100%',
+    maxWidth: 420,
+    overflow: 'hidden',
+    borderRadius: 20,
+    paddingTop: 26,
+    backgroundColor: 'rgba(250,250,250,0.98)',
+  },
+  modalTitle: {
+    paddingHorizontal: 24,
+    color: colors.text,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: '700',
+    letterSpacing: -0.42,
+    textAlign: 'center',
+  },
+  renameInput: {
+    minHeight: 52,
+    marginTop: 24,
+    marginHorizontal: 24,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(17,24,39,0.18)',
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+    color: colors.text,
+    fontSize: 18,
+    lineHeight: 23,
+  },
+  errorText: {
+    marginTop: 10,
+    paddingHorizontal: 24,
+    color: DANGER_COLOR,
+    fontSize: 14,
+    lineHeight: 18,
+    textAlign: 'center',
+  },
+  deleteMessage: {
+    marginTop: 10,
+    paddingHorizontal: 28,
+    color: colors.text,
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '400',
+    letterSpacing: -0.12,
+    textAlign: 'center',
+  },
+  deleteTitle: {
+    marginTop: 14,
+    marginHorizontal: 28,
+    color: colors.muted,
+    fontSize: 15,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  modalActions: {
+    minHeight: 64,
+    marginTop: 20,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(17,24,39,0.16)',
+    flexDirection: 'row',
+  },
+  modalActionButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalActionDivider: {
+    width: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(17,24,39,0.16)',
+  },
+  cancelActionText: {
+    color: '#147efb',
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: '600',
+  },
+  confirmActionText: {
+    color: '#147efb',
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: '600',
+  },
+  deleteActionText: {
+    color: DANGER_COLOR,
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: '600',
   },
 });

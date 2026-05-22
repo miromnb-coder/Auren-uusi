@@ -11,7 +11,7 @@ import { AurenQuickActions } from '../components/AurenQuickActions';
 import { AurenSidebar } from '../components/AurenSidebar';
 import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
 import { generateAurenThinkingTimeline, sendAurenChatMessage, sendAurenChatMessageStream, type AurenThinkingStep } from '../lib/aurenAiClient';
-import { createAurenConversation, createAurenProject, createConversationTitle, listAurenConversations, loadAurenMessages, saveAurenMessage, type AurenConversation } from '../lib/aurenConversations';
+import { createAurenConversation, createAurenProject, createConversationTitle, deleteAurenProject, listAurenConversations, listAurenProjects, loadAurenMessages, saveAurenMessage, type AurenConversation, type AurenProject } from '../lib/aurenConversations';
 import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
 
@@ -61,6 +61,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const [createProjectSheetOpen, setCreateProjectSheetOpen] = useState(false);
   const [createProjectSubmitting, setCreateProjectSubmitting] = useState(false);
   const [createProjectError, setCreateProjectError] = useState<string | null>(null);
+  const [projects, setProjects] = useState<AurenProject[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
   const [draft, setDraft] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [selectedImages, setSelectedImages] = useState<AurenImageAttachment[]>([]);
@@ -90,6 +92,12 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     const next = await listAurenConversations(userId);
     setConversations(next);
     return next;
+  }
+
+  async function refreshProjects() {
+    const nextProjects = await listAurenProjects(userId);
+    setProjects(nextProjects);
+    return nextProjects;
   }
 
   function openSidebar() { void aurenHaptics.panelOpen(); Keyboard.dismiss(); setSidebarOpen(true); }
@@ -141,7 +149,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setCreateProjectSubmitting(true);
     setCreateProjectError(null);
     try {
-      await createAurenProject({ userId, title: payload.title, description: payload.description });
+      const createdProject = await createAurenProject({ userId, title: payload.title, description: payload.description });
+      setProjects((currentProjects) => [createdProject, ...currentProjects.filter((project) => project.id !== createdProject.id)]);
       void aurenHaptics.success();
       setCreateProjectSheetOpen(false);
     } catch (error) {
@@ -150,6 +159,24 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       setCreateProjectError(error instanceof Error ? error.message : 'Could not create project. Please try again.');
     } finally {
       setCreateProjectSubmitting(false);
+    }
+  }
+
+  function handleRenameProject(project: AurenProject) {
+    void aurenHaptics.selection();
+    console.log('Rename project:', project.id);
+  }
+
+  async function handleDeleteProject(project: AurenProject) {
+    void aurenHaptics.warning();
+    setProjects((currentProjects) => currentProjects.filter((item) => item.id !== project.id));
+
+    try {
+      await deleteAurenProject(project.id);
+    } catch (error) {
+      console.log('Auren project delete error:', error);
+      void aurenHaptics.warning();
+      setProjects((currentProjects) => [project, ...currentProjects.filter((item) => item.id !== project.id)]);
     }
   }
 
@@ -267,6 +294,13 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   }, [userId]);
 
   useEffect(() => {
+    let mounted = true;
+    setLoadingProjects(true);
+    listAurenProjects(userId).then((items) => { if (mounted) setProjects(items); }).catch((error) => console.log('Auren projects load error:', error)).finally(() => { if (mounted) setLoadingProjects(false); });
+    return () => { mounted = false; };
+  }, [userId]);
+
+  useEffect(() => {
     if (!assistantThinking || thinkingTimeline.length <= 1 || thinkingStepIndex >= thinkingTimeline.length - 1) return undefined;
     const delay = THINKING_STEP_DELAYS[Math.min(thinkingStepIndex, THINKING_STEP_DELAYS.length - 1)];
     const timeoutId = setTimeout(() => setThinkingStepIndex((index) => Math.min(index + 1, thinkingTimeline.length - 1)), delay);
@@ -315,12 +349,16 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       {activeScreen === 'projects' ? (
         <AurenProjectsScreen
           onBack={returnFromProjectsToSidebar}
+          projects={projects}
+          loadingProjects={loadingProjects}
           createSheetVisible={createProjectSheetOpen}
           createProjectSubmitting={createProjectSubmitting}
           createProjectError={createProjectError}
           onOpenCreateProject={openCreateProjectSheet}
           onCloseCreateProject={closeCreateProjectSheet}
           onSubmitCreateProject={handleCreateProject}
+          onRenameProject={handleRenameProject}
+          onDeleteProject={handleDeleteProject}
         />
       ) : (
         <SafeAreaView style={styles.screen}>

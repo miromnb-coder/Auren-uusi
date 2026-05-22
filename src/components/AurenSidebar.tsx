@@ -1,7 +1,15 @@
 import { BookOpen, Folder, Home, SquarePen } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect, useMemo } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  Easing as ReanimatedEasing,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import type { AurenConversation } from '../lib/aurenConversations';
 import { colors } from '../theme';
 
@@ -9,6 +17,7 @@ type AurenSidebarProps = {
   open: boolean;
   children: ReactNode;
   onClose: () => void;
+  onOpen?: () => void;
   onNewChat?: () => void;
   conversations?: AurenConversation[];
   activeConversationId?: string | null;
@@ -26,16 +35,28 @@ const DRAWER_BACKGROUND = '#fbfaf7';
 const SIDEBAR_ICON_COLOR = 'rgba(34,27,23,0.84)';
 const ICON_STROKE_WIDTH = 1.82;
 
+const EDGE_SWIPE_WIDTH = 30;
+const DRAG_ACTIVATION_DISTANCE = 8;
+const HORIZONTAL_DOMINANCE = 1.18;
+const SWIPE_VELOCITY = 720;
+const OPEN_PROGRESS_THRESHOLD = 0.38;
+
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 function sidebarIcon(icon: ReactNode) {
   return icon;
 }
 
+function clampProgress(value: number) {
+  'worklet';
+  return Math.min(Math.max(value, 0), 1);
+}
+
 export function AurenSidebar({
   open,
   children,
   onClose,
+  onOpen,
   onNewChat,
   conversations = [],
   activeConversationId = null,
@@ -45,7 +66,10 @@ export function AurenSidebar({
   onSelectConversation,
 }: AurenSidebarProps) {
   const { width } = useWindowDimensions();
-  const progress = useRef(new Animated.Value(open ? 1 : 0)).current;
+  const drawerProgress = useSharedValue(open ? 1 : 0);
+  const openValue = useSharedValue(open ? 1 : 0);
+  const gestureStartProgress = useSharedValue(open ? 1 : 0);
+  const gestureEligible = useSharedValue(0);
 
   const drawerWidth = useMemo(() => {
     const measuredWidth = width * DRAWER_WIDTH_RATIO;
@@ -53,134 +77,190 @@ export function AurenSidebar({
   }, [width]);
 
   useEffect(() => {
-    Animated.timing(progress, {
-      toValue: open ? 1 : 0,
+    openValue.value = open ? 1 : 0;
+    drawerProgress.value = withTiming(open ? 1 : 0, {
       duration: open ? 310 : 255,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [open, progress]);
+      easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
+    });
+  }, [drawerProgress, open, openValue]);
 
-  const drawerTranslateX = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-drawerWidth, 0],
-  });
+  const gesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
+        .failOffsetY([-18, 18])
+        .onBegin((event) => {
+          gestureStartProgress.value = drawerProgress.value;
+          gestureEligible.value = openValue.value > 0.01 || event.absoluteX <= EDGE_SWIPE_WIDTH ? 1 : 0;
+        })
+        .onUpdate((event) => {
+          if (!gestureEligible.value) {
+            return;
+          }
 
-  const mainTranslateX = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, drawerWidth],
-  });
+          const isMostlyHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY) * HORIZONTAL_DOMINANCE;
+          if (!isMostlyHorizontal) {
+            return;
+          }
+
+          drawerProgress.value = clampProgress(gestureStartProgress.value + event.translationX / drawerWidth);
+        })
+        .onEnd((event) => {
+          if (!gestureEligible.value) {
+            return;
+          }
+
+          const shouldOpen =
+            event.velocityX > SWIPE_VELOCITY ||
+            (event.velocityX > -SWIPE_VELOCITY && drawerProgress.value > OPEN_PROGRESS_THRESHOLD);
+
+          drawerProgress.value = withTiming(
+            shouldOpen ? 1 : 0,
+            {
+              duration: shouldOpen ? 230 : 205,
+              easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
+            },
+            (finished) => {
+              if (!finished) {
+                return;
+              }
+
+              if (shouldOpen) {
+                if (onOpen) {
+                  runOnJS(onOpen)();
+                }
+              } else {
+                runOnJS(onClose)();
+              }
+            },
+          );
+        })
+        .onFinalize(() => {
+          gestureEligible.value = 0;
+        }),
+    [drawerProgress, drawerWidth, gestureEligible, gestureStartProgress, onClose, onOpen, openValue],
+  );
+
+  const mainAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: drawerProgress.value * drawerWidth }],
+  }));
+
+  const drawerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: -drawerWidth + drawerProgress.value * drawerWidth }],
+  }));
 
   const visibleMainWidth = Math.max(width - drawerWidth, 58);
 
   return (
-    <View style={styles.root}>
-      <Animated.View style={[styles.mainScreen, { transform: [{ translateX: mainTranslateX }] }]}>
-        {children}
-      </Animated.View>
+    <GestureDetector gesture={gesture}>
+      <View style={styles.root}>
+        <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>
+          {children}
+        </Animated.View>
 
-      {open ? <Pressable style={[styles.peekCloseArea, { width: visibleMainWidth }]} onPress={onClose} /> : null}
+        {open ? <Pressable style={[styles.peekCloseArea, { width: visibleMainWidth }]} onPress={onClose} /> : null}
 
-      <Animated.View
-        pointerEvents={open ? 'auto' : 'none'}
-        style={[
-          styles.drawer,
-          {
-            width: drawerWidth,
-            transform: [{ translateX: drawerTranslateX }],
-          },
-        ]}
-      >
-        <View style={styles.drawerInner}>
-          <View style={styles.topBar}>
-            <Text style={styles.brand}>Auren</Text>
-            <Text style={styles.subtitle}>Your study assistant</Text>
-          </View>
-
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            bounces
-          >
-            <View style={styles.primaryNav}>
-              <SidebarItem
-                icon={sidebarIcon(<Home size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                label="Home"
-                onPress={onClose}
-              />
-
-              <SidebarItem
-                icon={sidebarIcon(<SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                label="New chat"
-                onPress={onNewChat}
-              />
-
-              <SidebarItem
-                icon={sidebarIcon(<BookOpen size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                label="Study modes"
-              />
-
-              <SidebarItem
-                icon={sidebarIcon(<Folder size={28} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                label="Projects"
-              />
+        <Animated.View
+          pointerEvents={open ? 'auto' : 'none'}
+          style={[
+            styles.drawer,
+            drawerAnimatedStyle,
+            {
+              width: drawerWidth,
+            },
+          ]}
+        >
+          <View style={styles.drawerInner}>
+            <View style={styles.topBar}>
+              <Text style={styles.brand}>Auren</Text>
+              <Text style={styles.subtitle}>Your study assistant</Text>
             </View>
 
-            <View style={styles.divider} />
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              bounces
+            >
+              <View style={styles.primaryNav}>
+                <SidebarItem
+                  icon={sidebarIcon(<Home size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                  label="Home"
+                  onPress={onClose}
+                />
 
-            <View style={styles.recentList}>
-              {loadingConversations ? (
-                <Text style={styles.emptyRecentText}>Loading chats...</Text>
-              ) : conversations.length > 0 ? (
-                conversations.map((chat) => {
-                  const isActive = chat.id === activeConversationId;
+                <SidebarItem
+                  icon={sidebarIcon(<SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                  label="New chat"
+                  onPress={onNewChat}
+                />
 
-                  return (
-                    <Pressable
-                      key={chat.id}
-                      onPress={() => onSelectConversation?.(chat.id)}
-                      style={({ pressed }) => [
-                        styles.recentRow,
-                        isActive && styles.activeRecentRow,
-                        pressed && styles.pressed,
-                      ]}
-                    >
-                      <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
-                        {chat.title}
-                      </Text>
-                    </Pressable>
-                  );
-                })
-              ) : (
-                <Text style={styles.emptyRecentText}>Your chats will appear here.</Text>
-              )}
-            </View>
-          </ScrollView>
+                <SidebarItem
+                  icon={sidebarIcon(<BookOpen size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                  label="Study modes"
+                />
 
-          <View style={styles.bottomBar}>
-            <Pressable style={({ pressed }) => [styles.profileInline, pressed && styles.pressed]}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{avatarLetter}</Text>
+                <SidebarItem
+                  icon={sidebarIcon(<Folder size={28} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                  label="Projects"
+                />
               </View>
 
-              <Text style={styles.profileName} numberOfLines={1}>
-                {profileName}
-              </Text>
-            </Pressable>
+              <View style={styles.divider} />
 
-            <Pressable
-              onPress={onNewChat}
-              style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]}
-              accessibilityRole="button"
-              accessibilityLabel="Start a new chat"
-            >
-              <SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={1.85} />
-            </Pressable>
+              <View style={styles.recentList}>
+                {loadingConversations ? (
+                  <Text style={styles.emptyRecentText}>Loading chats...</Text>
+                ) : conversations.length > 0 ? (
+                  conversations.map((chat) => {
+                    const isActive = chat.id === activeConversationId;
+
+                    return (
+                      <Pressable
+                        key={chat.id}
+                        onPress={() => onSelectConversation?.(chat.id)}
+                        style={({ pressed }) => [
+                          styles.recentRow,
+                          isActive && styles.activeRecentRow,
+                          pressed && styles.pressed,
+                        ]}
+                      >
+                        <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
+                          {chat.title}
+                        </Text>
+                      </Pressable>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.emptyRecentText}>Your chats will appear here.</Text>
+                )}
+              </View>
+            </ScrollView>
+
+            <View style={styles.bottomBar}>
+              <Pressable style={({ pressed }) => [styles.profileInline, pressed && styles.pressed]}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{avatarLetter}</Text>
+                </View>
+
+                <Text style={styles.profileName} numberOfLines={1}>
+                  {profileName}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={onNewChat}
+                style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]}
+                accessibilityRole="button"
+                accessibilityLabel="Start a new chat"
+              >
+                <SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={1.85} />
+              </Pressable>
+            </View>
           </View>
-        </View>
-      </Animated.View>
-    </View>
+        </Animated.View>
+      </View>
+    </GestureDetector>
   );
 }
 

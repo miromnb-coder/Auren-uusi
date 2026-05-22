@@ -11,7 +11,7 @@ import { AurenQuickActions } from '../components/AurenQuickActions';
 import { AurenSidebar } from '../components/AurenSidebar';
 import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
 import { generateAurenThinkingTimeline, sendAurenChatMessage, sendAurenChatMessageStream, type AurenThinkingStep } from '../lib/aurenAiClient';
-import { createAurenConversation, createAurenProject, createConversationTitle, deleteAurenProject, listAurenConversations, listAurenProjects, loadAurenMessages, saveAurenMessage, updateAurenProjectTitle, type AurenConversation, type AurenProject } from '../lib/aurenConversations';
+import { createAurenConversation, createAurenProject, createConversationTitle, deleteAurenConversation, deleteAurenProject, listAurenConversations, listAurenProjects, loadAurenMessages, saveAurenMessage, updateAurenConversationTitle, updateAurenProjectTitle, type AurenConversation, type AurenProject } from '../lib/aurenConversations';
 import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
 
@@ -304,6 +304,38 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     catch (error) { console.log('Auren conversation load error:', error); setMessages([{ id: createMessageId('assistant'), role: 'assistant', content: createDebugAurenResponse(error) }]); }
   }
 
+  async function handleRenameConversation(conversation: AurenConversation, title: string) {
+    try {
+      const renamedConversation = await updateAurenConversationTitle(conversation.id, title);
+      setConversations((items) => items.map((item) => item.id === renamedConversation.id ? renamedConversation : item));
+      void aurenHaptics.success();
+    } catch (error) {
+      console.log('Auren conversation rename error:', error);
+      void aurenHaptics.warning();
+      throw error;
+    }
+  }
+
+  async function handleDeleteConversation(conversation: AurenConversation) {
+    const previousConversations = conversations;
+    setConversations((items) => items.filter((item) => item.id !== conversation.id));
+
+    if (conversation.id === activeConversationId) {
+      resetChatSurface();
+      setActiveScreen('chat');
+    }
+
+    try {
+      await deleteAurenConversation(conversation.id);
+      void aurenHaptics.success();
+    } catch (error) {
+      console.log('Auren conversation delete error:', error);
+      void aurenHaptics.warning();
+      setConversations(previousConversations);
+      throw error;
+    }
+  }
+
   async function handleAddImage() {
     const attachment = await pickAurenImageAttachment();
     if (!attachment) return;
@@ -444,6 +476,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       avatarLetter={avatarLetter}
       loadingConversations={loadingConversations}
       onSelectConversation={handleSelectConversation}
+      onRenameConversation={handleRenameConversation}
+      onDeleteConversation={handleDeleteConversation}
     >
       {activeScreen === 'projects' ? (
         <AurenProjectsScreen

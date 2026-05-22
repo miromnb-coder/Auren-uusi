@@ -19,6 +19,7 @@ type AurenSidebarProps = {
   onClose: () => void;
   onOpen?: () => void;
   onNewChat?: () => void;
+  onProjects?: () => void;
   gesturesEnabled?: boolean;
   gestureBottomExclusion?: number;
   conversations?: AurenConversation[];
@@ -60,6 +61,7 @@ export function AurenSidebar({
   onClose,
   onOpen,
   onNewChat,
+  onProjects,
   gesturesEnabled = true,
   gestureBottomExclusion = 0,
   conversations = [],
@@ -269,6 +271,7 @@ export function AurenSidebar({
                   <SidebarItem
                     icon={sidebarIcon(<Folder size={28} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
                     label="Projects"
+                    onPress={onProjects}
                   />
                 </View>
 

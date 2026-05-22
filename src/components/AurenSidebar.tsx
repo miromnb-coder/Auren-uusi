@@ -58,7 +58,7 @@ const CONTEXT_MENU_WIDTH = 228;
 const CONTEXT_MENU_HEIGHT = 117;
 const CONTEXT_SIDE_PADDING = 30;
 const CONTEXT_VERTICAL_GAP = 12;
-const CONTEXT_PILL_HORIZONTAL_INSET = 12;
+const CONTEXT_PILL_HORIZONTAL_INSET = 0;
 const CONVERSATION_LONG_PRESS_DELAY = 355;
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
@@ -515,10 +515,10 @@ function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, on
 
   const desiredPillLeft = target.x - CONTEXT_PILL_HORIZONTAL_INSET;
   const desiredPillWidth = target.width + CONTEXT_PILL_HORIZONTAL_INSET * 2;
-  const pillWidth = Math.min(desiredPillWidth, screenWidth - CONTEXT_SIDE_PADDING * 2);
-  const pillLeft = clamp(desiredPillLeft, CONTEXT_SIDE_PADDING, Math.max(CONTEXT_SIDE_PADDING, screenWidth - pillWidth - CONTEXT_SIDE_PADDING));
-  const pillHeight = Math.max(56, target.height + 15);
-  const pillTop = clamp(target.y - 8, 72, screenHeight - pillHeight - 92);
+  const pillWidth = Math.min(desiredPillWidth, screenWidth - 40);
+  const pillLeft = clamp(desiredPillLeft, 20, Math.max(20, screenWidth - pillWidth - 20));
+  const pillHeight = Math.max(44, target.height);
+  const pillTop = clamp(target.y, 72, screenHeight - pillHeight - 92);
   const menuLeft = clamp(pillLeft, CONTEXT_SIDE_PADDING, Math.max(CONTEXT_SIDE_PADDING, screenWidth - CONTEXT_MENU_WIDTH - CONTEXT_SIDE_PADDING));
   const hasSpaceAbove = pillTop > CONTEXT_MENU_HEIGHT + 78;
   const menuTop = hasSpaceAbove
@@ -527,8 +527,8 @@ function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, on
   const menuStartOffset = hasSpaceAbove ? 8 : -8;
   const overlayOpacity = detachProgress.interpolate({ inputRange: [0, 0.34, 1], outputRange: [0, 0, 1] });
   const pillOpacity = detachProgress.interpolate({ inputRange: [0, 0.16, 1], outputRange: [0.74, 0.95, 1] });
-  const pillTranslateY = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -3] });
-  const pillScale = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0.996, 1.018] });
+  const pillTranslateY = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -2] });
+  const pillScale = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 1] });
   const menuOpacity = menuProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
   const menuTranslateY = menuProgress.interpolate({ inputRange: [0, 1], outputRange: [menuStartOffset, 0] });
   const menuScale = menuProgress.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] });
@@ -786,8 +786,8 @@ const styles = StyleSheet.create({
   contextSelectedPill: {
     position: 'absolute',
     justifyContent: 'center',
-    borderRadius: 30,
-    paddingHorizontal: 26,
+    borderRadius: 22,
+    paddingHorizontal: 12,
     backgroundColor: 'rgba(255,255,255,0.99)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.9)',
@@ -799,9 +799,9 @@ const styles = StyleSheet.create({
   },
   contextSelectedTitle: {
     color: colors.text,
-    fontSize: 19,
-    lineHeight: 24,
+    fontSize: 17.7,
+    lineHeight: 23,
     fontWeight: '400',
-    letterSpacing: -0.2,
+    letterSpacing: -0.18,
   },
 });

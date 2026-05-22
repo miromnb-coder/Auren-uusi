@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import type { AurenConversation } from '../lib/aurenConversations';
+import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
 
 type ActiveSidebarItem = 'newChat' | 'projects' | null;
@@ -56,7 +57,8 @@ const CLOSE_PROGRESS_THRESHOLD = 0.62;
 const CONTEXT_MENU_WIDTH = 228;
 const CONTEXT_MENU_HEIGHT = 117;
 const CONTEXT_SIDE_PADDING = 30;
-const CONTEXT_VERTICAL_GAP = 10;
+const CONTEXT_VERTICAL_GAP = 12;
+const CONTEXT_PILL_HORIZONTAL_INSET = 12;
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
@@ -114,7 +116,14 @@ export function AurenSidebar({
     });
   }, [drawerProgress, open, openValue]);
 
+  useEffect(() => {
+    if (!open && actionTarget) {
+      setActionTarget(null);
+    }
+  }, [actionTarget, open]);
+
   function openConversationActions(conversation: AurenConversation) {
+    void aurenHaptics.contextMenu();
     const rowRef = conversationRowRefs.current[conversation.id];
 
     if (!rowRef?.measureInWindow) {
@@ -144,6 +153,7 @@ export function AurenSidebar({
   }
 
   function openRenameConversation(conversation: AurenConversation) {
+    void aurenHaptics.selection();
     setActionTarget(null);
     setRenameError(null);
     setRenameDraft(conversation.title);
@@ -180,6 +190,7 @@ export function AurenSidebar({
   }
 
   function openDeleteConversation(conversation: AurenConversation) {
+    void aurenHaptics.selection();
     setActionTarget(null);
     setDeleteConversation(conversation);
   }
@@ -395,9 +406,10 @@ export function AurenSidebar({
                             ref={(node) => {
                               conversationRowRefs.current[chat.id] = node;
                             }}
+                            collapsable={false}
                             onPress={() => onSelectConversation?.(chat.id)}
                             onLongPress={() => openConversationActions(chat)}
-                            delayLongPress={330}
+                            delayLongPress={285}
                             style={({ pressed }) => [
                               styles.recentRow,
                               isActive && styles.activeRecentRow,
@@ -506,10 +518,12 @@ function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, on
     return null;
   }
 
-  const pillLeft = clamp(target.x, CONTEXT_SIDE_PADDING, Math.max(CONTEXT_SIDE_PADDING, screenWidth - target.width - CONTEXT_SIDE_PADDING));
-  const pillWidth = Math.min(target.width, screenWidth - CONTEXT_SIDE_PADDING * 2);
-  const pillHeight = Math.max(50, target.height + 10);
-  const pillTop = clamp(target.y - 5, 72, screenHeight - pillHeight - 92);
+  const desiredPillLeft = target.x - CONTEXT_PILL_HORIZONTAL_INSET;
+  const desiredPillWidth = target.width + CONTEXT_PILL_HORIZONTAL_INSET * 2;
+  const pillWidth = Math.min(desiredPillWidth, screenWidth - CONTEXT_SIDE_PADDING * 2);
+  const pillLeft = clamp(desiredPillLeft, CONTEXT_SIDE_PADDING, Math.max(CONTEXT_SIDE_PADDING, screenWidth - pillWidth - CONTEXT_SIDE_PADDING));
+  const pillHeight = Math.max(56, target.height + 15);
+  const pillTop = clamp(target.y - 8, 72, screenHeight - pillHeight - 92);
   const menuLeft = clamp(pillLeft, CONTEXT_SIDE_PADDING, Math.max(CONTEXT_SIDE_PADDING, screenWidth - CONTEXT_MENU_WIDTH - CONTEXT_SIDE_PADDING));
   const hasSpaceAbove = pillTop > CONTEXT_MENU_HEIGHT + 78;
   const menuTop = hasSpaceAbove
@@ -517,7 +531,7 @@ function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, on
     : Math.min(screenHeight - CONTEXT_MENU_HEIGHT - 96, pillTop + pillHeight + CONTEXT_VERTICAL_GAP);
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={styles.contextOverlay} onPress={onClose}>
         <View
           pointerEvents="none"
@@ -545,12 +559,12 @@ function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, on
           ]}
           onPress={(event) => event.stopPropagation()}
         >
-          <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.pressed]} onPress={() => onRename(target.conversation)}>
+          <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.contextMenuRowPressed]} onPress={() => onRename(target.conversation)}>
             <Text style={styles.contextMenuLabel}>Rename</Text>
             <SquarePen size={23} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
           </Pressable>
           <View style={styles.contextDivider} />
-          <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.pressed]} onPress={() => onDelete(target.conversation)}>
+          <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.contextMenuRowPressed]} onPress={() => onDelete(target.conversation)}>
             <Text style={[styles.contextMenuLabel, styles.dangerText]}>Delete</Text>
             <Trash2 size={23} color={DANGER_COLOR} strokeWidth={1.9} />
           </Pressable>
@@ -756,7 +770,7 @@ const styles = StyleSheet.create({
     marginLeft: -12,
     paddingLeft: 12,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.75)',
+    backgroundColor: 'rgba(255,255,255,0.72)',
   },
   recentTitle: {
     flex: 1,
@@ -827,18 +841,20 @@ const styles = StyleSheet.create({
   },
   contextOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(20,22,28,0.22)',
+    backgroundColor: 'rgba(209,211,218,0.68)',
   },
   contextMenu: {
     position: 'absolute',
     overflow: 'hidden',
     borderRadius: 18,
-    backgroundColor: 'rgba(250,250,250,0.96)',
+    backgroundColor: 'rgba(252,252,252,0.98)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.84)',
     shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 10,
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 14,
   },
   contextMenuRow: {
     minHeight: 58,
@@ -847,6 +863,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 22,
+  },
+  contextMenuRowPressed: {
+    backgroundColor: 'rgba(17,24,39,0.045)',
   },
   contextMenuLabel: {
     color: colors.text,
@@ -865,14 +884,16 @@ const styles = StyleSheet.create({
   contextSelectedPill: {
     position: 'absolute',
     justifyContent: 'center',
-    borderRadius: 29,
+    borderRadius: 30,
     paddingHorizontal: 26,
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: 'rgba(255,255,255,0.99)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.9)',
     shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 13 },
+    elevation: 14,
   },
   contextSelectedTitle: {
     color: colors.text,

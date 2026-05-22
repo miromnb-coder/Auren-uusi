@@ -34,7 +34,7 @@ const DRAWER_WIDTH_RATIO = 0.82;
 const DRAWER_MIN_WIDTH = 316;
 const DRAWER_MAX_WIDTH = 470;
 
-const DRAWER_BACKGROUND = '#fffefb';
+const DRAWER_BACKGROUND = '#fbfbfb';
 const SIDEBAR_ICON_COLOR = 'rgba(34,27,23,0.84)';
 const ICON_STROKE_WIDTH = 1.82;
 

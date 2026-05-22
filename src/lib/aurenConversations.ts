@@ -11,6 +11,16 @@ export type AurenConversation = {
   lastMessageAt: string | null;
 };
 
+export type AurenProject = {
+  id: string;
+  userId: string;
+  title: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastOpenedAt: string | null;
+};
+
 type ConversationRow = {
   id: string;
   user_id: string;
@@ -18,6 +28,16 @@ type ConversationRow = {
   created_at: string;
   updated_at: string;
   last_message_at: string | null;
+};
+
+type ProjectRow = {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+  last_opened_at: string | null;
 };
 
 type MessageRow = {
@@ -35,6 +55,18 @@ function mapConversation(row: ConversationRow): AurenConversation {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     lastMessageAt: row.last_message_at,
+  };
+}
+
+function mapProject(row: ProjectRow): AurenProject {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title.trim() || 'Untitled project',
+    description: row.description?.trim() || null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    lastOpenedAt: row.last_opened_at,
   };
 }
 
@@ -111,6 +143,46 @@ export async function createAurenConversation(userId: string, title: string) {
   }
 
   return mapConversation(data as ConversationRow);
+}
+
+export async function listAurenProjects(userId: string) {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id,user_id,title,description,created_at,updated_at,last_opened_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data ?? []) as ProjectRow[]).map(mapProject);
+}
+
+type CreateProjectInput = {
+  userId: string;
+  title: string;
+  description?: string | null;
+};
+
+export async function createAurenProject({ userId, title, description }: CreateProjectInput) {
+  const { data, error } = await supabase
+    .from('projects')
+    .insert({
+      user_id: userId,
+      title: title.trim(),
+      description: description?.trim() || null,
+      last_opened_at: new Date().toISOString(),
+    })
+    .select('id,user_id,title,description,created_at,updated_at,last_opened_at')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapProject(data as ProjectRow);
 }
 
 export async function loadAurenMessages(conversationId: string) {

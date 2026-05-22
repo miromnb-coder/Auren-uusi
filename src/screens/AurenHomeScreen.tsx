@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AurenComposer } from '../components/AurenComposer';
+import { AurenConversationSearchScreen } from '../components/AurenConversationSearchScreen';
 import { AurenHeader } from '../components/AurenHeader';
 import { AurenMessageList, type AurenMessage } from '../components/AurenMessageList';
 import { AurenPlusSheet } from '../components/AurenPlusSheet';
@@ -22,7 +23,7 @@ const THINKING_STEP_DELAYS = [1450, 1900, 2400, 3000, 3600];
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 type AurenHomeScreenProps = { session: Session };
-type AurenScreenMode = 'chat' | 'projects' | 'projectDetail';
+type AurenScreenMode = 'chat' | 'conversationSearch' | 'projects' | 'projectDetail';
 type CreateProjectPayload = { title: string; description: string | null };
 
 function createMessageId(role: AurenMessage['role']) {
@@ -129,9 +130,32 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setSidebarOpen(true);
   }
 
+  function returnFromConversationSearchToSidebar() {
+    void aurenHaptics.panelOpen();
+    Keyboard.dismiss();
+    setPlusSheetOpen(false);
+    setActiveProject(null);
+    setActiveScreen('chat');
+    setSidebarOpen(true);
+  }
+
   function handleSidebarOpen() {
     if (activeScreen === 'projects') returnFromProjectsToSidebar();
+    else if (activeScreen === 'conversationSearch') returnFromConversationSearchToSidebar();
     else openSidebar();
+  }
+
+  function openConversationSearch() {
+    void aurenHaptics.selection();
+    Keyboard.dismiss();
+    setPlusSheetOpen(false);
+    setCreateProjectSheetOpen(false);
+    setCreateProjectError(null);
+    setProjectActionsOpen(false);
+    setRenameProjectTarget(null);
+    setActiveProject(null);
+    setSidebarOpen(false);
+    setActiveScreen('conversationSearch');
   }
 
   function openProjects() {
@@ -466,6 +490,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       onOpen={handleSidebarOpen}
       onClose={closeSidebar}
       onNewChat={startNewChat}
+      onSearchChats={openConversationSearch}
       onProjects={openProjects}
       gesturesEnabled={!plusSheetOpen && !createProjectSheetOpen && activeScreen !== 'projectDetail'}
       gestureBottomExclusion={activeScreen === 'chat' ? sidebarGestureBottomExclusion : 0}
@@ -479,7 +504,14 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       onRenameConversation={handleRenameConversation}
       onDeleteConversation={handleDeleteConversation}
     >
-      {activeScreen === 'projects' ? (
+      {activeScreen === 'conversationSearch' ? (
+        <AurenConversationSearchScreen
+          conversations={conversations}
+          loading={loadingConversations}
+          onBack={returnFromConversationSearchToSidebar}
+          onSelectConversation={handleSelectConversation}
+        />
+      ) : activeScreen === 'projects' ? (
         <AurenProjectsScreen
           onBack={returnFromProjectsToSidebar}
           projects={projects}

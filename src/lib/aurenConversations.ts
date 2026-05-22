@@ -185,6 +185,14 @@ export async function createAurenProject({ userId, title, description }: CreateP
   return mapProject(data as ProjectRow);
 }
 
+export async function deleteAurenProject(projectId: string) {
+  const { error } = await supabase.from('projects').delete().eq('id', projectId);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function loadAurenMessages(conversationId: string) {
   const { data, error } = await supabase
     .from('messages')

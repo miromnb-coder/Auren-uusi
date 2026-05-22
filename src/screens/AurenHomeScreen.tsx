@@ -6,12 +6,12 @@ import { AurenComposer } from '../components/AurenComposer';
 import { AurenHeader } from '../components/AurenHeader';
 import { AurenMessageList, type AurenMessage } from '../components/AurenMessageList';
 import { AurenPlusSheet } from '../components/AurenPlusSheet';
-import { AurenProjectsScreen } from '../components/AurenProjectsScreen';
+import { AurenProjectsScreen, ProjectActionsSheet, RenameProjectSheet } from '../components/AurenProjectsScreen';
 import { AurenQuickActions } from '../components/AurenQuickActions';
 import { AurenSidebar } from '../components/AurenSidebar';
 import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
 import { generateAurenThinkingTimeline, sendAurenChatMessage, sendAurenChatMessageStream, type AurenThinkingStep } from '../lib/aurenAiClient';
-import { createAurenConversation, createAurenProject, createConversationTitle, deleteAurenProject, listAurenConversations, listAurenProjects, loadAurenMessages, saveAurenMessage, type AurenConversation, type AurenProject } from '../lib/aurenConversations';
+import { createAurenConversation, createAurenProject, createConversationTitle, deleteAurenProject, listAurenConversations, listAurenProjects, loadAurenMessages, saveAurenMessage, updateAurenProjectTitle, type AurenConversation, type AurenProject } from '../lib/aurenConversations';
 import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
 
@@ -57,6 +57,10 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const { profileName, avatarLetter } = useMemo(() => getSessionProfile(session), [session]);
   const [activeScreen, setActiveScreen] = useState<AurenScreenMode>('chat');
   const [activeProject, setActiveProject] = useState<AurenProject | null>(null);
+  const [projectActionsOpen, setProjectActionsOpen] = useState(false);
+  const [renameProjectTarget, setRenameProjectTarget] = useState<AurenProject | null>(null);
+  const [renameProjectSubmitting, setRenameProjectSubmitting] = useState(false);
+  const [renameProjectError, setRenameProjectError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [plusSheetOpen, setPlusSheetOpen] = useState(false);
   const [createProjectSheetOpen, setCreateProjectSheetOpen] = useState(false);
@@ -135,6 +139,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setPlusSheetOpen(false);
     setCreateProjectSheetOpen(false);
     setCreateProjectError(null);
+    setProjectActionsOpen(false);
+    setRenameProjectTarget(null);
     setActiveProject(null);
     setSidebarOpen(false);
     setActiveScreen('projects');
@@ -147,6 +153,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setPlusSheetOpen(false);
     setCreateProjectSheetOpen(false);
     setCreateProjectError(null);
+    setProjectActionsOpen(false);
+    setRenameProjectTarget(null);
     setActiveProject(project);
     setActiveScreen('projectDetail');
   }
@@ -155,8 +163,30 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     void aurenHaptics.selection();
     Keyboard.dismiss();
     resetChatSurface();
+    setProjectActionsOpen(false);
+    setRenameProjectTarget(null);
     setActiveProject(null);
     setActiveScreen('projects');
+  }
+
+  function openProjectActions() {
+    if (!activeProject) return;
+    void aurenHaptics.panelOpen();
+    Keyboard.dismiss();
+    setProjectActionsOpen(true);
+  }
+
+  function closeProjectActions() {
+    void aurenHaptics.panelClose();
+    setProjectActionsOpen(false);
+  }
+
+  function openProjectRenameFromDetail() {
+    if (!activeProject) return;
+    void aurenHaptics.selection();
+    setProjectActionsOpen(false);
+    setRenameProjectError(null);
+    setRenameProjectTarget(activeProject);
   }
 
   function openCreateProjectSheet() {
@@ -192,14 +222,39 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     }
   }
 
-  function handleRenameProject(project: AurenProject) {
-    void aurenHaptics.selection();
-    console.log('Rename project:', project.id);
+  async function handleRenameProject(project: AurenProject, title: string) {
+    setRenameProjectSubmitting(true);
+    setRenameProjectError(null);
+    try {
+      const renamedProject = await updateAurenProjectTitle(project.id, title);
+      setProjects((currentProjects) => currentProjects.map((item) => item.id === renamedProject.id ? renamedProject : item));
+      setActiveProject((currentProject) => currentProject?.id === renamedProject.id ? renamedProject : currentProject);
+      void aurenHaptics.success();
+    } catch (error) {
+      void aurenHaptics.warning();
+      const message = error instanceof Error ? error.message : 'Could not rename project. Please try again.';
+      setRenameProjectError(message);
+      throw error;
+    } finally {
+      setRenameProjectSubmitting(false);
+    }
+  }
+
+  async function handleRenameProjectFromDetail(title: string) {
+    if (!renameProjectTarget) return;
+    await handleRenameProject(renameProjectTarget, title);
+    setRenameProjectTarget(null);
   }
 
   async function handleDeleteProject(project: AurenProject) {
     void aurenHaptics.warning();
+    setProjectActionsOpen(false);
     setProjects((currentProjects) => currentProjects.filter((item) => item.id !== project.id));
+    if (activeProject?.id === project.id) {
+      resetChatSurface();
+      setActiveProject(null);
+      setActiveScreen('projects');
+    }
 
     try {
       await deleteAurenProject(project.id);
@@ -207,6 +262,10 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       console.log('Auren project delete error:', error);
       void aurenHaptics.warning();
       setProjects((currentProjects) => [project, ...currentProjects.filter((item) => item.id !== project.id)]);
+      if (activeScreen === 'projects' && !activeProject) {
+        setActiveProject(project);
+        setActiveScreen('projectDetail');
+      }
     }
   }
 
@@ -215,6 +274,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     stopThinkingTimeline();
     setActiveScreen('chat');
     setActiveProject(null);
+    setProjectActionsOpen(false);
+    setRenameProjectTarget(null);
     setActiveConversationId(null);
     setMessages([]);
     setDraft('');
@@ -230,6 +291,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     Keyboard.dismiss();
     setActiveScreen('chat');
     setActiveProject(null);
+    setProjectActionsOpen(false);
+    setRenameProjectTarget(null);
     setSidebarOpen(false);
     if (conversationId === activeConversationId) return;
     stopThinkingTimeline();
@@ -400,10 +463,10 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
             <Pressable accessibilityRole="button" accessibilityLabel="Back to projects" onPress={closeProjectDetail} style={({ pressed }) => [styles.projectBackButton, pressed && styles.buttonPressed]}>
               <Text style={styles.projectBackText}>‹</Text>
             </Pressable>
-            <View style={styles.projectTitleWrap}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Project actions" onPress={openProjectActions} style={({ pressed }) => [styles.projectTitleWrap, pressed && styles.titlePressed]}>
               <Text style={styles.projectHeaderTitle} numberOfLines={1}>{activeProject.title}</Text>
               <Text style={styles.projectChevron}>⌄</Text>
-            </View>
+            </Pressable>
             <View style={styles.projectHeaderSpacer} />
           </View>
 
@@ -413,7 +476,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
             </View>
           ) : (
             <Pressable style={styles.projectEmptyContent} onPress={Keyboard.dismiss}>
-              <Text style={styles.projectEmptyTitle}>{`${activeProject.title} — ready.\nLet’s begin.`}</Text>
+              <Text style={styles.projectEmptyTitle}>Start with one question.</Text>
+              <Text style={styles.projectEmptySubtitle}>Make a plan, ask about your notes, or turn this project into a study session.</Text>
             </Pressable>
           )}
 
@@ -421,6 +485,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
             <AurenComposer value={draft} attachments={selectedImages} placeholder="Ask Auren about this project" attachmentPlaceholder="Ask Auren about this project image" onChangeText={setDraft} onAddImage={openPlusSheet} onRemoveAttachment={handleRemoveAttachment} onFocus={() => setInputFocused(true)} onBlur={() => setInputFocused(false)} onSend={handleSend} onHeightChange={setComposerHeight} />
           </Animated.View>
           {sharedPlusSheet}
+          <ProjectActionsSheet visible={projectActionsOpen} onClose={closeProjectActions} onRename={openProjectRenameFromDetail} onDelete={() => activeProject ? void handleDeleteProject(activeProject) : undefined} />
+          <RenameProjectSheet visible={Boolean(renameProjectTarget)} project={renameProjectTarget} submitting={renameProjectSubmitting} error={renameProjectError} onClose={() => setRenameProjectTarget(null)} onSubmit={handleRenameProjectFromDetail} />
         </SafeAreaView>
       ) : (
         <SafeAreaView style={styles.screen}>
@@ -462,14 +528,16 @@ const styles = StyleSheet.create({
   heroSubtitle: { marginTop: 15, color: colors.muted, fontSize: 15.8, lineHeight: 22.5, letterSpacing: -0.14, textAlign: 'center', fontWeight: '500' },
   actionsWrap: { width: '100%', marginTop: 42 },
   projectHeader: { height: 94, paddingHorizontal: 31, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  projectBackButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.82)', borderWidth: 1, borderColor: 'rgba(17,24,39,0.03)' },
+  projectBackButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 0 },
   projectBackText: { color: colors.text, fontSize: 39, lineHeight: 42, fontWeight: '300', marginTop: -3 },
-  projectTitleWrap: { position: 'absolute', left: 96, right: 96, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  projectTitleWrap: { position: 'absolute', left: 96, right: 96, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
   projectHeaderTitle: { flexShrink: 1, color: colors.text, fontSize: 19.5, lineHeight: 25, fontWeight: '700', letterSpacing: -0.25, textAlign: 'center' },
   projectChevron: { color: colors.text, fontSize: 18, lineHeight: 20, fontWeight: '700' },
   projectHeaderSpacer: { width: 48, height: 48 },
-  projectEmptyContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 34, paddingBottom: 178 },
-  projectEmptyTitle: { color: colors.text, fontSize: 30, lineHeight: 38, fontWeight: '700', letterSpacing: -0.75, textAlign: 'center' },
+  projectEmptyContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 38, paddingBottom: 178 },
+  projectEmptyTitle: { color: colors.text, fontSize: 31, lineHeight: 37, fontWeight: '700', letterSpacing: -0.78, textAlign: 'center' },
+  projectEmptySubtitle: { marginTop: 13, maxWidth: 318, color: colors.muted, fontSize: 16.2, lineHeight: 22.5, fontWeight: '500', letterSpacing: -0.13, textAlign: 'center' },
   composerWrap: { position: 'absolute', left: 16, right: 16, bottom: CLOSED_COMPOSER_BOTTOM },
   buttonPressed: { opacity: 0.62, transform: [{ scale: 0.97 }] },
+  titlePressed: { opacity: 0.62 },
 });

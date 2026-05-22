@@ -491,6 +491,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       onOpen={openSidebar}
       onClose={closeSidebar}
       onNewChat={startNewChat}
+      gesturesEnabled={!plusSheetOpen}
       gestureBottomExclusion={sidebarGestureBottomExclusion}
       conversations={conversations}
       activeConversationId={activeConversationId}

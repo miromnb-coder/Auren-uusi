@@ -37,6 +37,12 @@ type GenerateAurenThinkingTimelineInput = {
   hasImages?: boolean;
 };
 
+type GenerateAurenConversationTitleInput = {
+  userMessage: string;
+  assistantAnswer: string;
+  fallbackTitle?: string;
+};
+
 function createRequestBody(messages: AurenMessage[], options: SendAurenChatMessageOptions = {}) {
   return JSON.stringify({
     modelMode: options.modelMode,
@@ -95,6 +101,33 @@ function cleanThinkingLine(line: unknown) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 92);
+}
+
+function cleanConversationTitle(value: unknown, fallbackTitle = 'New chat') {
+  if (typeof value !== 'string') {
+    return fallbackTitle;
+  }
+
+  const cleaned = value
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .replace(/^\s*(title|otsikko)\s*[:：-]\s*/i, '')
+    .replace(/^['"“”]+|['"“”]+$/g, '')
+    .replace(/[.!?。！？]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleaned) {
+    return fallbackTitle;
+  }
+
+  const firstLine = cleaned.split(/\r?\n/)[0]?.trim() || cleaned;
+
+  if (firstLine.length <= 42) {
+    return firstLine;
+  }
+
+  return `${firstLine.slice(0, 39).trim()}...`;
 }
 
 function parseJsonObject(value: string) {
@@ -209,6 +242,36 @@ export async function sendAurenChatMessageStream(
   }
 
   return fullAnswer.trim();
+}
+
+export async function generateAurenConversationTitle({
+  userMessage,
+  assistantAnswer,
+  fallbackTitle = 'New chat',
+}: GenerateAurenConversationTitleInput) {
+  const prompt = [
+    'Create a short sidebar title for this Auren conversation.',
+    'Use the same language as the user message when clear.',
+    'Maximum 4 words when possible.',
+    'No punctuation. No quotes. No markdown.',
+    'Return only the title.',
+    '',
+    `User message: ${userMessage.trim()}`,
+    `Assistant answer: ${assistantAnswer.trim().slice(0, 900)}`,
+  ].join('\n');
+
+  const answer = await sendAurenChatMessage(
+    [
+      {
+        id: `title-${Date.now()}`,
+        role: 'user',
+        content: prompt,
+      },
+    ],
+    { modelMode: 'fast' },
+  );
+
+  return cleanConversationTitle(answer, fallbackTitle);
 }
 
 export async function generateAurenThinkingTimeline({

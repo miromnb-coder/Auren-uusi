@@ -1,5 +1,6 @@
 import type { AurenMessage } from '../components/AurenMessageList';
 import type { AurenImageAttachment } from './aurenAttachments';
+import { generateAurenConversationTitle } from './aurenAiClient';
 import { supabase } from './supabase';
 
 export type AurenConversation = {
@@ -45,6 +46,11 @@ type MessageRow = {
   role: 'user' | 'assistant';
   content: string;
   attachments: unknown;
+};
+
+type MessageTitleRow = {
+  role: 'user' | 'assistant';
+  content: string;
 };
 
 function mapConversation(row: ConversationRow): AurenConversation {
@@ -166,6 +172,44 @@ export async function updateAurenConversationTitle(conversationId: string, title
   return mapConversation(data as ConversationRow);
 }
 
+async function maybeGenerateAiConversationTitle(conversationId: string, assistantAnswer: string) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('role,content,created_at')
+    .eq('conversation_id', conversationId)
+    .order('created_at', { ascending: true })
+    .limit(3);
+
+  if (error) {
+    throw error;
+  }
+
+  const titleMessages = (data ?? []) as MessageTitleRow[];
+  const firstUserMessage = titleMessages[0];
+  const firstAssistantMessage = titleMessages[1];
+
+  if (
+    titleMessages.length !== 2 ||
+    firstUserMessage?.role !== 'user' ||
+    firstAssistantMessage?.role !== 'assistant'
+  ) {
+    return null;
+  }
+
+  const fallbackTitle = createConversationTitle(firstUserMessage.content);
+  const aiTitle = await generateAurenConversationTitle({
+    userMessage: firstUserMessage.content,
+    assistantAnswer,
+    fallbackTitle,
+  });
+
+  if (!aiTitle || aiTitle === fallbackTitle) {
+    return null;
+  }
+
+  return updateAurenConversationTitle(conversationId, aiTitle);
+}
+
 export async function listAurenProjects(userId: string) {
   const { data, error } = await supabase
     .from('projects')
@@ -272,6 +316,14 @@ export async function saveAurenMessage({ conversationId, userId, role, content, 
 
   if (error) {
     throw error;
+  }
+
+  if (role === 'assistant') {
+    try {
+      await maybeGenerateAiConversationTitle(conversationId, content);
+    } catch (titleError) {
+      console.log('Auren AI title generation error:', titleError);
+    }
   }
 
   return mapMessage(data as MessageRow);

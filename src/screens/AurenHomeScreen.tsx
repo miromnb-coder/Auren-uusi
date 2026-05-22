@@ -91,6 +91,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const currentThinkingLines = thinkingTimeline[thinkingStepIndex]?.lines ?? [];
   const messageListBottomInset = useMemo(() => composerHeight + composerBottomInset + MESSAGE_LIST_BOTTOM_GAP, [composerBottomInset, composerHeight]);
   const sidebarGestureBottomExclusion = useMemo(() => composerHeight + composerBottomInset + 24, [composerBottomInset, composerHeight]);
+  const sidebarActiveItem = activeScreen === 'projects' || activeScreen === 'projectDetail' ? 'projects' : null;
   const quickActionsTranslateY = quickActionsProgress.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] });
   const quickActionsScale = quickActionsProgress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
 
@@ -438,6 +439,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       gestureBottomExclusion={activeScreen === 'chat' ? sidebarGestureBottomExclusion : 0}
       conversations={conversations}
       activeConversationId={activeConversationId}
+      activeItem={sidebarActiveItem}
       profileName={profileName}
       avatarLetter={avatarLetter}
       loadingConversations={loadingConversations}

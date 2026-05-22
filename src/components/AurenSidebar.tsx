@@ -19,6 +19,7 @@ type AurenSidebarProps = {
   onClose: () => void;
   onOpen?: () => void;
   onNewChat?: () => void;
+  gestureBottomExclusion?: number;
   conversations?: AurenConversation[];
   activeConversationId?: string | null;
   profileName?: string;
@@ -35,7 +36,6 @@ const DRAWER_BACKGROUND = '#fbfaf7';
 const SIDEBAR_ICON_COLOR = 'rgba(34,27,23,0.84)';
 const ICON_STROKE_WIDTH = 1.82;
 
-const EDGE_SWIPE_WIDTH = 30;
 const DRAG_ACTIVATION_DISTANCE = 8;
 const HORIZONTAL_DOMINANCE = 1.18;
 const SWIPE_VELOCITY = 720;
@@ -58,6 +58,7 @@ export function AurenSidebar({
   onClose,
   onOpen,
   onNewChat,
+  gestureBottomExclusion = 0,
   conversations = [],
   activeConversationId = null,
   profileName = 'Auren user',
@@ -69,7 +70,6 @@ export function AurenSidebar({
   const drawerProgress = useSharedValue(open ? 1 : 0);
   const openValue = useSharedValue(open ? 1 : 0);
   const gestureStartProgress = useSharedValue(open ? 1 : 0);
-  const gestureEligible = useSharedValue(0);
 
   const drawerWidth = useMemo(() => {
     const measuredWidth = width * DRAWER_WIDTH_RATIO;
@@ -89,15 +89,10 @@ export function AurenSidebar({
       Gesture.Pan()
         .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
         .failOffsetY([-18, 18])
-        .onBegin((event) => {
+        .onBegin(() => {
           gestureStartProgress.value = drawerProgress.value;
-          gestureEligible.value = openValue.value > 0.01 || event.absoluteX <= EDGE_SWIPE_WIDTH ? 1 : 0;
         })
         .onUpdate((event) => {
-          if (!gestureEligible.value) {
-            return;
-          }
-
           const isMostlyHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY) * HORIZONTAL_DOMINANCE;
           if (!isMostlyHorizontal) {
             return;
@@ -106,10 +101,6 @@ export function AurenSidebar({
           drawerProgress.value = clampProgress(gestureStartProgress.value + event.translationX / drawerWidth);
         })
         .onEnd((event) => {
-          if (!gestureEligible.value) {
-            return;
-          }
-
           const shouldOpen =
             event.velocityX > SWIPE_VELOCITY ||
             (event.velocityX > -SWIPE_VELOCITY && drawerProgress.value > OPEN_PROGRESS_THRESHOLD);
@@ -134,11 +125,8 @@ export function AurenSidebar({
               }
             },
           );
-        })
-        .onFinalize(() => {
-          gestureEligible.value = 0;
         }),
-    [drawerProgress, drawerWidth, gestureEligible, gestureStartProgress, onClose, onOpen, openValue],
+    [drawerProgress, drawerWidth, gestureStartProgress, onClose, onOpen],
   );
 
   const mainAnimatedStyle = useAnimatedStyle(() => ({
@@ -150,16 +138,29 @@ export function AurenSidebar({
   }));
 
   const visibleMainWidth = Math.max(width - drawerWidth, 58);
+  const normalizedGestureBottomExclusion = Math.max(0, gestureBottomExclusion);
 
   return (
-    <GestureDetector gesture={gesture}>
-      <View style={styles.root}>
-        <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>
-          {children}
-        </Animated.View>
+    <View style={styles.root}>
+      <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>
+        {children}
+      </Animated.View>
 
-        {open ? <Pressable style={[styles.peekCloseArea, { width: visibleMainWidth }]} onPress={onClose} /> : null}
+      {!open ? (
+        <GestureDetector gesture={gesture}>
+          <Animated.View style={[styles.chatGestureArea, { bottom: normalizedGestureBottomExclusion }]} />
+        </GestureDetector>
+      ) : null}
 
+      {open ? (
+        <GestureDetector gesture={gesture}>
+          <Animated.View style={[styles.peekCloseArea, { width: visibleMainWidth }]}> 
+            <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+          </Animated.View>
+        </GestureDetector>
+      ) : null}
+
+      <GestureDetector gesture={gesture}>
         <Animated.View
           pointerEvents={open ? 'auto' : 'none'}
           style={[
@@ -259,8 +260,8 @@ export function AurenSidebar({
             </View>
           </View>
         </Animated.View>
-      </View>
-    </GestureDetector>
+      </GestureDetector>
+    </View>
   );
 }
 
@@ -293,6 +294,14 @@ const styles = StyleSheet.create({
   mainScreen: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
+  },
+  chatGestureArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 30,
+    backgroundColor: 'rgba(255,255,255,0)',
   },
   peekCloseArea: {
     position: 'absolute',

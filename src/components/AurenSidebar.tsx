@@ -67,73 +67,104 @@ export function AurenSidebar({
   loadingConversations = false,
   onSelectConversation,
 }: AurenSidebarProps) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const drawerProgress = useSharedValue(open ? 1 : 0);
-  const openGestureStartProgress = useSharedValue(0);
-  const closeGestureStartProgress = useSharedValue(1);
+  const openValue = useSharedValue(open ? 1 : 0);
+  const rootGestureStartProgress = useSharedValue(open ? 1 : 0);
+  const rootGestureEligible = useSharedValue(0);
+  const drawerCloseGestureStartProgress = useSharedValue(1);
 
   const drawerWidth = useMemo(() => {
     const measuredWidth = width * DRAWER_WIDTH_RATIO;
     return Math.min(Math.max(measuredWidth, DRAWER_MIN_WIDTH), Math.min(DRAWER_MAX_WIDTH, width - 58));
   }, [width]);
 
+  const normalizedGestureBottomExclusion = Math.max(0, gestureBottomExclusion);
+
   useEffect(() => {
+    openValue.value = open ? 1 : 0;
     drawerProgress.value = withTiming(open ? 1 : 0, {
       duration: open ? 310 : 255,
       easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
     });
-  }, [drawerProgress, open]);
+  }, [drawerProgress, open, openValue]);
 
-  const openGesture = useMemo(
+  const rootGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(!open)
         .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
-        .failOffsetY([-24, 24])
-        .onBegin(() => {
-          openGestureStartProgress.value = drawerProgress.value;
+        .failOffsetY([-28, 28])
+        .onBegin((event) => {
+          const startsAboveComposer = event.absoluteY < height - normalizedGestureBottomExclusion;
+          rootGestureStartProgress.value = drawerProgress.value;
+          rootGestureEligible.value = startsAboveComposer || openValue.value > 0.01 ? 1 : 0;
         })
         .onUpdate((event) => {
-          const isMostlyHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY) * HORIZONTAL_DOMINANCE;
-          const isOpeningDirection = event.translationX > 0;
-
-          if (!isMostlyHorizontal || !isOpeningDirection) {
+          if (!rootGestureEligible.value) {
             return;
           }
 
-          drawerProgress.value = clampProgress(openGestureStartProgress.value + event.translationX / drawerWidth);
+          const isMostlyHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY) * HORIZONTAL_DOMINANCE;
+          if (!isMostlyHorizontal) {
+            return;
+          }
+
+          if (openValue.value < 0.01 && event.translationX < 0) {
+            return;
+          }
+
+          if (openValue.value > 0.01 && event.translationX > 0) {
+            return;
+          }
+
+          drawerProgress.value = clampProgress(rootGestureStartProgress.value + event.translationX / drawerWidth);
         })
         .onEnd((event) => {
+          if (!rootGestureEligible.value) {
+            return;
+          }
+
           const shouldOpen =
             event.velocityX > SWIPE_VELOCITY ||
             (event.velocityX > -SWIPE_VELOCITY && drawerProgress.value > OPEN_PROGRESS_THRESHOLD);
+          const shouldClose =
+            event.velocityX < -SWIPE_VELOCITY ||
+            (event.velocityX < SWIPE_VELOCITY && drawerProgress.value < CLOSE_PROGRESS_THRESHOLD);
+          const nextOpen = openValue.value > 0.01 ? !shouldClose : shouldOpen;
 
           drawerProgress.value = withTiming(
-            shouldOpen ? 1 : 0,
+            nextOpen ? 1 : 0,
             {
-              duration: shouldOpen ? 230 : 205,
+              duration: nextOpen ? 230 : 205,
               easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
             },
             (finished) => {
               if (!finished) return;
 
-              if (shouldOpen && onOpen) {
-                runOnJS(onOpen)();
+              if (nextOpen) {
+                if (onOpen) {
+                  runOnJS(onOpen)();
+                }
+              } else {
+                runOnJS(onClose)();
               }
             },
           );
+        })
+        .onFinalize(() => {
+          rootGestureEligible.value = 0;
         }),
-    [drawerProgress, drawerWidth, onOpen, open, openGestureStartProgress],
+    [drawerProgress, drawerWidth, height, normalizedGestureBottomExclusion, onClose, onOpen, openValue, rootGestureEligible, rootGestureStartProgress],
   );
 
-  const closeGesture = useMemo(
+  const drawerCloseGesture = useMemo(
     () =>
       Gesture.Pan()
         .enabled(open)
         .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
-        .failOffsetY([-24, 24])
+        .failOffsetY([-28, 28])
         .onBegin(() => {
-          closeGestureStartProgress.value = drawerProgress.value;
+          drawerCloseGestureStartProgress.value = drawerProgress.value;
         })
         .onUpdate((event) => {
           const isMostlyHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY) * HORIZONTAL_DOMINANCE;
@@ -143,7 +174,7 @@ export function AurenSidebar({
             return;
           }
 
-          drawerProgress.value = clampProgress(closeGestureStartProgress.value + event.translationX / drawerWidth);
+          drawerProgress.value = clampProgress(drawerCloseGestureStartProgress.value + event.translationX / drawerWidth);
         })
         .onEnd((event) => {
           const shouldClose =
@@ -165,7 +196,7 @@ export function AurenSidebar({
             },
           );
         }),
-    [closeGestureStartProgress, drawerProgress, drawerWidth, onClose, open],
+    [drawerCloseGestureStartProgress, drawerProgress, drawerWidth, onClose, open],
   );
 
   const mainAnimatedStyle = useAnimatedStyle(() => ({
@@ -177,130 +208,123 @@ export function AurenSidebar({
   }));
 
   const visibleMainWidth = Math.max(width - drawerWidth, 58);
-  const normalizedGestureBottomExclusion = Math.max(0, gestureBottomExclusion);
 
   return (
-    <View style={styles.root}>
-      <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>
-        {children}
-      </Animated.View>
+    <GestureDetector gesture={rootGesture}>
+      <View style={styles.root}>
+        <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>
+          {children}
+        </Animated.View>
 
-      {!open ? (
-        <GestureDetector gesture={openGesture}>
-          <Animated.View style={[styles.chatGestureLayer, { bottom: normalizedGestureBottomExclusion }]} />
-        </GestureDetector>
-      ) : null}
-
-      {open ? (
-        <GestureDetector gesture={closeGesture}>
-          <Animated.View style={[styles.peekCloseArea, { width: visibleMainWidth }]}>
+        {open ? (
+          <Animated.View style={[styles.peekCloseArea, { width: visibleMainWidth }]}> 
             <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
           </Animated.View>
-        </GestureDetector>
-      ) : null}
+        ) : null}
 
-      <GestureDetector gesture={closeGesture}>
-        <Animated.View
-          pointerEvents={open ? 'auto' : 'none'}
-          style={[
-            styles.drawer,
-            drawerAnimatedStyle,
-            {
-              width: drawerWidth,
-            },
-          ]}
-        >
-          <View style={styles.drawerInner}>
-            <View style={styles.topBar}>
-              <Text style={styles.brand}>Auren</Text>
-              <Text style={styles.subtitle}>Your study assistant</Text>
-            </View>
-
-            <ScrollView
-              style={styles.scroll}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-              bounces
-            >
-              <View style={styles.primaryNav}>
-                <SidebarItem
-                  icon={sidebarIcon(<Home size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                  label="Home"
-                  onPress={onClose}
-                />
-
-                <SidebarItem
-                  icon={sidebarIcon(<SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                  label="New chat"
-                  onPress={onNewChat}
-                />
-
-                <SidebarItem
-                  icon={sidebarIcon(<BookOpen size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                  label="Study modes"
-                />
-
-                <SidebarItem
-                  icon={sidebarIcon(<Folder size={28} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                  label="Projects"
-                />
+        <GestureDetector gesture={drawerCloseGesture}>
+          <Animated.View
+            pointerEvents={open ? 'auto' : 'none'}
+            style={[
+              styles.drawer,
+              drawerAnimatedStyle,
+              {
+                width: drawerWidth,
+              },
+            ]}
+          >
+            <View style={styles.drawerInner}>
+              <View style={styles.topBar}>
+                <Text style={styles.brand}>Auren</Text>
+                <Text style={styles.subtitle}>Your study assistant</Text>
               </View>
 
-              <View style={styles.divider} />
+              <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                bounces
+              >
+                <View style={styles.primaryNav}>
+                  <SidebarItem
+                    icon={sidebarIcon(<Home size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                    label="Home"
+                    onPress={onClose}
+                  />
 
-              <View style={styles.recentList}>
-                {loadingConversations ? (
-                  <Text style={styles.emptyRecentText}>Loading chats...</Text>
-                ) : conversations.length > 0 ? (
-                  conversations.map((chat) => {
-                    const isActive = chat.id === activeConversationId;
+                  <SidebarItem
+                    icon={sidebarIcon(<SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                    label="New chat"
+                    onPress={onNewChat}
+                  />
 
-                    return (
-                      <Pressable
-                        key={chat.id}
-                        onPress={() => onSelectConversation?.(chat.id)}
-                        style={({ pressed }) => [
-                          styles.recentRow,
-                          isActive && styles.activeRecentRow,
-                          pressed && styles.pressed,
-                        ]}
-                      >
-                        <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
-                          {chat.title}
-                        </Text>
-                      </Pressable>
-                    );
-                  })
-                ) : (
-                  <Text style={styles.emptyRecentText}>Your chats will appear here.</Text>
-                )}
-              </View>
-            </ScrollView>
+                  <SidebarItem
+                    icon={sidebarIcon(<BookOpen size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                    label="Study modes"
+                  />
 
-            <View style={styles.bottomBar}>
-              <Pressable style={({ pressed }) => [styles.profileInline, pressed && styles.pressed]}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{avatarLetter}</Text>
+                  <SidebarItem
+                    icon={sidebarIcon(<Folder size={28} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                    label="Projects"
+                  />
                 </View>
 
-                <Text style={styles.profileName} numberOfLines={1}>
-                  {profileName}
-                </Text>
-              </Pressable>
+                <View style={styles.divider} />
 
-              <Pressable
-                onPress={onNewChat}
-                style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]}
-                accessibilityRole="button"
-                accessibilityLabel="Start a new chat"
-              >
-                <SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={1.85} />
-              </Pressable>
+                <View style={styles.recentList}>
+                  {loadingConversations ? (
+                    <Text style={styles.emptyRecentText}>Loading chats...</Text>
+                  ) : conversations.length > 0 ? (
+                    conversations.map((chat) => {
+                      const isActive = chat.id === activeConversationId;
+
+                      return (
+                        <Pressable
+                          key={chat.id}
+                          onPress={() => onSelectConversation?.(chat.id)}
+                          style={({ pressed }) => [
+                            styles.recentRow,
+                            isActive && styles.activeRecentRow,
+                            pressed && styles.pressed,
+                          ]}
+                        >
+                          <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
+                            {chat.title}
+                          </Text>
+                        </Pressable>
+                      );
+                    })
+                  ) : (
+                    <Text style={styles.emptyRecentText}>Your chats will appear here.</Text>
+                  )}
+                </View>
+              </ScrollView>
+
+              <View style={styles.bottomBar}>
+                <Pressable style={({ pressed }) => [styles.profileInline, pressed && styles.pressed]}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{avatarLetter}</Text>
+                  </View>
+
+                  <Text style={styles.profileName} numberOfLines={1}>
+                    {profileName}
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={onNewChat}
+                  style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Start a new chat"
+                >
+                  <SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={1.85} />
+                </Pressable>
+              </View>
             </View>
-          </View>
-        </Animated.View>
-      </GestureDetector>
-    </View>
+          </Animated.View>
+        </GestureDetector>
+      </View>
+    </GestureDetector>
   );
 }
 
@@ -333,14 +357,6 @@ const styles = StyleSheet.create({
   mainScreen: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
-  },
-  chatGestureLayer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 35,
-    backgroundColor: 'rgba(255,255,255,0.001)',
   },
   peekCloseArea: {
     position: 'absolute',

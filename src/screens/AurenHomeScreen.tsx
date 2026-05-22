@@ -315,6 +315,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   async function handlePickImageFromSheet() { setPlusSheetOpen(false); await handleAddImage(); }
   function handleRemoveAttachment(id: string) { void aurenHaptics.selection(); setSelectedImages((items) => items.filter((image) => image.id !== id)); }
   function usePlusPrompt(prompt: string) { void aurenHaptics.selection(); setPlusSheetOpen(false); if (!inProjectDetail) setActiveScreen('chat'); setDraft(prompt); setInputFocused(true); }
+  function useProjectPrompt(prompt: string) { void aurenHaptics.selection(); setPlusSheetOpen(false); Keyboard.dismiss(); setDraft(prompt); setInputFocused(true); }
 
   async function handleSend() {
     const text = draft.trim();
@@ -476,8 +477,19 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
             </View>
           ) : (
             <Pressable style={styles.projectEmptyContent} onPress={Keyboard.dismiss}>
-              <Text style={styles.projectEmptyTitle}>Start with one question.</Text>
-              <Text style={styles.projectEmptySubtitle}>Make a plan, ask about your notes, or turn this project into a study session.</Text>
+              <Text style={styles.projectEmptyEyebrow}>Project workspace</Text>
+              <Text style={styles.projectEmptyTitle}>Auren is ready for this project.</Text>
+              <Text style={styles.projectEmptySubtitle}>Make a plan, understand the goal, or start a focused study session.</Text>
+              <View style={styles.projectQuickActionsWrap}>
+                <AurenQuickActions
+                  actions={[
+                    { id: 'project-plan', icon: 'calendar-outline', label: 'Make plan', prompt: `Make a clear study plan for ${activeProject.title}.` },
+                    { id: 'project-goal', icon: 'book-outline', label: 'Explain goal', prompt: `Help me understand the main goal of ${activeProject.title} and what I should focus on first.` },
+                    { id: 'project-session', icon: 'play-circle-outline', label: 'Study session', prompt: `Start a focused study session for ${activeProject.title}.` },
+                  ]}
+                  onActionPress={(action) => action.prompt ? useProjectPrompt(action.prompt) : undefined}
+                />
+              </View>
             </Pressable>
           )}
 
@@ -534,9 +546,11 @@ const styles = StyleSheet.create({
   projectHeaderTitle: { flexShrink: 1, color: colors.text, fontSize: 19.5, lineHeight: 25, fontWeight: '700', letterSpacing: -0.25, textAlign: 'center' },
   projectChevron: { color: colors.text, fontSize: 18, lineHeight: 20, fontWeight: '700' },
   projectHeaderSpacer: { width: 48, height: 48 },
-  projectEmptyContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 38, paddingBottom: 178 },
-  projectEmptyTitle: { color: colors.text, fontSize: 31, lineHeight: 37, fontWeight: '700', letterSpacing: -0.78, textAlign: 'center' },
+  projectEmptyContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingBottom: 178 },
+  projectEmptyEyebrow: { marginBottom: 11, color: 'rgba(104,103,117,0.74)', fontSize: 12.5, lineHeight: 16, fontWeight: '700', letterSpacing: 0.8, textAlign: 'center', textTransform: 'uppercase' },
+  projectEmptyTitle: { maxWidth: 330, color: colors.text, fontSize: 30.5, lineHeight: 36.5, fontWeight: '700', letterSpacing: -0.78, textAlign: 'center' },
   projectEmptySubtitle: { marginTop: 13, maxWidth: 318, color: colors.muted, fontSize: 16.2, lineHeight: 22.5, fontWeight: '500', letterSpacing: -0.13, textAlign: 'center' },
+  projectQuickActionsWrap: { width: '100%', marginTop: 34 },
   composerWrap: { position: 'absolute', left: 16, right: 16, bottom: CLOSED_COMPOSER_BOTTOM },
   buttonPressed: { opacity: 0.62, transform: [{ scale: 0.97 }] },
   titlePressed: { opacity: 0.62 },

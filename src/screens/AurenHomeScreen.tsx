@@ -10,20 +10,8 @@ import { AurenProjectsScreen } from '../components/AurenProjectsScreen';
 import { AurenQuickActions } from '../components/AurenQuickActions';
 import { AurenSidebar } from '../components/AurenSidebar';
 import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
-import {
-  generateAurenThinkingTimeline,
-  sendAurenChatMessage,
-  sendAurenChatMessageStream,
-  type AurenThinkingStep,
-} from '../lib/aurenAiClient';
-import {
-  createAurenConversation,
-  createConversationTitle,
-  listAurenConversations,
-  loadAurenMessages,
-  saveAurenMessage,
-  type AurenConversation,
-} from '../lib/aurenConversations';
+import { generateAurenThinkingTimeline, sendAurenChatMessage, sendAurenChatMessageStream, type AurenThinkingStep } from '../lib/aurenAiClient';
+import { createAurenConversation, createAurenProject, createConversationTitle, listAurenConversations, loadAurenMessages, saveAurenMessage, type AurenConversation } from '../lib/aurenConversations';
 import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
 
@@ -32,57 +20,35 @@ const KEYBOARD_GAP = 34;
 const MESSAGE_LIST_BOTTOM_GAP = 24;
 const THINKING_STEP_DELAYS = [1450, 1900, 2400, 3000, 3600];
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
-const SHOW_AI_DEBUG_ERRORS = true;
 
-type AurenHomeScreenProps = {
-  session: Session;
-};
-
+type AurenHomeScreenProps = { session: Session };
 type AurenScreenMode = 'chat' | 'projects';
+type CreateProjectPayload = { title: string; description: string | null };
 
 function createMessageId(role: AurenMessage['role']) {
   return `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function createFallbackAurenResponse(message: string) {
-  const cleanedMessage = message.trim();
-
-  if (!cleanedMessage) {
-    return 'Tell me what you want to study, and I’ll help you start with the simplest next step.';
-  }
-
-  return `I’m having trouble connecting to Auren AI right now, but we can still start.\n\nLet’s work on “${cleanedMessage}”. First, tell me what part feels confusing, and I’ll help you break it down.`;
-}
-
 function createDebugAurenResponse(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
-  return `**Auren AI debug error:**\n\n${message}`;
+  return `Auren AI debug error:\n\n${message}`;
+}
+
+function createFallbackAurenResponse(message: string) {
+  const cleaned = message.trim() || 'this topic';
+  return `I cannot connect to Auren AI right now. Tell me what feels confusing about ${cleaned}, and I will help you break it down.`;
 }
 
 function toTitleCase(value: string) {
-  return value
-    .split(/[._\-\s]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+  return value.split(/[._\-\s]+/).filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
 }
 
 function getSessionProfile(session: Session) {
   const metadata = session.user.user_metadata ?? {};
-  const metadataName =
-    typeof metadata.full_name === 'string'
-      ? metadata.full_name
-      : typeof metadata.name === 'string'
-        ? metadata.name
-        : typeof metadata.display_name === 'string'
-          ? metadata.display_name
-          : '';
-
+  const metadataName = typeof metadata.full_name === 'string' ? metadata.full_name : typeof metadata.name === 'string' ? metadata.name : typeof metadata.display_name === 'string' ? metadata.display_name : '';
   const emailName = session.user.email?.split('@')[0] ?? 'Auren user';
   const profileName = metadataName.trim() || toTitleCase(emailName) || 'Auren user';
-  const avatarLetter = profileName.trim().charAt(0).toUpperCase() || 'A';
-
-  return { profileName, avatarLetter };
+  return { profileName, avatarLetter: profileName.trim().charAt(0).toUpperCase() || 'A' };
 }
 
 export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
@@ -92,6 +58,9 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const [activeScreen, setActiveScreen] = useState<AurenScreenMode>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [plusSheetOpen, setPlusSheetOpen] = useState(false);
+  const [createProjectSheetOpen, setCreateProjectSheetOpen] = useState(false);
+  const [createProjectSubmitting, setCreateProjectSubmitting] = useState(false);
+  const [createProjectError, setCreateProjectError] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [inputFocused, setInputFocused] = useState(false);
   const [selectedImages, setSelectedImages] = useState<AurenImageAttachment[]>([]);
@@ -111,105 +80,81 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
 
   const hasMessages = messages.length > 0;
   const hasSelectedImages = selectedImages.length > 0;
-  const quickActionsOpacity = quickActionsProgress;
+  const currentThinkingLines = thinkingTimeline[thinkingStepIndex]?.lines ?? [];
+  const messageListBottomInset = useMemo(() => composerHeight + composerBottomInset + MESSAGE_LIST_BOTTOM_GAP, [composerBottomInset, composerHeight]);
+  const sidebarGestureBottomExclusion = useMemo(() => composerHeight + composerBottomInset + 24, [composerBottomInset, composerHeight]);
   const quickActionsTranslateY = quickActionsProgress.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] });
   const quickActionsScale = quickActionsProgress.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] });
-  const startContentOpacity = quickActionsProgress;
-  const currentThinkingLines = thinkingTimeline[thinkingStepIndex]?.lines ?? [];
-  const messageListBottomInset = useMemo(
-    () => composerHeight + composerBottomInset + MESSAGE_LIST_BOTTOM_GAP,
-    [composerBottomInset, composerHeight],
-  );
-  const sidebarGestureBottomExclusion = useMemo(
-    () => composerHeight + composerBottomInset + 24,
-    [composerBottomInset, composerHeight],
-  );
 
   async function refreshConversations() {
-    const nextConversations = await listAurenConversations(userId);
-    setConversations(nextConversations);
-    return nextConversations;
+    const next = await listAurenConversations(userId);
+    setConversations(next);
+    return next;
   }
 
-  function openSidebar() {
-    void aurenHaptics.panelOpen();
-    Keyboard.dismiss();
-    setSidebarOpen(true);
-  }
-
-  function closeSidebar() {
-    void aurenHaptics.panelClose();
-    setSidebarOpen(false);
-  }
+  function openSidebar() { void aurenHaptics.panelOpen(); Keyboard.dismiss(); setSidebarOpen(true); }
+  function closeSidebar() { void aurenHaptics.panelClose(); setSidebarOpen(false); }
+  function closePlusSheet() { void aurenHaptics.panelClose(); setPlusSheetOpen(false); }
+  function openPlusSheet() { void aurenHaptics.panelOpen(); Keyboard.dismiss(); setPlusSheetOpen(true); }
 
   function returnFromProjectsToSidebar() {
     void aurenHaptics.panelOpen();
     Keyboard.dismiss();
     setPlusSheetOpen(false);
+    setCreateProjectSheetOpen(false);
+    setCreateProjectError(null);
     setActiveScreen('chat');
     setSidebarOpen(true);
   }
 
   function handleSidebarOpen() {
-    if (activeScreen === 'projects') {
-      returnFromProjectsToSidebar();
-      return;
-    }
-
-    openSidebar();
-  }
-
-  function openPlusSheet() {
-    void aurenHaptics.panelOpen();
-    Keyboard.dismiss();
-    setPlusSheetOpen(true);
-  }
-
-  function closePlusSheet() {
-    void aurenHaptics.panelClose();
-    setPlusSheetOpen(false);
+    if (activeScreen === 'projects') returnFromProjectsToSidebar();
+    else openSidebar();
   }
 
   function openProjects() {
     void aurenHaptics.selection();
     Keyboard.dismiss();
     setPlusSheetOpen(false);
+    setCreateProjectSheetOpen(false);
+    setCreateProjectError(null);
     setSidebarOpen(false);
     setActiveScreen('projects');
   }
 
-  function closeProjects() {
-    returnFromProjectsToSidebar();
+  function openCreateProjectSheet() {
+    void aurenHaptics.panelOpen();
+    Keyboard.dismiss();
+    setCreateProjectError(null);
+    setCreateProjectSheetOpen(true);
   }
 
-  function handleCreateProject() {
-    void aurenHaptics.selection();
+  function closeCreateProjectSheet() {
+    void aurenHaptics.panelClose();
+    Keyboard.dismiss();
+    setCreateProjectError(null);
+    setCreateProjectSheetOpen(false);
   }
 
-  function usePlusPrompt(prompt: string) {
-    void aurenHaptics.selection();
-    setPlusSheetOpen(false);
-    setActiveScreen('chat');
-    setDraft(prompt);
-    setInputFocused(true);
-  }
-
-  function stopThinkingTimeline() {
-    thinkingRunRef.current += 1;
-    setAssistantThinking(false);
-    setThinkingTimeline([]);
-    setThinkingStepIndex(0);
-  }
-
-  function stopThinkingForRun(thinkingRunId: number) {
-    if (thinkingRunRef.current !== thinkingRunId) {
-      return;
+  async function handleCreateProject(payload: CreateProjectPayload) {
+    if (createProjectSubmitting) return;
+    setCreateProjectSubmitting(true);
+    setCreateProjectError(null);
+    try {
+      await createAurenProject({ userId, title: payload.title, description: payload.description });
+      void aurenHaptics.success();
+      setCreateProjectSheetOpen(false);
+    } catch (error) {
+      console.log('Auren project create error:', error);
+      void aurenHaptics.warning();
+      setCreateProjectError(error instanceof Error ? error.message : 'Could not create project. Please try again.');
+    } finally {
+      setCreateProjectSubmitting(false);
     }
-
-    setAssistantThinking(false);
-    setThinkingTimeline([]);
-    setThinkingStepIndex(0);
   }
+
+  function stopThinkingTimeline() { thinkingRunRef.current += 1; setAssistantThinking(false); setThinkingTimeline([]); setThinkingStepIndex(0); }
+  function stopThinkingForRun(runId: number) { if (thinkingRunRef.current === runId) stopThinkingTimeline(); }
 
   function startNewChat() {
     void aurenHaptics.selection();
@@ -221,6 +166,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setSelectedImages([]);
     setSidebarOpen(false);
     setPlusSheetOpen(false);
+    setCreateProjectSheetOpen(false);
+    setCreateProjectError(null);
   }
 
   async function handleSelectConversation(conversationId: string) {
@@ -228,29 +175,13 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     Keyboard.dismiss();
     setActiveScreen('chat');
     setSidebarOpen(false);
-
-    if (conversationId === activeConversationId) {
-      return;
-    }
-
+    if (conversationId === activeConversationId) return;
     stopThinkingTimeline();
     setActiveConversationId(conversationId);
     setDraft('');
     setSelectedImages([]);
-
-    try {
-      const storedMessages = await loadAurenMessages(conversationId);
-      setMessages(storedMessages);
-    } catch (error) {
-      console.log('Auren conversation load error:', error);
-      setMessages([
-        {
-          id: createMessageId('assistant'),
-          role: 'assistant',
-          content: createDebugAurenResponse(error),
-        },
-      ]);
-    }
+    try { setMessages(await loadAurenMessages(conversationId)); }
+    catch (error) { console.log('Auren conversation load error:', error); setMessages([{ id: createMessageId('assistant'), role: 'assistant', content: createDebugAurenResponse(error) }]); }
   }
 
   async function handleAddImage() {
@@ -262,302 +193,107 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setInputFocused(true);
   }
 
-  async function handlePickImageFromSheet() {
-    setPlusSheetOpen(false);
-    await handleAddImage();
-  }
-
-  function handleRemoveAttachment(id: string) {
-    void aurenHaptics.selection();
-    setSelectedImages((currentImages) => currentImages.filter((image) => image.id !== id));
-  }
+  async function handlePickImageFromSheet() { setPlusSheetOpen(false); await handleAddImage(); }
+  function handleRemoveAttachment(id: string) { void aurenHaptics.selection(); setSelectedImages((items) => items.filter((image) => image.id !== id)); }
+  function usePlusPrompt(prompt: string) { void aurenHaptics.selection(); setPlusSheetOpen(false); setActiveScreen('chat'); setDraft(prompt); setInputFocused(true); }
 
   async function handleSend() {
-    const nextContent = draft.trim();
-
-    if (assistantThinking) {
-      return;
-    }
-
-    if (!nextContent && !hasSelectedImages) {
-      void aurenHaptics.warning();
-      return;
-    }
-
+    const text = draft.trim();
+    if (assistantThinking) return;
+    if (!text && !hasSelectedImages) { void aurenHaptics.warning(); return; }
     void aurenHaptics.sendMessage();
     setActiveScreen('chat');
-
     const imagesForSend = selectedImages;
-    const messageContent = nextContent || 'Please explain this image.';
-    const thinkingRunId = thinkingRunRef.current + 1;
-    thinkingRunRef.current = thinkingRunId;
-
-    const optimisticUserMessage: AurenMessage = {
-      id: createMessageId('user'),
-      role: 'user',
-      content: messageContent,
-      images: imagesForSend,
-    };
-
+    const content = text || 'Please explain this image.';
+    const runId = thinkingRunRef.current + 1;
+    thinkingRunRef.current = runId;
+    const optimisticUserMessage: AurenMessage = { id: createMessageId('user'), role: 'user', content, images: imagesForSend };
     const nextMessages = [...messages, optimisticUserMessage];
-
     setMessages(nextMessages);
     setDraft('');
     setSelectedImages([]);
+    setAssistantThinking(true);
     setThinkingTimeline([]);
     setThinkingStepIndex(0);
-    setAssistantThinking(true);
     Keyboard.dismiss();
-
-    generateAurenThinkingTimeline({
-      message: messageContent,
-      hasImages: imagesForSend.length > 0,
-    })
-      .then((timeline) => {
-        if (thinkingRunRef.current !== thinkingRunId || timeline.length === 0) {
-          return;
-        }
-
-        setThinkingTimeline(timeline);
-        setThinkingStepIndex(0);
-      })
-      .catch((error) => {
-        console.log('Auren thinking timeline error:', error);
-      });
-
+    generateAurenThinkingTimeline({ message: content, hasImages: imagesForSend.length > 0 }).then((timeline) => {
+      if (thinkingRunRef.current === runId && timeline.length > 0) { setThinkingTimeline(timeline); setThinkingStepIndex(0); }
+    }).catch((error) => console.log('Auren thinking timeline error:', error));
     let conversationIdForSave = activeConversationId;
-    let answerCompleteHapticPlayed = false;
-
-    function playAnswerCompleteHaptic() {
-      if (answerCompleteHapticPlayed) {
-        return;
-      }
-
-      answerCompleteHapticPlayed = true;
-      void aurenHaptics.answerComplete();
-    }
-
     try {
       if (!conversationIdForSave) {
-        const createdConversation = await createAurenConversation(userId, createConversationTitle(messageContent));
-        conversationIdForSave = createdConversation.id;
-        setActiveConversationId(createdConversation.id);
-        setConversations((currentConversations) => [
-          createdConversation,
-          ...currentConversations.filter((conversation) => conversation.id !== createdConversation.id),
-        ]);
+        const created = await createAurenConversation(userId, createConversationTitle(content));
+        conversationIdForSave = created.id;
+        setActiveConversationId(created.id);
+        setConversations((items) => [created, ...items.filter((item) => item.id !== created.id)]);
       }
-
-      const savedUserMessage = await saveAurenMessage({
-        conversationId: conversationIdForSave,
-        userId,
-        role: 'user',
-        content: messageContent,
-        images: imagesForSend,
-      });
-
-      setMessages((currentMessages) =>
-        currentMessages.map((message) =>
-          message.id === optimisticUserMessage.id ? { ...savedUserMessage, images: imagesForSend } : message,
-        ),
-      );
-
-      const optimisticAssistantMessage: AurenMessage = {
-        id: createMessageId('assistant'),
-        role: 'assistant',
-        content: '',
-      };
-
-      setMessages((currentMessages) => [...currentMessages, optimisticAssistantMessage]);
-
-      let firstChunkReceived = false;
+      const savedUserMessage = await saveAurenMessage({ conversationId: conversationIdForSave, userId, role: 'user', content, images: imagesForSend });
+      setMessages((items) => items.map((item) => item.id === optimisticUserMessage.id ? { ...savedUserMessage, images: imagesForSend } : item));
+      const assistantMessage: AurenMessage = { id: createMessageId('assistant'), role: 'assistant', content: '' };
+      setMessages((items) => [...items, assistantMessage]);
       let answer = '';
-
       try {
-        answer = await sendAurenChatMessageStream(nextMessages, {
-          images: imagesForSend,
-          onChunk: (chunk) => {
-            if (thinkingRunRef.current !== thinkingRunId) {
-              return;
-            }
-
-            if (!firstChunkReceived) {
-              firstChunkReceived = true;
-              stopThinkingForRun(thinkingRunId);
-            }
-
-            setMessages((currentMessages) =>
-              currentMessages.map((message) =>
-                message.id === optimisticAssistantMessage.id
-                  ? { ...message, content: `${message.content}${chunk}` }
-                  : message,
-              ),
-            );
-          },
-        });
-
-        stopThinkingForRun(thinkingRunId);
-        playAnswerCompleteHaptic();
-
-        setMessages((currentMessages) =>
-          currentMessages.map((message) =>
-            message.id === optimisticAssistantMessage.id ? { ...message, content: answer } : message,
-          ),
-        );
+        answer = await sendAurenChatMessageStream(nextMessages, { images: imagesForSend, onChunk: (chunk) => {
+          if (thinkingRunRef.current !== runId) return;
+          stopThinkingForRun(runId);
+          setMessages((items) => items.map((item) => item.id === assistantMessage.id ? { ...item, content: `${item.content}${chunk}` } : item));
+        }});
       } catch (streamError) {
         console.log('Auren stream error:', streamError);
-
-        try {
-          answer = await sendAurenChatMessage(nextMessages, { images: imagesForSend });
-        } catch (fallbackError) {
-          console.log('Auren AI error:', fallbackError);
-          answer = SHOW_AI_DEBUG_ERRORS ? createDebugAurenResponse(fallbackError) : createFallbackAurenResponse(messageContent);
-        }
-
-        stopThinkingForRun(thinkingRunId);
-        playAnswerCompleteHaptic();
-
-        setMessages((currentMessages) =>
-          currentMessages.map((message) =>
-            message.id === optimisticAssistantMessage.id ? { ...message, content: answer } : message,
-          ),
-        );
+        try { answer = await sendAurenChatMessage(nextMessages, { images: imagesForSend }); }
+        catch (error) { console.log('Auren AI error:', error); answer = createFallbackAurenResponse(content); }
       }
-
-      try {
-        const savedAssistantMessage = await saveAurenMessage({
-          conversationId: conversationIdForSave,
-          userId,
-          role: 'assistant',
-          content: answer,
-        });
-
-        setMessages((currentMessages) =>
-          currentMessages.map((message) =>
-            message.id === optimisticAssistantMessage.id ? savedAssistantMessage : message,
-          ),
-        );
-      } catch (error) {
-        console.log('Auren assistant message save error:', error);
-      }
-
+      stopThinkingForRun(runId);
+      void aurenHaptics.answerComplete();
+      setMessages((items) => items.map((item) => item.id === assistantMessage.id ? { ...item, content: answer } : item));
+      const savedAssistantMessage = await saveAurenMessage({ conversationId: conversationIdForSave, userId, role: 'assistant', content: answer });
+      setMessages((items) => items.map((item) => item.id === assistantMessage.id ? savedAssistantMessage : item));
       await refreshConversations();
     } catch (error) {
       console.log('Auren conversation save error:', error);
       void aurenHaptics.warning();
-      stopThinkingForRun(thinkingRunId);
-
-      const fallbackMessage: AurenMessage = {
-        id: createMessageId('assistant'),
-        role: 'assistant',
-        content: createDebugAurenResponse(error),
-      };
-
-      setMessages((currentMessages) => [...currentMessages, fallbackMessage]);
+      stopThinkingForRun(runId);
+      setMessages((items) => [...items, { id: createMessageId('assistant'), role: 'assistant', content: createDebugAurenResponse(error) }]);
     } finally {
-      if (thinkingRunRef.current === thinkingRunId) {
-        setAssistantThinking(false);
-        setThinkingTimeline([]);
-        setThinkingStepIndex(0);
-      }
+      if (thinkingRunRef.current === runId) stopThinkingTimeline();
     }
-  }
-
-  function dismissKeyboard() {
-    Keyboard.dismiss();
   }
 
   useEffect(() => {
     let mounted = true;
-
     setLoadingConversations(true);
-    listAurenConversations(userId)
-      .then((nextConversations) => {
-        if (mounted) {
-          setConversations(nextConversations);
-        }
-      })
-      .catch((error) => {
-        console.log('Auren conversations load error:', error);
-      })
-      .finally(() => {
-        if (mounted) {
-          setLoadingConversations(false);
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
+    listAurenConversations(userId).then((items) => { if (mounted) setConversations(items); }).catch((error) => console.log('Auren conversations load error:', error)).finally(() => { if (mounted) setLoadingConversations(false); });
+    return () => { mounted = false; };
   }, [userId]);
 
   useEffect(() => {
-    if (!assistantThinking || thinkingTimeline.length <= 1 || thinkingStepIndex >= thinkingTimeline.length - 1) {
-      return undefined;
-    }
-
+    if (!assistantThinking || thinkingTimeline.length <= 1 || thinkingStepIndex >= thinkingTimeline.length - 1) return undefined;
     const delay = THINKING_STEP_DELAYS[Math.min(thinkingStepIndex, THINKING_STEP_DELAYS.length - 1)];
-    const timeoutId = setTimeout(() => {
-      setThinkingStepIndex((currentIndex) => Math.min(currentIndex + 1, thinkingTimeline.length - 1));
-    }, delay);
-
+    const timeoutId = setTimeout(() => setThinkingStepIndex((index) => Math.min(index + 1, thinkingTimeline.length - 1)), delay);
     return () => clearTimeout(timeoutId);
   }, [assistantThinking, thinkingStepIndex, thinkingTimeline.length]);
 
   useEffect(() => {
     const toValue = inputFocused || hasMessages || hasSelectedImages ? 0 : 1;
     Animated.parallel([
-      Animated.timing(quickActionsProgress, {
-        toValue,
-        duration: inputFocused || hasMessages || hasSelectedImages ? 180 : 240,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(heroTranslateY, {
-        toValue: inputFocused || hasSelectedImages ? -18 : 0,
-        duration: inputFocused || hasSelectedImages ? 220 : 260,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
+      Animated.timing(quickActionsProgress, { toValue, duration: toValue ? 240 : 180, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(heroTranslateY, { toValue: inputFocused || hasSelectedImages ? -18 : 0, duration: inputFocused || hasSelectedImages ? 220 : 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
   }, [hasMessages, hasSelectedImages, heroTranslateY, inputFocused, quickActionsProgress]);
 
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
     const showSub = Keyboard.addListener(showEvent, (event) => {
-      const duration = event.duration ?? 250;
-      const keyboardHeight = event.endCoordinates.height;
-      const nextBottom = Math.max(
-        CLOSED_COMPOSER_BOTTOM,
-        keyboardHeight - insets.bottom + KEYBOARD_GAP,
-      );
-
+      const nextBottom = Math.max(CLOSED_COMPOSER_BOTTOM, event.endCoordinates.height - insets.bottom + KEYBOARD_GAP);
       setComposerBottomInset(nextBottom);
-      Animated.timing(composerBottom, {
-        toValue: nextBottom,
-        duration,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start();
+      Animated.timing(composerBottom, { toValue: nextBottom, duration: event.duration ?? 250, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
     });
-
     const hideSub = Keyboard.addListener(hideEvent, (event) => {
-      const duration = event.duration ?? 220;
       setComposerBottomInset(CLOSED_COMPOSER_BOTTOM);
-      Animated.timing(composerBottom, {
-        toValue: CLOSED_COMPOSER_BOTTOM,
-        duration,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }).start(() => setInputFocused(false));
+      Animated.timing(composerBottom, { toValue: CLOSED_COMPOSER_BOTTOM, duration: event.duration ?? 220, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start(() => setInputFocused(false));
     });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
+    return () => { showSub.remove(); hideSub.remove(); };
   }, [composerBottom, insets.bottom]);
 
   return (
@@ -567,7 +303,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       onClose={closeSidebar}
       onNewChat={startNewChat}
       onProjects={openProjects}
-      gesturesEnabled={!plusSheetOpen}
+      gesturesEnabled={!plusSheetOpen && !createProjectSheetOpen}
       gestureBottomExclusion={activeScreen === 'chat' ? sidebarGestureBottomExclusion : 0}
       conversations={conversations}
       activeConversationId={activeConversationId}
@@ -577,78 +313,39 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       onSelectConversation={handleSelectConversation}
     >
       {activeScreen === 'projects' ? (
-        <AurenProjectsScreen onBack={closeProjects} onCreateProject={handleCreateProject} />
+        <AurenProjectsScreen
+          onBack={returnFromProjectsToSidebar}
+          createSheetVisible={createProjectSheetOpen}
+          createProjectSubmitting={createProjectSubmitting}
+          createProjectError={createProjectError}
+          onOpenCreateProject={openCreateProjectSheet}
+          onCloseCreateProject={closeCreateProjectSheet}
+          onSubmitCreateProject={handleCreateProject}
+        />
       ) : (
         <SafeAreaView style={styles.screen}>
           <AurenHeader onOpenMenu={openSidebar} />
-
           {hasMessages || assistantThinking ? (
             <View style={styles.chatContent}>
-              <AurenMessageList
-                messages={messages}
-                thinking={assistantThinking}
-                thinkingLines={currentThinkingLines}
-                bottomInset={messageListBottomInset}
-              />
+              <AurenMessageList messages={messages} thinking={assistantThinking} thinkingLines={currentThinkingLines} bottomInset={messageListBottomInset} />
             </View>
           ) : (
-            <Pressable style={styles.content} onPress={dismissKeyboard}>
-              <Animated.View
-                style={[
-                  styles.startContent,
-                  {
-                    opacity: startContentOpacity,
-                    transform: [{ translateY: heroTranslateY }],
-                  },
-                ]}
-              >
+            <Pressable style={styles.content} onPress={Keyboard.dismiss}>
+              <Animated.View style={[styles.startContent, { opacity: quickActionsProgress, transform: [{ translateY: heroTranslateY }] }]}> 
                 <View style={styles.hero}>
                   <Text style={styles.heroTitle}>{'Good evening,\nlet’s study smarter.'}</Text>
                   <Text style={styles.heroSubtitle}>{'I’m here to help you focus, learn faster,\nand stay on track.'}</Text>
                 </View>
-
-                <Animated.View
-                  pointerEvents={inputFocused || hasSelectedImages ? 'none' : 'auto'}
-                  style={[
-                    styles.actionsWrap,
-                    {
-                      opacity: quickActionsOpacity,
-                      transform: [{ translateY: quickActionsTranslateY }, { scale: quickActionsScale }],
-                    },
-                  ]}
-                >
+                <Animated.View pointerEvents={inputFocused || hasSelectedImages ? 'none' : 'auto'} style={[styles.actionsWrap, { opacity: quickActionsProgress, transform: [{ translateY: quickActionsTranslateY }, { scale: quickActionsScale }] }]}>
                   <AurenQuickActions />
                 </Animated.View>
               </Animated.View>
             </Pressable>
           )}
-
           <Animated.View style={[styles.composerWrap, { bottom: composerBottom }]}> 
-            <AurenComposer
-              value={draft}
-              attachments={selectedImages}
-              onChangeText={setDraft}
-              onAddImage={openPlusSheet}
-              onRemoveAttachment={handleRemoveAttachment}
-              onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
-              onSend={handleSend}
-              onHeightChange={setComposerHeight}
-            />
+            <AurenComposer value={draft} attachments={selectedImages} onChangeText={setDraft} onAddImage={openPlusSheet} onRemoveAttachment={handleRemoveAttachment} onFocus={() => setInputFocused(true)} onBlur={() => setInputFocused(false)} onSend={handleSend} onHeightChange={setComposerHeight} />
           </Animated.View>
-
-          <AurenPlusSheet
-            visible={plusSheetOpen}
-            onClose={closePlusSheet}
-            onCamera={handlePickImageFromSheet}
-            onPhotos={handlePickImageFromSheet}
-            onFiles={closePlusSheet}
-            onCreateFlashcards={() => usePlusPrompt('Create flashcards from ')}
-            onSummarizeNotes={() => usePlusPrompt('Summarize these notes: ')}
-            onExplainTask={() => usePlusPrompt('Explain this task step by step: ')}
-            onExplainFromImage={handlePickImageFromSheet}
-            onStartStudySession={() => usePlusPrompt('Start a focused study session for ')}
-          />
+          <AurenPlusSheet visible={plusSheetOpen} onClose={closePlusSheet} onCamera={handlePickImageFromSheet} onPhotos={handlePickImageFromSheet} onFiles={closePlusSheet} onCreateFlashcards={() => usePlusPrompt('Create flashcards from ')} onSummarizeNotes={() => usePlusPrompt('Summarize these notes: ')} onExplainTask={() => usePlusPrompt('Explain this task step by step: ')} onExplainFromImage={handlePickImageFromSheet} onStartStudySession={() => usePlusPrompt('Start a focused study session for ')} />
         </SafeAreaView>
       )}
     </AurenSidebar>
@@ -656,53 +353,13 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 18,
-    paddingBottom: 220,
-  },
-  startContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 104,
-  },
-  chatContent: {
-    flex: 1,
-  },
-  hero: {
-    alignItems: 'center',
-    maxWidth: 370,
-  },
-  heroTitle: {
-    color: '#686775',
-    fontSize: 34,
-    lineHeight: 40.5,
-    letterSpacing: -1.08,
-    textAlign: 'center',
-    fontFamily: serifFont,
-  },
-  heroSubtitle: {
-    marginTop: 15,
-    color: colors.muted,
-    fontSize: 15.8,
-    lineHeight: 22.5,
-    letterSpacing: -0.14,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  actionsWrap: {
-    width: '100%',
-    marginTop: 42,
-  },
-  composerWrap: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: CLOSED_COMPOSER_BOTTOM,
-  },
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { flex: 1, paddingHorizontal: 18, paddingBottom: 220 },
+  startContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 104 },
+  chatContent: { flex: 1 },
+  hero: { alignItems: 'center', maxWidth: 370 },
+  heroTitle: { color: '#686775', fontSize: 34, lineHeight: 40.5, letterSpacing: -1.08, textAlign: 'center', fontFamily: serifFont },
+  heroSubtitle: { marginTop: 15, color: colors.muted, fontSize: 15.8, lineHeight: 22.5, letterSpacing: -0.14, textAlign: 'center', fontWeight: '500' },
+  actionsWrap: { width: '100%', marginTop: 42 },
+  composerWrap: { position: 'absolute', left: 16, right: 16, bottom: CLOSED_COMPOSER_BOTTOM },
 });

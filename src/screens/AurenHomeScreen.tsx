@@ -6,6 +6,7 @@ import { AurenComposer } from '../components/AurenComposer';
 import { AurenHeader } from '../components/AurenHeader';
 import { AurenMessageList, type AurenMessage } from '../components/AurenMessageList';
 import { AurenPlusSheet } from '../components/AurenPlusSheet';
+import { AurenProjectsScreen } from '../components/AurenProjectsScreen';
 import { AurenQuickActions } from '../components/AurenQuickActions';
 import { AurenSidebar } from '../components/AurenSidebar';
 import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
@@ -36,6 +37,8 @@ const SHOW_AI_DEBUG_ERRORS = true;
 type AurenHomeScreenProps = {
   session: Session;
 };
+
+type AurenScreenMode = 'chat' | 'projects';
 
 function createMessageId(role: AurenMessage['role']) {
   return `${role}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -86,6 +89,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const insets = useSafeAreaInsets();
   const userId = session.user.id;
   const { profileName, avatarLetter } = useMemo(() => getSessionProfile(session), [session]);
+  const [activeScreen, setActiveScreen] = useState<AurenScreenMode>('chat');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [plusSheetOpen, setPlusSheetOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -149,9 +153,27 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setPlusSheetOpen(false);
   }
 
+  function openProjects() {
+    void aurenHaptics.selection();
+    Keyboard.dismiss();
+    setPlusSheetOpen(false);
+    setSidebarOpen(false);
+    setActiveScreen('projects');
+  }
+
+  function closeProjects() {
+    void aurenHaptics.selection();
+    setActiveScreen('chat');
+  }
+
+  function handleCreateProject() {
+    void aurenHaptics.selection();
+  }
+
   function usePlusPrompt(prompt: string) {
     void aurenHaptics.selection();
     setPlusSheetOpen(false);
+    setActiveScreen('chat');
     setDraft(prompt);
     setInputFocused(true);
   }
@@ -176,6 +198,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   function startNewChat() {
     void aurenHaptics.selection();
     stopThinkingTimeline();
+    setActiveScreen('chat');
     setActiveConversationId(null);
     setMessages([]);
     setDraft('');
@@ -187,6 +210,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   async function handleSelectConversation(conversationId: string) {
     void aurenHaptics.selection();
     Keyboard.dismiss();
+    setActiveScreen('chat');
     setSidebarOpen(false);
 
     if (conversationId === activeConversationId) {
@@ -217,6 +241,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     const attachment = await pickAurenImageAttachment();
     if (!attachment) return;
     void aurenHaptics.selection();
+    setActiveScreen('chat');
     setSelectedImages([attachment]);
     setInputFocused(true);
   }
@@ -244,6 +269,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     }
 
     void aurenHaptics.sendMessage();
+    setActiveScreen('chat');
 
     const imagesForSend = selectedImages;
     const messageContent = nextContent || 'Please explain this image.';
@@ -524,7 +550,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       onOpen={openSidebar}
       onClose={closeSidebar}
       onNewChat={startNewChat}
-      gesturesEnabled={!plusSheetOpen}
+      onProjects={openProjects}
+      gesturesEnabled={!plusSheetOpen && activeScreen === 'chat'}
       gestureBottomExclusion={sidebarGestureBottomExclusion}
       conversations={conversations}
       activeConversationId={activeConversationId}
@@ -533,77 +560,81 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       loadingConversations={loadingConversations}
       onSelectConversation={handleSelectConversation}
     >
-      <SafeAreaView style={styles.screen}>
-        <AurenHeader onOpenMenu={openSidebar} />
+      {activeScreen === 'projects' ? (
+        <AurenProjectsScreen onBack={closeProjects} onCreateProject={handleCreateProject} />
+      ) : (
+        <SafeAreaView style={styles.screen}>
+          <AurenHeader onOpenMenu={openSidebar} />
 
-        {hasMessages || assistantThinking ? (
-          <View style={styles.chatContent}>
-            <AurenMessageList
-              messages={messages}
-              thinking={assistantThinking}
-              thinkingLines={currentThinkingLines}
-              bottomInset={messageListBottomInset}
-            />
-          </View>
-        ) : (
-          <Pressable style={styles.content} onPress={dismissKeyboard}>
-            <Animated.View
-              style={[
-                styles.startContent,
-                {
-                  opacity: startContentOpacity,
-                  transform: [{ translateY: heroTranslateY }],
-                },
-              ]}
-            >
-              <View style={styles.hero}>
-                <Text style={styles.heroTitle}>{'Good evening,\nlet’s study smarter.'}</Text>
-                <Text style={styles.heroSubtitle}>{'I’m here to help you focus, learn faster,\nand stay on track.'}</Text>
-              </View>
-
+          {hasMessages || assistantThinking ? (
+            <View style={styles.chatContent}>
+              <AurenMessageList
+                messages={messages}
+                thinking={assistantThinking}
+                thinkingLines={currentThinkingLines}
+                bottomInset={messageListBottomInset}
+              />
+            </View>
+          ) : (
+            <Pressable style={styles.content} onPress={dismissKeyboard}>
               <Animated.View
-                pointerEvents={inputFocused || hasSelectedImages ? 'none' : 'auto'}
                 style={[
-                  styles.actionsWrap,
+                  styles.startContent,
                   {
-                    opacity: quickActionsOpacity,
-                    transform: [{ translateY: quickActionsTranslateY }, { scale: quickActionsScale }],
+                    opacity: startContentOpacity,
+                    transform: [{ translateY: heroTranslateY }],
                   },
                 ]}
               >
-                <AurenQuickActions />
+                <View style={styles.hero}>
+                  <Text style={styles.heroTitle}>{'Good evening,\nlet’s study smarter.'}</Text>
+                  <Text style={styles.heroSubtitle}>{'I’m here to help you focus, learn faster,\nand stay on track.'}</Text>
+                </View>
+
+                <Animated.View
+                  pointerEvents={inputFocused || hasSelectedImages ? 'none' : 'auto'}
+                  style={[
+                    styles.actionsWrap,
+                    {
+                      opacity: quickActionsOpacity,
+                      transform: [{ translateY: quickActionsTranslateY }, { scale: quickActionsScale }],
+                    },
+                  ]}
+                >
+                  <AurenQuickActions />
+                </Animated.View>
               </Animated.View>
-            </Animated.View>
-          </Pressable>
-        )}
+            </Pressable>
+          )}
 
-        <Animated.View style={[styles.composerWrap, { bottom: composerBottom }]}> 
-          <AurenComposer
-            value={draft}
-            attachments={selectedImages}
-            onChangeText={setDraft}
-            onAddImage={openPlusSheet}
-            onRemoveAttachment={handleRemoveAttachment}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-            onSend={handleSend}
-            onHeightChange={setComposerHeight}
+          <Animated.View style={[styles.composerWrap, { bottom: composerBottom }]}> 
+            <AurenComposer
+              value={draft}
+              attachments={selectedImages}
+              onChangeText={setDraft}
+              onAddImage={openPlusSheet}
+              onRemoveAttachment={handleRemoveAttachment}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              onSend={handleSend}
+              onHeightChange={setComposerHeight}
+            />
+          </Animated.View>
+
+          <AurenPlusSheet
+            visible={plusSheetOpen}
+            onClose={closePlusSheet}
+            onCamera={handlePickImageFromSheet}
+            onPhotos={handlePickImageFromSheet}
+            onFiles={closePlusSheet}
+            onCreateFlashcards={() => usePlusPrompt('Create flashcards from ')}
+            onSummarizeNotes={() => usePlusPrompt('Summarize these notes: ')}
+            onExplainTask={() => usePlusPrompt('Explain this task step by step: ')}
+            onExplainFromImage={handlePickImageFromSheet}
+            onStartStudySession={() => usePlusPrompt('Start a focused study session for ')}
           />
-        </Animated.View>
-
-        <AurenPlusSheet
-          visible={plusSheetOpen}
-          onClose={closePlusSheet}
-          onCamera={handlePickImageFromSheet}
-          onPhotos={handlePickImageFromSheet}
-          onFiles={closePlusSheet}
-          onCreateFlashcards={() => usePlusPrompt('Create flashcards from ')}
-          onSummarizeNotes={() => usePlusPrompt('Summarize these notes: ')}
-          onExplainTask={() => usePlusPrompt('Explain this task step by step: ')}
-          onExplainFromImage={handlePickImageFromSheet}
-          onStartStudySession={() => usePlusPrompt('Start a focused study session for ')}
-        />
-      </SafeAreaView>
+        </SafeAreaView>
+      )}
     </AurenSidebar>
   );
 }

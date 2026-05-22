@@ -115,6 +115,10 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     () => composerHeight + composerBottomInset + MESSAGE_LIST_BOTTOM_GAP,
     [composerBottomInset, composerHeight],
   );
+  const sidebarGestureBottomExclusion = useMemo(
+    () => composerHeight + composerBottomInset + 24,
+    [composerBottomInset, composerHeight],
+  );
 
   async function refreshConversations() {
     const nextConversations = await listAurenConversations(userId);
@@ -487,6 +491,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       onOpen={openSidebar}
       onClose={closeSidebar}
       onNewChat={startNewChat}
+      gestureBottomExclusion={sidebarGestureBottomExclusion}
       conversations={conversations}
       activeConversationId={activeConversationId}
       profileName={profileName}

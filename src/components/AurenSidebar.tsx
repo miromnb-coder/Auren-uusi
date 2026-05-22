@@ -228,7 +228,7 @@ export function AurenSidebar({
                   accessibilityRole="button"
                   accessibilityLabel="Close menu"
                 >
-                  <X size={32} color="rgba(15,17,21,0.9)" strokeWidth={1.7} />
+                  <X size={31} color="rgba(15,17,21,0.9)" strokeWidth={1.7} />
                 </Pressable>
               </View>
 
@@ -240,19 +240,19 @@ export function AurenSidebar({
               >
                 <View style={styles.primaryNav}>
                   <SidebarItem
-                    icon={<SquarePen size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
+                    icon={<SquarePen size={30} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
                     label="New chat"
                     onPress={onNewChat}
                     highlighted
                   />
 
                   <SidebarItem
-                    icon={<Search size={33} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
+                    icon={<Search size={32} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
                     label="Search chats"
                   />
 
                   <SidebarItem
-                    icon={<Folder size={32} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
+                    icon={<Folder size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
                     label="Projects"
                     onPress={onProjects}
                   />
@@ -307,7 +307,7 @@ export function AurenSidebar({
                   accessibilityRole="button"
                   accessibilityLabel="Open settings"
                 >
-                  <Settings size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
+                  <Settings size={30} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
                 </Pressable>
               </View>
             </View>
@@ -360,12 +360,12 @@ const styles = StyleSheet.create({
   },
   drawerInner: {
     flex: 1,
-    paddingTop: 84,
-    paddingHorizontal: 46,
-    paddingBottom: 26,
+    paddingTop: 66,
+    paddingHorizontal: 32,
+    paddingBottom: 20,
   },
   headerRow: {
-    height: 60,
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -373,73 +373,73 @@ const styles = StyleSheet.create({
   brand: {
     color: colors.text,
     fontFamily: serifFont,
-    fontSize: 37,
-    lineHeight: 43,
-    letterSpacing: -1.08,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.98,
   },
   closeButton: {
-    width: 54,
-    height: 54,
-    marginRight: -10,
+    width: 50,
+    height: 50,
+    marginRight: -5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   scroll: {
     flex: 1,
-    marginTop: 16,
+    marginTop: 12,
   },
   scrollContent: {
-    paddingBottom: 28,
+    paddingBottom: 22,
   },
   primaryNav: {
-    gap: 22,
+    gap: 12,
   },
   navItem: {
-    minHeight: 58,
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 36,
+    gap: 22,
   },
   highlightedNavItem: {
-    minHeight: 72,
+    minHeight: 66,
     marginBottom: 4,
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     marginHorizontal: -4,
     borderRadius: 30,
     backgroundColor: 'rgba(17,24,39,0.035)',
   },
   navIconSlot: {
-    width: 40,
+    width: 38,
     alignItems: 'center',
     justifyContent: 'center',
   },
   navLabel: {
     color: colors.text,
-    fontSize: 20.8,
-    lineHeight: 27,
+    fontSize: 20.2,
+    lineHeight: 26,
     fontWeight: '400',
-    letterSpacing: -0.34,
+    letterSpacing: -0.32,
   },
   pressed: {
     opacity: 0.58,
   },
   recentSection: {
-    marginTop: 38,
-    paddingLeft: 29,
+    marginTop: 30,
+    paddingLeft: 8,
   },
   recentHeader: {
     color: colors.muted,
-    fontSize: 17.2,
+    fontSize: 16.8,
     lineHeight: 22,
     fontWeight: '400',
     letterSpacing: -0.22,
   },
   recentList: {
-    marginTop: 24,
-    gap: 18,
+    marginTop: 18,
+    gap: 13,
   },
   recentRow: {
-    minHeight: 42,
+    minHeight: 39,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 0,
@@ -456,10 +456,10 @@ const styles = StyleSheet.create({
   recentTitle: {
     flex: 1,
     color: colors.text,
-    fontSize: 18.2,
-    lineHeight: 24,
+    fontSize: 17.7,
+    lineHeight: 23,
     fontWeight: '400',
-    letterSpacing: -0.2,
+    letterSpacing: -0.18,
   },
   activeRecentTitle: {
     color: colors.text,
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   emptyRecentText: {
     color: colors.muted,
-    fontSize: 16.2,
+    fontSize: 16,
     lineHeight: 22,
     fontWeight: '400',
     letterSpacing: -0.14,
@@ -475,12 +475,12 @@ const styles = StyleSheet.create({
   bottomBar: {
     flexShrink: 0,
     minHeight: 70,
-    paddingTop: 16,
-    paddingBottom: 0,
+    paddingTop: 12,
+    paddingBottom: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 22,
+    gap: 20,
     backgroundColor: DRAWER_BACKGROUND,
   },
   profileInline: {
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 28,
+    gap: 22,
   },
   avatar: {
     width: 46,
@@ -507,15 +507,15 @@ const styles = StyleSheet.create({
   profileName: {
     flexShrink: 1,
     color: colors.text,
-    fontSize: 19.2,
+    fontSize: 18.8,
     lineHeight: 25,
     fontWeight: '400',
     letterSpacing: -0.22,
   },
   settingsButton: {
-    width: 58,
-    height: 58,
-    marginRight: -7,
+    width: 56,
+    height: 56,
+    marginRight: -2,
     alignItems: 'center',
     justifyContent: 'center',
   },

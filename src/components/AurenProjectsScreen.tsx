@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, Folder, Plus, Upload, X } from 'lucide-react-native';
+import { Check, ChevronLeft, Folder, MoreHorizontal, PencilLine, Plus, Trash2, Upload, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -6,12 +6,14 @@ import {
   Keyboard,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { AurenProject } from '../lib/aurenConversations';
 import { colors, shadows } from '../theme';
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
@@ -23,23 +25,76 @@ type CreateProjectPayload = {
 
 type AurenProjectsScreenProps = {
   onBack: () => void;
+  projects?: AurenProject[];
+  loadingProjects?: boolean;
   createSheetVisible: boolean;
   createProjectSubmitting?: boolean;
   createProjectError?: string | null;
   onOpenCreateProject: () => void;
   onCloseCreateProject: () => void;
   onSubmitCreateProject: (payload: CreateProjectPayload) => void;
+  onRenameProject?: (project: AurenProject) => void;
+  onDeleteProject?: (project: AurenProject) => void;
 };
+
+function formatProjectDate(value: string | null) {
+  if (!value) return 'Tänään';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Tänään';
+
+  const now = new Date();
+  const isToday =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+
+  if (isToday) return 'Tänään';
+
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getFullYear() === yesterday.getFullYear() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getDate() === yesterday.getDate();
+
+  if (isYesterday) return 'Eilen';
+
+  return new Intl.DateTimeFormat('fi-FI', { day: 'numeric', month: 'long' }).format(date);
+}
 
 export function AurenProjectsScreen({
   onBack,
+  projects = [],
+  loadingProjects = false,
   createSheetVisible,
   createProjectSubmitting = false,
   createProjectError = null,
   onOpenCreateProject,
   onCloseCreateProject,
   onSubmitCreateProject,
+  onRenameProject,
+  onDeleteProject,
 }: AurenProjectsScreenProps) {
+  const [actionProject, setActionProject] = useState<AurenProject | null>(null);
+  const hasProjects = projects.length > 0;
+
+  function closeActions() {
+    setActionProject(null);
+  }
+
+  function handleRenameProject() {
+    if (!actionProject) return;
+    onRenameProject?.(actionProject);
+    closeActions();
+  }
+
+  function handleDeleteProject() {
+    if (!actionProject) return;
+    onDeleteProject?.(actionProject);
+    closeActions();
+  }
+
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
@@ -64,24 +119,71 @@ export function AurenProjectsScreen({
         </Pressable>
       </View>
 
-      <View style={styles.emptyWrap}>
-        <View style={styles.iconWrap}>
-          <Folder size={53} color="rgba(104,103,117,0.72)" strokeWidth={1.52} />
-        </View>
-
-        <Text style={styles.emptyTitle}>{'Keep your chats, files,\nand study resources in one place'}</Text>
-
-        <Text style={styles.emptySubtitle}>{'Everything for a project\nstays organized here.'}</Text>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Create project"
-          onPress={onOpenCreateProject}
-          style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryPressed]}
+      {hasProjects ? (
+        <ScrollView
+          style={styles.projectScroll}
+          contentContainerStyle={styles.projectList}
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.primaryButtonText}>Create project</Text>
-        </Pressable>
-      </View>
+          {projects.map((project) => (
+            <Pressable
+              key={project.id}
+              accessibilityRole="button"
+              accessibilityLabel={project.title}
+              style={({ pressed }) => [styles.projectRow, pressed && styles.projectRowPressed]}
+            >
+              <View style={styles.projectIconSlot}>
+                <Folder size={30} color={colors.text} strokeWidth={1.82} />
+              </View>
+
+              <View style={styles.projectTextWrap}>
+                <Text style={styles.projectTitle} numberOfLines={1}>
+                  {project.title}
+                </Text>
+                <Text style={styles.projectSubtitle}>{formatProjectDate(project.lastOpenedAt ?? project.updatedAt)}</Text>
+              </View>
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Project actions for ${project.title}`}
+                hitSlop={12}
+                onPress={() => setActionProject(project)}
+                style={({ pressed }) => [styles.moreButton, pressed && styles.pressed]}
+              >
+                <MoreHorizontal size={24} color="rgba(34,27,23,0.72)" strokeWidth={2.25} />
+              </Pressable>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : (
+        <View style={styles.emptyWrap}>
+          <View style={styles.iconWrap}>
+            <Folder size={53} color="rgba(104,103,117,0.72)" strokeWidth={1.52} />
+          </View>
+
+          <Text style={styles.emptyTitle}>{'Keep your chats, files,\nand study resources in one place'}</Text>
+
+          <Text style={styles.emptySubtitle}>
+            {loadingProjects ? 'Loading your projects...' : 'Everything for a project\nstays organized here.'}
+          </Text>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Create project"
+            onPress={onOpenCreateProject}
+            style={({ pressed }) => [styles.primaryButton, pressed && styles.primaryPressed]}
+          >
+            <Text style={styles.primaryButtonText}>Create project</Text>
+          </Pressable>
+        </View>
+      )}
+
+      <ProjectActionsSheet
+        visible={Boolean(actionProject)}
+        onClose={closeActions}
+        onRename={handleRenameProject}
+        onDelete={handleDeleteProject}
+      />
 
       <CreateProjectSheet
         visible={createSheetVisible}
@@ -91,6 +193,77 @@ export function AurenProjectsScreen({
         onSubmit={onSubmitCreateProject}
       />
     </SafeAreaView>
+  );
+}
+
+type ProjectActionsSheetProps = {
+  visible: boolean;
+  onClose: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+};
+
+function ProjectActionsSheet({ visible, onClose, onRename, onDelete }: ProjectActionsSheetProps) {
+  const insets = useSafeAreaInsets();
+  const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const [mounted, setMounted] = useState(visible);
+
+  useEffect(() => {
+    if (visible) setMounted(true);
+
+    Animated.timing(progress, {
+      toValue: visible ? 1 : 0,
+      duration: visible ? 230 : 185,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished && !visible) setMounted(false);
+    });
+  }, [progress, visible]);
+
+  const overlayOpacity = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 0.14] });
+  const sheetTranslateY = progress.interpolate({ inputRange: [0, 1], outputRange: [330, 0] });
+
+  if (!mounted) return null;
+
+  return (
+    <View pointerEvents={visible ? 'auto' : 'none'} style={styles.actionsRoot}>
+      <Animated.View style={[styles.actionsOverlay, { opacity: overlayOpacity }]}> 
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </Animated.View>
+
+      <Animated.View
+        style={[
+          styles.actionsSheet,
+          {
+            paddingBottom: Math.max(insets.bottom + 18, 34),
+            transform: [{ translateY: sheetTranslateY }],
+          },
+        ]}
+      >
+        <View style={styles.actionsHandle} />
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Rename project"
+          onPress={onRename}
+          style={({ pressed }) => [styles.actionRow, pressed && styles.actionPressed]}
+        >
+          <PencilLine size={25} color={colors.text} strokeWidth={1.82} />
+          <Text style={styles.actionText}>Nimeä uudelleen</Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Delete project"
+          onPress={onDelete}
+          style={({ pressed }) => [styles.actionRow, pressed && styles.actionPressed]}
+        >
+          <Trash2 size={25} color="#a62935" strokeWidth={1.82} />
+          <Text style={styles.deleteText}>Poista</Text>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -320,6 +493,54 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     letterSpacing: -0.32,
   },
+  projectScroll: {
+    flex: 1,
+  },
+  projectList: {
+    paddingTop: 22,
+    paddingHorizontal: 35,
+    paddingBottom: 90,
+  },
+  projectRow: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  projectRowPressed: {
+    opacity: 0.74,
+  },
+  projectIconSlot: {
+    width: 52,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  projectTextWrap: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  projectTitle: {
+    color: colors.text,
+    fontSize: 21,
+    lineHeight: 27,
+    fontWeight: '500',
+    letterSpacing: -0.28,
+  },
+  projectSubtitle: {
+    marginTop: 1,
+    color: colors.muted,
+    fontSize: 15.8,
+    lineHeight: 21,
+    fontWeight: '500',
+    letterSpacing: -0.14,
+  },
+  moreButton: {
+    width: 42,
+    height: 42,
+    marginLeft: 8,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   emptyWrap: {
     flex: 1,
     alignItems: 'center',
@@ -373,6 +594,62 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     fontWeight: '500',
     letterSpacing: -0.16,
+  },
+  actionsRoot: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 82,
+  },
+  actionsOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#111111',
+  },
+  actionsSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    minHeight: 235,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingTop: 12,
+    paddingHorizontal: 31,
+    backgroundColor: '#fffefb',
+    shadowColor: '#111827',
+    shadowOpacity: 0.1,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: -12 },
+    elevation: 16,
+  },
+  actionsHandle: {
+    alignSelf: 'center',
+    width: 49,
+    height: 7,
+    borderRadius: 999,
+    marginBottom: 28,
+    backgroundColor: 'rgba(104,103,117,0.34)',
+  },
+  actionRow: {
+    minHeight: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 24,
+  },
+  actionPressed: {
+    opacity: 0.58,
+  },
+  actionText: {
+    color: colors.text,
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '500',
+    letterSpacing: -0.22,
+  },
+  deleteText: {
+    color: '#a62935',
+    fontSize: 20,
+    lineHeight: 26,
+    fontWeight: '600',
+    letterSpacing: -0.22,
   },
   sheetRoot: {
     ...StyleSheet.absoluteFillObject,

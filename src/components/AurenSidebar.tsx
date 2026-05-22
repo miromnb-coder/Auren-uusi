@@ -19,6 +19,7 @@ type AurenSidebarProps = {
   onClose: () => void;
   onOpen?: () => void;
   onNewChat?: () => void;
+  gesturesEnabled?: boolean;
   gestureBottomExclusion?: number;
   conversations?: AurenConversation[];
   activeConversationId?: string | null;
@@ -59,6 +60,7 @@ export function AurenSidebar({
   onClose,
   onOpen,
   onNewChat,
+  gesturesEnabled = true,
   gestureBottomExclusion = 0,
   conversations = [],
   activeConversationId = null,
@@ -92,6 +94,7 @@ export function AurenSidebar({
   const rootGesture = useMemo(
     () =>
       Gesture.Pan()
+        .enabled(gesturesEnabled)
         .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
         .failOffsetY([-28, 28])
         .onBegin((event) => {
@@ -154,13 +157,13 @@ export function AurenSidebar({
         .onFinalize(() => {
           rootGestureEligible.value = 0;
         }),
-    [drawerProgress, drawerWidth, height, normalizedGestureBottomExclusion, onClose, onOpen, openValue, rootGestureEligible, rootGestureStartProgress],
+    [drawerProgress, drawerWidth, gesturesEnabled, height, normalizedGestureBottomExclusion, onClose, onOpen, openValue, rootGestureEligible, rootGestureStartProgress],
   );
 
   const drawerCloseGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(open)
+        .enabled(gesturesEnabled && open)
         .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
         .failOffsetY([-28, 28])
         .onBegin(() => {
@@ -196,7 +199,7 @@ export function AurenSidebar({
             },
           );
         }),
-    [drawerCloseGestureStartProgress, drawerProgress, drawerWidth, onClose, open],
+    [drawerCloseGestureStartProgress, drawerProgress, drawerWidth, gesturesEnabled, onClose, open],
   );
 
   const mainAnimatedStyle = useAnimatedStyle(() => ({

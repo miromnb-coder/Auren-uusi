@@ -22,7 +22,7 @@ const THINKING_STEP_DELAYS = [1450, 1900, 2400, 3000, 3600];
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 type AurenHomeScreenProps = { session: Session };
-type AurenScreenMode = 'chat' | 'projects';
+type AurenScreenMode = 'chat' | 'projects' | 'projectDetail';
 type CreateProjectPayload = { title: string; description: string | null };
 
 function createMessageId(role: AurenMessage['role']) {
@@ -56,6 +56,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const userId = session.user.id;
   const { profileName, avatarLetter } = useMemo(() => getSessionProfile(session), [session]);
   const [activeScreen, setActiveScreen] = useState<AurenScreenMode>('chat');
+  const [activeProject, setActiveProject] = useState<AurenProject | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [plusSheetOpen, setPlusSheetOpen] = useState(false);
   const [createProjectSheetOpen, setCreateProjectSheetOpen] = useState(false);
@@ -82,6 +83,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
 
   const hasMessages = messages.length > 0;
   const hasSelectedImages = selectedImages.length > 0;
+  const inProjectDetail = activeScreen === 'projectDetail' && activeProject !== null;
   const currentThinkingLines = thinkingTimeline[thinkingStepIndex]?.lines ?? [];
   const messageListBottomInset = useMemo(() => composerHeight + composerBottomInset + MESSAGE_LIST_BOTTOM_GAP, [composerBottomInset, composerHeight]);
   const sidebarGestureBottomExclusion = useMemo(() => composerHeight + composerBottomInset + 24, [composerBottomInset, composerHeight]);
@@ -94,10 +96,16 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     return next;
   }
 
-  async function refreshProjects() {
-    const nextProjects = await listAurenProjects(userId);
-    setProjects(nextProjects);
-    return nextProjects;
+  function stopThinkingTimeline() { thinkingRunRef.current += 1; setAssistantThinking(false); setThinkingTimeline([]); setThinkingStepIndex(0); }
+  function stopThinkingForRun(runId: number) { if (thinkingRunRef.current === runId) stopThinkingTimeline(); }
+
+  function resetChatSurface() {
+    stopThinkingTimeline();
+    setActiveConversationId(null);
+    setMessages([]);
+    setDraft('');
+    setSelectedImages([]);
+    setInputFocused(false);
   }
 
   function openSidebar() { void aurenHaptics.panelOpen(); Keyboard.dismiss(); setSidebarOpen(true); }
@@ -111,6 +119,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setPlusSheetOpen(false);
     setCreateProjectSheetOpen(false);
     setCreateProjectError(null);
+    setActiveProject(null);
     setActiveScreen('chat');
     setSidebarOpen(true);
   }
@@ -126,7 +135,27 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     setPlusSheetOpen(false);
     setCreateProjectSheetOpen(false);
     setCreateProjectError(null);
+    setActiveProject(null);
     setSidebarOpen(false);
+    setActiveScreen('projects');
+  }
+
+  function openProjectDetail(project: AurenProject) {
+    void aurenHaptics.selection();
+    Keyboard.dismiss();
+    resetChatSurface();
+    setPlusSheetOpen(false);
+    setCreateProjectSheetOpen(false);
+    setCreateProjectError(null);
+    setActiveProject(project);
+    setActiveScreen('projectDetail');
+  }
+
+  function closeProjectDetail() {
+    void aurenHaptics.selection();
+    Keyboard.dismiss();
+    resetChatSurface();
+    setActiveProject(null);
     setActiveScreen('projects');
   }
 
@@ -153,6 +182,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       setProjects((currentProjects) => [createdProject, ...currentProjects.filter((project) => project.id !== createdProject.id)]);
       void aurenHaptics.success();
       setCreateProjectSheetOpen(false);
+      openProjectDetail(createdProject);
     } catch (error) {
       console.log('Auren project create error:', error);
       void aurenHaptics.warning();
@@ -180,13 +210,11 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     }
   }
 
-  function stopThinkingTimeline() { thinkingRunRef.current += 1; setAssistantThinking(false); setThinkingTimeline([]); setThinkingStepIndex(0); }
-  function stopThinkingForRun(runId: number) { if (thinkingRunRef.current === runId) stopThinkingTimeline(); }
-
   function startNewChat() {
     void aurenHaptics.selection();
     stopThinkingTimeline();
     setActiveScreen('chat');
+    setActiveProject(null);
     setActiveConversationId(null);
     setMessages([]);
     setDraft('');
@@ -201,6 +229,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     void aurenHaptics.selection();
     Keyboard.dismiss();
     setActiveScreen('chat');
+    setActiveProject(null);
     setSidebarOpen(false);
     if (conversationId === activeConversationId) return;
     stopThinkingTimeline();
@@ -215,21 +244,21 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     const attachment = await pickAurenImageAttachment();
     if (!attachment) return;
     void aurenHaptics.selection();
-    setActiveScreen('chat');
+    if (!inProjectDetail) setActiveScreen('chat');
     setSelectedImages([attachment]);
     setInputFocused(true);
   }
 
   async function handlePickImageFromSheet() { setPlusSheetOpen(false); await handleAddImage(); }
   function handleRemoveAttachment(id: string) { void aurenHaptics.selection(); setSelectedImages((items) => items.filter((image) => image.id !== id)); }
-  function usePlusPrompt(prompt: string) { void aurenHaptics.selection(); setPlusSheetOpen(false); setActiveScreen('chat'); setDraft(prompt); setInputFocused(true); }
+  function usePlusPrompt(prompt: string) { void aurenHaptics.selection(); setPlusSheetOpen(false); if (!inProjectDetail) setActiveScreen('chat'); setDraft(prompt); setInputFocused(true); }
 
   async function handleSend() {
     const text = draft.trim();
     if (assistantThinking) return;
     if (!text && !hasSelectedImages) { void aurenHaptics.warning(); return; }
     void aurenHaptics.sendMessage();
-    setActiveScreen('chat');
+    if (!inProjectDetail) setActiveScreen('chat');
     const imagesForSend = selectedImages;
     const content = text || 'Please explain this image.';
     const runId = thinkingRunRef.current + 1;
@@ -330,6 +359,10 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     return () => { showSub.remove(); hideSub.remove(); };
   }, [composerBottom, insets.bottom]);
 
+  const sharedPlusSheet = (
+    <AurenPlusSheet visible={plusSheetOpen} onClose={closePlusSheet} onCamera={handlePickImageFromSheet} onPhotos={handlePickImageFromSheet} onFiles={closePlusSheet} onCreateFlashcards={() => usePlusPrompt('Create flashcards from ')} onSummarizeNotes={() => usePlusPrompt('Summarize these notes: ')} onExplainTask={() => usePlusPrompt('Explain this task step by step: ')} onExplainFromImage={handlePickImageFromSheet} onStartStudySession={() => usePlusPrompt('Start a focused study session for ')} />
+  );
+
   return (
     <AurenSidebar
       open={sidebarOpen}
@@ -337,7 +370,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       onClose={closeSidebar}
       onNewChat={startNewChat}
       onProjects={openProjects}
-      gesturesEnabled={!plusSheetOpen && !createProjectSheetOpen}
+      gesturesEnabled={!plusSheetOpen && !createProjectSheetOpen && activeScreen !== 'projectDetail'}
       gestureBottomExclusion={activeScreen === 'chat' ? sidebarGestureBottomExclusion : 0}
       conversations={conversations}
       activeConversationId={activeConversationId}
@@ -357,9 +390,38 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
           onOpenCreateProject={openCreateProjectSheet}
           onCloseCreateProject={closeCreateProjectSheet}
           onSubmitCreateProject={handleCreateProject}
+          onOpenProject={openProjectDetail}
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}
         />
+      ) : inProjectDetail ? (
+        <SafeAreaView style={styles.screen}>
+          <View style={styles.projectHeader}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Back to projects" onPress={closeProjectDetail} style={({ pressed }) => [styles.projectBackButton, pressed && styles.buttonPressed]}>
+              <Text style={styles.projectBackText}>‹</Text>
+            </Pressable>
+            <View style={styles.projectTitleWrap}>
+              <Text style={styles.projectHeaderTitle} numberOfLines={1}>{activeProject.title}</Text>
+              <Text style={styles.projectChevron}>⌄</Text>
+            </View>
+            <View style={styles.projectHeaderSpacer} />
+          </View>
+
+          {hasMessages || assistantThinking ? (
+            <View style={styles.chatContent}>
+              <AurenMessageList messages={messages} thinking={assistantThinking} thinkingLines={currentThinkingLines} bottomInset={messageListBottomInset} />
+            </View>
+          ) : (
+            <Pressable style={styles.projectEmptyContent} onPress={Keyboard.dismiss}>
+              <Text style={styles.projectEmptyTitle}>{`${activeProject.title} — ready.\nLet’s begin.`}</Text>
+            </Pressable>
+          )}
+
+          <Animated.View style={[styles.composerWrap, { bottom: composerBottom }]}> 
+            <AurenComposer value={draft} attachments={selectedImages} placeholder="Ask Auren about this project" attachmentPlaceholder="Ask Auren about this project image" onChangeText={setDraft} onAddImage={openPlusSheet} onRemoveAttachment={handleRemoveAttachment} onFocus={() => setInputFocused(true)} onBlur={() => setInputFocused(false)} onSend={handleSend} onHeightChange={setComposerHeight} />
+          </Animated.View>
+          {sharedPlusSheet}
+        </SafeAreaView>
       ) : (
         <SafeAreaView style={styles.screen}>
           <AurenHeader onOpenMenu={openSidebar} />
@@ -383,7 +445,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
           <Animated.View style={[styles.composerWrap, { bottom: composerBottom }]}> 
             <AurenComposer value={draft} attachments={selectedImages} onChangeText={setDraft} onAddImage={openPlusSheet} onRemoveAttachment={handleRemoveAttachment} onFocus={() => setInputFocused(true)} onBlur={() => setInputFocused(false)} onSend={handleSend} onHeightChange={setComposerHeight} />
           </Animated.View>
-          <AurenPlusSheet visible={plusSheetOpen} onClose={closePlusSheet} onCamera={handlePickImageFromSheet} onPhotos={handlePickImageFromSheet} onFiles={closePlusSheet} onCreateFlashcards={() => usePlusPrompt('Create flashcards from ')} onSummarizeNotes={() => usePlusPrompt('Summarize these notes: ')} onExplainTask={() => usePlusPrompt('Explain this task step by step: ')} onExplainFromImage={handlePickImageFromSheet} onStartStudySession={() => usePlusPrompt('Start a focused study session for ')} />
+          {sharedPlusSheet}
         </SafeAreaView>
       )}
     </AurenSidebar>
@@ -399,5 +461,15 @@ const styles = StyleSheet.create({
   heroTitle: { color: '#686775', fontSize: 34, lineHeight: 40.5, letterSpacing: -1.08, textAlign: 'center', fontFamily: serifFont },
   heroSubtitle: { marginTop: 15, color: colors.muted, fontSize: 15.8, lineHeight: 22.5, letterSpacing: -0.14, textAlign: 'center', fontWeight: '500' },
   actionsWrap: { width: '100%', marginTop: 42 },
+  projectHeader: { height: 94, paddingHorizontal: 31, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  projectBackButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.82)', borderWidth: 1, borderColor: 'rgba(17,24,39,0.03)' },
+  projectBackText: { color: colors.text, fontSize: 39, lineHeight: 42, fontWeight: '300', marginTop: -3 },
+  projectTitleWrap: { position: 'absolute', left: 96, right: 96, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  projectHeaderTitle: { flexShrink: 1, color: colors.text, fontSize: 19.5, lineHeight: 25, fontWeight: '700', letterSpacing: -0.25, textAlign: 'center' },
+  projectChevron: { color: colors.text, fontSize: 18, lineHeight: 20, fontWeight: '700' },
+  projectHeaderSpacer: { width: 48, height: 48 },
+  projectEmptyContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 34, paddingBottom: 178 },
+  projectEmptyTitle: { color: colors.text, fontSize: 30, lineHeight: 38, fontWeight: '700', letterSpacing: -0.75, textAlign: 'center' },
   composerWrap: { position: 'absolute', left: 16, right: 16, bottom: CLOSED_COMPOSER_BOTTOM },
+  buttonPressed: { opacity: 0.62, transform: [{ scale: 0.97 }] },
 });

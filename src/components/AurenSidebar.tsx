@@ -59,6 +59,7 @@ const CONTEXT_MENU_HEIGHT = 117;
 const CONTEXT_SIDE_PADDING = 30;
 const CONTEXT_VERTICAL_GAP = 12;
 const CONTEXT_PILL_HORIZONTAL_INSET = 12;
+const CONVERSATION_LONG_PRESS_DELAY = 355;
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
@@ -398,12 +399,12 @@ export function AurenSidebar({
                             collapsable={false}
                             onPress={() => onSelectConversation?.(chat.id)}
                             onLongPress={() => openConversationActions(chat)}
-                            delayLongPress={285}
+                            delayLongPress={CONVERSATION_LONG_PRESS_DELAY}
                             style={({ pressed }) => [
                               styles.recentRow,
                               isActive && styles.activeRecentRow,
+                              pressed && !isContextTarget && styles.pressedRecentRow,
                               isContextTarget && styles.contextRecentRow,
-                              pressed && !isContextTarget && styles.pressed,
                             ]}
                           >
                             <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
@@ -494,15 +495,15 @@ function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, on
     RNAnimated.parallel([
       RNAnimated.timing(detachProgress, {
         toValue: 1,
-        duration: 165,
+        duration: 210,
         easing: RNEasing.out(RNEasing.cubic),
         useNativeDriver: true,
       }),
       RNAnimated.sequence([
-        RNAnimated.delay(88),
+        RNAnimated.delay(128),
         RNAnimated.timing(menuProgress, {
           toValue: 1,
-          duration: 150,
+          duration: 165,
           easing: RNEasing.out(RNEasing.cubic),
           useNativeDriver: true,
         }),
@@ -524,10 +525,10 @@ function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, on
     ? pillTop - CONTEXT_MENU_HEIGHT - CONTEXT_VERTICAL_GAP
     : Math.min(screenHeight - CONTEXT_MENU_HEIGHT - 96, pillTop + pillHeight + CONTEXT_VERTICAL_GAP);
   const menuStartOffset = hasSpaceAbove ? 8 : -8;
-  const overlayOpacity = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-  const pillOpacity = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
+  const overlayOpacity = detachProgress.interpolate({ inputRange: [0, 0.34, 1], outputRange: [0, 0, 1] });
+  const pillOpacity = detachProgress.interpolate({ inputRange: [0, 0.16, 1], outputRange: [0.74, 0.95, 1] });
   const pillTranslateY = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -3] });
-  const pillScale = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1.018] });
+  const pillScale = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0.996, 1.018] });
   const menuOpacity = menuProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
   const menuTranslateY = menuProgress.interpolate({ inputRange: [0, 1], outputRange: [menuStartOffset, 0] });
   const menuScale = menuProgress.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] });
@@ -670,6 +671,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0)',
     shadowOpacity: 0,
     elevation: 0,
+  },
+  pressedRecentRow: {
+    minHeight: 44,
+    marginLeft: -12,
+    paddingLeft: 12,
+    paddingRight: 12,
+    borderRadius: 22,
+    backgroundColor: 'rgba(17,24,39,0.045)',
+    transform: [{ scale: 0.996 }],
   },
   contextRecentRow: {
     opacity: 0,

@@ -1,4 +1,4 @@
-import { Folder, Search, Settings, SquarePen, Trash2, X } from 'lucide-react-native';
+import { Folder, Search, SquarePen, Trash2, X } from 'lucide-react-native';
 import type { ElementRef, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated as RNAnimated, Easing as RNEasing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -10,6 +10,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
+import { AurenProfileSheet } from './AurenProfileSheet';
 import type { AurenConversation } from '../lib/aurenConversations';
 import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
@@ -99,6 +100,7 @@ export function AurenSidebar({
 }: AurenSidebarProps) {
   const { width, height } = useWindowDimensions();
   const [actionTarget, setActionTarget] = useState<ConversationContextTarget | null>(null);
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const actionBusyRef = useRef(false);
   const conversationRowRefs = useRef<Record<string, ElementRef<typeof Pressable> | null>>({});
   const drawerProgress = useSharedValue(open ? 1 : 0);
@@ -124,10 +126,27 @@ export function AurenSidebar({
     }
   }, [actionTarget, open]);
 
+  useEffect(() => {
+    if (!open && profileSheetOpen) {
+      setProfileSheetOpen(false);
+    }
+  }, [open, profileSheetOpen]);
+
   function openSearchChats() {
     void aurenHaptics.selection();
     setActionTarget(null);
     onSearchChats?.();
+  }
+
+  function openProfileSheet() {
+    void aurenHaptics.panelOpen();
+    setActionTarget(null);
+    setProfileSheetOpen(true);
+  }
+
+  function closeProfileSheet() {
+    void aurenHaptics.panelClose();
+    setProfileSheetOpen(false);
   }
 
   function openConversationActions(conversation: AurenConversation) {
@@ -250,7 +269,7 @@ export function AurenSidebar({
   const rootGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(gesturesEnabled)
+        .enabled(gesturesEnabled && !profileSheetOpen)
         .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
         .failOffsetY([-28, 28])
         .onBegin((event) => {
@@ -300,13 +319,13 @@ export function AurenSidebar({
         .onFinalize(() => {
           rootGestureEligible.value = 0;
         }),
-    [drawerProgress, drawerWidth, gesturesEnabled, height, normalizedGestureBottomExclusion, onClose, onOpen, openValue, rootGestureEligible, rootGestureStartProgress],
+    [drawerProgress, drawerWidth, gesturesEnabled, height, normalizedGestureBottomExclusion, onClose, onOpen, openValue, profileSheetOpen, rootGestureEligible, rootGestureStartProgress],
   );
 
   const drawerCloseGesture = useMemo(
     () =>
       Gesture.Pan()
-        .enabled(gesturesEnabled && open)
+        .enabled(gesturesEnabled && open && !profileSheetOpen)
         .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
         .failOffsetY([-28, 28])
         .onBegin(() => {
@@ -337,7 +356,7 @@ export function AurenSidebar({
             },
           );
         }),
-    [drawerCloseGestureStartProgress, drawerProgress, drawerWidth, gesturesEnabled, onClose, open],
+    [drawerCloseGestureStartProgress, drawerProgress, drawerWidth, gesturesEnabled, onClose, open, profileSheetOpen],
   );
 
   const mainAnimatedStyle = useAnimatedStyle(() => ({
@@ -430,14 +449,16 @@ export function AurenSidebar({
               </ScrollView>
 
               <View style={styles.bottomBar}>
-                <Pressable style={({ pressed }) => [styles.profileInline, pressed && styles.pressed]}>
+                <Pressable
+                  onPress={openProfileSheet}
+                  style={({ pressed }) => [styles.profileInline, pressed && styles.profilePressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open profile settings"
+                >
                   <View style={styles.avatar}>
                     <Text style={styles.avatarText}>{avatarLetter}</Text>
                   </View>
                   <Text style={styles.profileName} numberOfLines={1}>{profileName}</Text>
-                </Pressable>
-                <Pressable style={({ pressed }) => [styles.settingsButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Open settings">
-                  <Settings size={30} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
                 </Pressable>
               </View>
             </View>
@@ -451,6 +472,13 @@ export function AurenSidebar({
           onClose={closeConversationActions}
           onRename={openRenameConversation}
           onDelete={openDeleteConversation}
+        />
+
+        <AurenProfileSheet
+          visible={profileSheetOpen}
+          profileName={profileName}
+          avatarLetter={avatarLetter}
+          onClose={closeProfileSheet}
         />
       </View>
     </GestureDetector>
@@ -717,8 +745,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 20,
     backgroundColor: DRAWER_BACKGROUND,
   },
   profileInline: {
@@ -727,6 +753,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 22,
+  },
+  profilePressed: {
+    opacity: 0.62,
+    transform: [{ scale: 0.99 }],
   },
   avatar: {
     width: 46,
@@ -744,13 +774,6 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     fontWeight: '400',
     letterSpacing: -0.22,
-  },
-  settingsButton: {
-    width: 56,
-    height: 56,
-    marginRight: -2,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   contextOverlay: { flex: 1 },
   contextOverlayTint: {

@@ -37,7 +37,7 @@ export function AurenProjectsScreen({ onBack, onCreateProject }: AurenProjectsSc
 
       <View style={styles.emptyWrap}>
         <View style={styles.iconWrap}>
-          <Folder size={54} color="rgba(104,103,117,0.74)" strokeWidth={1.55} />
+          <Folder size={53} color="rgba(104,103,117,0.72)" strokeWidth={1.52} />
         </View>
 
         <Text style={styles.emptyTitle}>{'Organize your chats, files,\nand study materials in one place'}</Text>
@@ -96,11 +96,11 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
-    paddingTop: 226,
+    paddingTop: 150,
     paddingHorizontal: 30,
   },
   iconWrap: {
-    marginBottom: 76,
+    marginBottom: 43,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -108,40 +108,40 @@ const styles = StyleSheet.create({
     maxWidth: 340,
     color: '#686775',
     fontFamily: serifFont,
-    fontSize: 24.5,
-    lineHeight: 31.5,
+    fontSize: 24,
+    lineHeight: 31,
     fontWeight: '400',
-    letterSpacing: -0.66,
+    letterSpacing: -0.64,
     textAlign: 'center',
   },
   emptySubtitle: {
-    marginTop: 25,
-    maxWidth: 294,
+    marginTop: 24,
+    maxWidth: 292,
     color: colors.muted,
-    fontSize: 16.2,
-    lineHeight: 23.5,
+    fontSize: 16,
+    lineHeight: 23.2,
     fontWeight: '500',
     letterSpacing: -0.16,
     textAlign: 'center',
   },
   primaryButton: {
-    marginTop: 47,
-    minWidth: 178,
-    height: 50,
+    marginTop: 45,
+    minWidth: 176,
+    height: 49,
     paddingHorizontal: 28,
-    borderRadius: 25,
+    borderRadius: 24.5,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#1d1a18',
     shadowColor: '#111827',
-    shadowOpacity: 0.13,
+    shadowOpacity: 0.12,
     shadowRadius: 15,
     shadowOffset: { width: 0, height: 10 },
     elevation: 7,
   },
   primaryButtonText: {
     color: '#ffffff',
-    fontSize: 16.4,
+    fontSize: 16.2,
     lineHeight: 21,
     fontWeight: '500',
     letterSpacing: -0.16,

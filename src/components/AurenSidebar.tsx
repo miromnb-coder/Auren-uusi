@@ -239,72 +239,74 @@ export function AurenSidebar({
             ]}
           >
             <View style={styles.drawerInner}>
-              <View style={styles.topBar}>
-                <Text style={styles.brand}>Auren</Text>
-                <Text style={styles.subtitle}>Your study assistant</Text>
+              <View style={styles.leftShiftedContent}>
+                <View style={styles.topBar}>
+                  <Text style={styles.brand}>Auren</Text>
+                  <Text style={styles.subtitle}>Your study assistant</Text>
+                </View>
+
+                <ScrollView
+                  style={styles.scroll}
+                  contentContainerStyle={styles.scrollContent}
+                  showsVerticalScrollIndicator={false}
+                  bounces
+                >
+                  <View style={styles.primaryNav}>
+                    <SidebarItem
+                      icon={sidebarIcon(<Home size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                      label="Home"
+                      onPress={onClose}
+                    />
+
+                    <SidebarItem
+                      icon={sidebarIcon(<SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                      label="New chat"
+                      onPress={onNewChat}
+                    />
+
+                    <SidebarItem
+                      icon={sidebarIcon(<BookOpen size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                      label="Study modes"
+                    />
+
+                    <SidebarItem
+                      icon={sidebarIcon(<Folder size={28} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
+                      label="Projects"
+                      onPress={onProjects}
+                    />
+                  </View>
+
+                  <View style={styles.divider} />
+
+                  <View style={styles.recentList}>
+                    {loadingConversations ? (
+                      <Text style={styles.emptyRecentText}>Loading chats...</Text>
+                    ) : conversations.length > 0 ? (
+                      conversations.map((chat) => {
+                        const isActive = chat.id === activeConversationId;
+
+                        return (
+                          <Pressable
+                            key={chat.id}
+                            onPress={() => onSelectConversation?.(chat.id)}
+                            style={({ pressed }) => [
+                              styles.recentRow,
+                              isActive && styles.activeRecentRow,
+                              pressed && styles.pressed,
+                            ]}
+                          >
+                            <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
+                              {chat.title}
+                            </Text>
+                          </Pressable>
+                        );
+                      })
+                    ) : (
+                      <Text style={styles.emptyRecentText}>Your chats will appear here.</Text>
+                    )}
+                  </View>
+                </ScrollView>
               </View>
-
-              <ScrollView
-                style={styles.scroll}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                bounces
-              >
-                <View style={styles.primaryNav}>
-                  <SidebarItem
-                    icon={sidebarIcon(<Home size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                    label="Home"
-                    onPress={onClose}
-                  />
-
-                  <SidebarItem
-                    icon={sidebarIcon(<SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                    label="New chat"
-                    onPress={onNewChat}
-                  />
-
-                  <SidebarItem
-                    icon={sidebarIcon(<BookOpen size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                    label="Study modes"
-                  />
-
-                  <SidebarItem
-                    icon={sidebarIcon(<Folder size={28} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                    label="Projects"
-                    onPress={onProjects}
-                  />
-                </View>
-
-                <View style={styles.divider} />
-
-                <View style={styles.recentList}>
-                  {loadingConversations ? (
-                    <Text style={styles.emptyRecentText}>Loading chats...</Text>
-                  ) : conversations.length > 0 ? (
-                    conversations.map((chat) => {
-                      const isActive = chat.id === activeConversationId;
-
-                      return (
-                        <Pressable
-                          key={chat.id}
-                          onPress={() => onSelectConversation?.(chat.id)}
-                          style={({ pressed }) => [
-                            styles.recentRow,
-                            isActive && styles.activeRecentRow,
-                            pressed && styles.pressed,
-                          ]}
-                        >
-                          <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
-                            {chat.title}
-                          </Text>
-                        </Pressable>
-                      );
-                    })
-                  ) : (
-                    <Text style={styles.emptyRecentText}>Your chats will appear here.</Text>
-                  )}
-                </View>
-              </ScrollView>
 
               <View style={styles.bottomBar}>
                 <Pressable style={({ pressed }) => [styles.profileInline, pressed && styles.pressed]}>
@@ -392,6 +394,11 @@ const styles = StyleSheet.create({
     paddingTop: 74,
     paddingHorizontal: 38,
     paddingBottom: 24,
+  },
+  leftShiftedContent: {
+    flex: 1,
+    marginLeft: -12,
+    paddingRight: 12,
   },
   topBar: {
     flexShrink: 0,
@@ -502,6 +509,7 @@ const styles = StyleSheet.create({
   profileInline: {
     width: 168,
     minHeight: 58,
+    marginLeft: -12,
     paddingLeft: 10,
     paddingRight: 18,
     flexDirection: 'row',

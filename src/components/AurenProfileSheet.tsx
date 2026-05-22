@@ -98,15 +98,15 @@ export function AurenProfileSheet({ visible, profileName, avatarLetter, onClose 
           </View>
 
           <View style={styles.groupCard}>
-            <ProfileRow icon={<User size={27} color={ICON_COLOR} strokeWidth={1.8} />} label="Account" />
-            <ProfileRow icon={<Moon size={28} color={ICON_COLOR} strokeWidth={1.8} />} label="Appearance" />
-            <ProfileRow icon={<Brain size={29} color={ICON_COLOR} strokeWidth={1.75} />} label="Memory" />
-            <ProfileRow icon={<Settings size={29} color={ICON_COLOR} strokeWidth={1.8} />} label="Settings" />
-            <ProfileRow icon={<HelpCircle size={29} color={ICON_COLOR} strokeWidth={1.8} />} label="Help" last />
+            <ProfileRow icon={<User size={26} color={ICON_COLOR} strokeWidth={1.8} />} label="Account" />
+            <ProfileRow icon={<Moon size={27} color={ICON_COLOR} strokeWidth={1.8} />} label="Appearance" />
+            <ProfileRow icon={<Brain size={28} color={ICON_COLOR} strokeWidth={1.75} />} label="Memory" />
+            <ProfileRow icon={<Settings size={28} color={ICON_COLOR} strokeWidth={1.8} />} label="Settings" />
+            <ProfileRow icon={<HelpCircle size={28} color={ICON_COLOR} strokeWidth={1.8} />} label="Help" last />
           </View>
 
           <View style={styles.signOutCard}>
-            <ProfileRow icon={<LogOut size={29} color={DANGER} strokeWidth={1.8} />} label="Sign out" danger last />
+            <ProfileRow icon={<LogOut size={28} color={DANGER} strokeWidth={1.8} />} label="Sign out" danger last />
           </View>
         </Animated.View>
       </View>
@@ -120,7 +120,7 @@ function ProfileRow({ icon, label, danger = false, last = false, onPress }: Prof
       <View style={styles.rowContent}>
         <View style={styles.iconSlot}>{icon}</View>
         <Text style={[styles.rowLabel, danger && styles.dangerText]}>{label}</Text>
-        <ChevronRight size={28} color={danger ? DANGER : ICON_COLOR} strokeWidth={1.75} />
+        <ChevronRight size={27} color={danger ? DANGER : ICON_COLOR} strokeWidth={1.75} />
       </View>
       {!last ? <View style={styles.divider} /> : null}
     </Pressable>
@@ -161,26 +161,26 @@ const styles = StyleSheet.create({
     backgroundColor: HANDLE_COLOR,
   },
   profileHeader: {
-    marginTop: 51,
-    marginBottom: 44,
+    marginTop: 42,
+    marginBottom: 33,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 27,
+    gap: 25,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 66,
+    height: 66,
+    borderRadius: 33,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#d89437',
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 29,
-    lineHeight: 34,
+    fontSize: 27,
+    lineHeight: 32,
     fontWeight: '700',
-    letterSpacing: -0.36,
+    letterSpacing: -0.34,
   },
   profileCopy: {
     flex: 1,
@@ -188,15 +188,15 @@ const styles = StyleSheet.create({
   },
   profileName: {
     color: colors.text,
-    fontSize: 22.5,
-    lineHeight: 28,
+    fontSize: 21.8,
+    lineHeight: 27,
     fontWeight: '500',
-    letterSpacing: -0.68,
+    letterSpacing: -0.66,
   },
   profileSubtitle: {
     marginTop: 2,
     color: colors.muted,
-    fontSize: 15.6,
+    fontSize: 15.2,
     lineHeight: 20,
     fontWeight: '400',
     letterSpacing: -0.15,
@@ -210,14 +210,14 @@ const styles = StyleSheet.create({
   },
   signOutCard: {
     overflow: 'hidden',
-    marginTop: 20,
+    marginTop: 17,
     borderRadius: 17,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: CARD_BORDER,
     backgroundColor: CARD_BACKGROUND,
   },
   row: {
-    minHeight: 64,
+    minHeight: 58,
     backgroundColor: 'transparent',
   },
   rowPressed: {
@@ -225,25 +225,25 @@ const styles = StyleSheet.create({
   },
   rowContent: {
     flex: 1,
-    minHeight: 64,
+    minHeight: 58,
     paddingLeft: 31,
     paddingRight: 28,
     flexDirection: 'row',
     alignItems: 'center',
   },
   iconSlot: {
-    width: 40,
+    width: 39,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rowLabel: {
     flex: 1,
-    marginLeft: 22,
+    marginLeft: 21,
     color: colors.text,
-    fontSize: 18.2,
-    lineHeight: 24,
+    fontSize: 17.7,
+    lineHeight: 23,
     fontWeight: '400',
-    letterSpacing: -0.24,
+    letterSpacing: -0.23,
   },
   dangerText: {
     color: DANGER,

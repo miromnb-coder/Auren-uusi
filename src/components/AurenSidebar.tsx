@@ -1,15 +1,8 @@
 import { BookOpen, Folder, Home, SquarePen } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { useEffect, useMemo } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  Easing as ReanimatedEasing,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useMemo, useRef } from 'react';
+import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import type { AurenConversation } from '../lib/aurenConversations';
 import { colors } from '../theme';
 
@@ -48,7 +41,6 @@ function sidebarIcon(icon: ReactNode) {
 }
 
 function clampProgress(value: number) {
-  'worklet';
   return Math.min(Math.max(value, 0), 1);
 }
 
@@ -66,10 +58,9 @@ export function AurenSidebar({
   onSelectConversation,
 }: AurenSidebarProps) {
   const { width } = useWindowDimensions();
-  const drawerProgress = useSharedValue(open ? 1 : 0);
-  const openValue = useSharedValue(open ? 1 : 0);
-  const gestureStartProgress = useSharedValue(open ? 1 : 0);
-  const gestureEligible = useSharedValue(0);
+  const progress = useRef(new Animated.Value(open ? 1 : 0)).current;
+  const progressValueRef = useRef(open ? 1 : 0);
+  const gestureStartProgressRef = useRef(open ? 1 : 0);
 
   const drawerWidth = useMemo(() => {
     const measuredWidth = width * DRAWER_WIDTH_RATIO;
@@ -77,96 +68,145 @@ export function AurenSidebar({
   }, [width]);
 
   useEffect(() => {
-    openValue.value = open ? 1 : 0;
-    drawerProgress.value = withTiming(open ? 1 : 0, {
-      duration: open ? 310 : 255,
-      easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
+    const listenerId = progress.addListener(({ value }) => {
+      progressValueRef.current = value;
     });
-  }, [drawerProgress, open, openValue]);
 
-  const gesture = useMemo(
-    () =>
-      Gesture.Pan()
-        .activeOffsetX([-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE])
-        .failOffsetY([-18, 18])
-        .onBegin((event) => {
-          gestureStartProgress.value = drawerProgress.value;
-          gestureEligible.value = openValue.value > 0.01 || event.absoluteX <= EDGE_SWIPE_WIDTH ? 1 : 0;
-        })
-        .onUpdate((event) => {
-          if (!gestureEligible.value) {
-            return;
-          }
+    return () => {
+      progress.removeListener(listenerId);
+    };
+  }, [progress]);
 
-          const isMostlyHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY) * HORIZONTAL_DOMINANCE;
-          if (!isMostlyHorizontal) {
-            return;
-          }
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: open ? 1 : 0,
+      duration: open ? 310 : 255,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [open, progress]);
 
-          drawerProgress.value = clampProgress(gestureStartProgress.value + event.translationX / drawerWidth);
-        })
-        .onEnd((event) => {
-          if (!gestureEligible.value) {
-            return;
-          }
+  function animateGestureTo(nextOpen: boolean) {
+    progress.stopAnimation();
 
-          const shouldOpen =
-            event.velocityX > SWIPE_VELOCITY ||
-            (event.velocityX > -SWIPE_VELOCITY && drawerProgress.value > OPEN_PROGRESS_THRESHOLD);
+    Animated.timing(progress, {
+      toValue: nextOpen ? 1 : 0,
+      duration: nextOpen ? 230 : 205,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) {
+        return;
+      }
 
-          drawerProgress.value = withTiming(
-            shouldOpen ? 1 : 0,
-            {
-              duration: shouldOpen ? 230 : 205,
-              easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
-            },
-            (finished) => {
-              if (!finished) {
-                return;
-              }
+      if (nextOpen) {
+        onOpen?.();
+        return;
+      }
 
-              if (shouldOpen) {
-                if (onOpen) {
-                  runOnJS(onOpen)();
-                }
-              } else {
-                runOnJS(onClose)();
-              }
-            },
-          );
-        })
-        .onFinalize(() => {
-          gestureEligible.value = 0;
-        }),
-    [drawerProgress, drawerWidth, gestureEligible, gestureStartProgress, onClose, onOpen, openValue],
-  );
+      if (open) {
+        onClose();
+      }
+    });
+  }
 
-  const mainAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: drawerProgress.value * drawerWidth }],
-  }));
+  function handleGestureEvent(event: any) {
+    const { translationX, translationY } = event.nativeEvent;
+    const isMostlyHorizontal = Math.abs(translationX) > Math.abs(translationY) * HORIZONTAL_DOMINANCE;
 
-  const drawerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: -drawerWidth + drawerProgress.value * drawerWidth }],
-  }));
+    if (!isMostlyHorizontal) {
+      return;
+    }
+
+    const nextProgress = clampProgress(gestureStartProgressRef.current + translationX / drawerWidth);
+    progress.setValue(nextProgress);
+  }
+
+  function handleGestureStateChange(event: any) {
+    const { state, translationX, translationY, velocityX } = event.nativeEvent;
+
+    if (state === State.BEGAN) {
+      progress.stopAnimation((currentValue) => {
+        progressValueRef.current = currentValue;
+        gestureStartProgressRef.current = currentValue;
+      });
+      return;
+    }
+
+    if (state !== State.END && state !== State.CANCELLED && state !== State.FAILED) {
+      return;
+    }
+
+    const isMostlyHorizontal = Math.abs(translationX) > Math.abs(translationY) * HORIZONTAL_DOMINANCE;
+
+    if (!isMostlyHorizontal) {
+      animateGestureTo(open);
+      return;
+    }
+
+    const shouldOpen =
+      velocityX > SWIPE_VELOCITY ||
+      (velocityX > -SWIPE_VELOCITY && progressValueRef.current > OPEN_PROGRESS_THRESHOLD);
+
+    animateGestureTo(shouldOpen);
+  }
+
+  const drawerTranslateX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-drawerWidth, 0],
+  });
+
+  const mainTranslateX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, drawerWidth],
+  });
 
   const visibleMainWidth = Math.max(width - drawerWidth, 58);
 
   return (
-    <GestureDetector gesture={gesture}>
-      <View style={styles.root}>
-        <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>
-          {children}
-        </Animated.View>
+    <View style={styles.root}>
+      <Animated.View style={[styles.mainScreen, { transform: [{ translateX: mainTranslateX }] }]}> 
+        {children}
+      </Animated.View>
 
-        {open ? <Pressable style={[styles.peekCloseArea, { width: visibleMainWidth }]} onPress={onClose} /> : null}
+      {!open ? (
+        <PanGestureHandler
+          activeOffsetX={[-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE]}
+          failOffsetY={[-18, 18]}
+          onGestureEvent={handleGestureEvent}
+          onHandlerStateChange={handleGestureStateChange}
+        >
+          <Animated.View style={styles.edgeGestureArea} />
+        </PanGestureHandler>
+      ) : null}
 
+      {open ? (
+        <PanGestureHandler
+          activeOffsetX={[-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE]}
+          failOffsetY={[-18, 18]}
+          onGestureEvent={handleGestureEvent}
+          onHandlerStateChange={handleGestureStateChange}
+        >
+          <Animated.View style={[styles.peekCloseArea, { width: visibleMainWidth }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+          </Animated.View>
+        </PanGestureHandler>
+      ) : null}
+
+      <PanGestureHandler
+        enabled={open}
+        activeOffsetX={[-DRAG_ACTIVATION_DISTANCE, DRAG_ACTIVATION_DISTANCE]}
+        failOffsetY={[-18, 18]}
+        onGestureEvent={handleGestureEvent}
+        onHandlerStateChange={handleGestureStateChange}
+      >
         <Animated.View
           pointerEvents={open ? 'auto' : 'none'}
           style={[
             styles.drawer,
-            drawerAnimatedStyle,
             {
               width: drawerWidth,
+              transform: [{ translateX: drawerTranslateX }],
             },
           ]}
         >
@@ -259,8 +299,8 @@ export function AurenSidebar({
             </View>
           </View>
         </Animated.View>
-      </View>
-    </GestureDetector>
+      </PanGestureHandler>
+    </View>
   );
 }
 
@@ -293,6 +333,15 @@ const styles = StyleSheet.create({
   mainScreen: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
+  },
+  edgeGestureArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: EDGE_SWIPE_WIDTH,
+    zIndex: 30,
+    backgroundColor: 'rgba(255,255,255,0)',
   },
   peekCloseArea: {
     position: 'absolute',

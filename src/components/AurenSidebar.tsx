@@ -1,7 +1,7 @@
 import { Folder, Search, Settings, SquarePen, Trash2, X } from 'lucide-react-native';
 import type { ElementRef, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Animated as RNAnimated, Easing as RNEasing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   Easing as ReanimatedEasing,
@@ -387,6 +387,7 @@ export function AurenSidebar({
                     ) : conversations.length > 0 ? (
                       conversations.map((chat) => {
                         const isActive = chat.id === activeConversationId;
+                        const isContextTarget = actionTarget?.conversation.id === chat.id;
 
                         return (
                           <Pressable
@@ -401,8 +402,8 @@ export function AurenSidebar({
                             style={({ pressed }) => [
                               styles.recentRow,
                               isActive && styles.activeRecentRow,
-                              actionTarget?.conversation.id === chat.id && styles.contextRecentRow,
-                              pressed && styles.pressed,
+                              isContextTarget && styles.contextRecentRow,
+                              pressed && !isContextTarget && styles.pressed,
                             ]}
                           >
                             <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>
@@ -477,6 +478,38 @@ type ConversationActionMenuProps = {
 };
 
 function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, onRename, onDelete }: ConversationActionMenuProps) {
+  const detachProgress = useRef(new RNAnimated.Value(0)).current;
+  const menuProgress = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    detachProgress.stopAnimation();
+    menuProgress.stopAnimation();
+    detachProgress.setValue(0);
+    menuProgress.setValue(0);
+
+    if (!target) {
+      return;
+    }
+
+    RNAnimated.parallel([
+      RNAnimated.timing(detachProgress, {
+        toValue: 1,
+        duration: 165,
+        easing: RNEasing.out(RNEasing.cubic),
+        useNativeDriver: true,
+      }),
+      RNAnimated.sequence([
+        RNAnimated.delay(88),
+        RNAnimated.timing(menuProgress, {
+          toValue: 1,
+          duration: 150,
+          easing: RNEasing.out(RNEasing.cubic),
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+  }, [detachProgress, menuProgress, target]);
+
   if (!target) return null;
 
   const desiredPillLeft = target.x - CONTEXT_PILL_HORIZONTAL_INSET;
@@ -490,31 +523,61 @@ function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, on
   const menuTop = hasSpaceAbove
     ? pillTop - CONTEXT_MENU_HEIGHT - CONTEXT_VERTICAL_GAP
     : Math.min(screenHeight - CONTEXT_MENU_HEIGHT - 96, pillTop + pillHeight + CONTEXT_VERTICAL_GAP);
+  const menuStartOffset = hasSpaceAbove ? 8 : -8;
+  const overlayOpacity = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const pillOpacity = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] });
+  const pillTranslateY = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0, -3] });
+  const pillScale = detachProgress.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1.018] });
+  const menuOpacity = menuProgress.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const menuTranslateY = menuProgress.interpolate({ inputRange: [0, 1], outputRange: [menuStartOffset, 0] });
+  const menuScale = menuProgress.interpolate({ inputRange: [0, 1], outputRange: [0.985, 1] });
 
   return (
-    <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <Pressable style={styles.contextOverlay} onPress={onClose}>
-        <View
+        <RNAnimated.View pointerEvents="none" style={[styles.contextOverlayTint, { opacity: overlayOpacity }]} />
+
+        <RNAnimated.View
           pointerEvents="none"
-          style={[styles.contextSelectedPill, { left: pillLeft, top: pillTop, width: pillWidth, minHeight: pillHeight }]}
+          style={[
+            styles.contextSelectedPill,
+            {
+              left: pillLeft,
+              top: pillTop,
+              width: pillWidth,
+              minHeight: pillHeight,
+              opacity: pillOpacity,
+              transform: [{ translateY: pillTranslateY }, { scale: pillScale }],
+            },
+          ]}
         >
           <Text numberOfLines={1} style={styles.contextSelectedTitle}>{target.conversation.title}</Text>
-        </View>
+        </RNAnimated.View>
 
-        <Pressable
-          style={[styles.contextMenu, { left: menuLeft, top: menuTop, width: CONTEXT_MENU_WIDTH }]}
-          onPress={(event) => event.stopPropagation()}
+        <RNAnimated.View
+          style={[
+            styles.contextMenu,
+            {
+              left: menuLeft,
+              top: menuTop,
+              width: CONTEXT_MENU_WIDTH,
+              opacity: menuOpacity,
+              transform: [{ translateY: menuTranslateY }, { scale: menuScale }],
+            },
+          ]}
         >
-          <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.contextMenuRowPressed]} onPress={() => onRename(target.conversation)}>
-            <Text style={styles.contextMenuLabel}>Rename</Text>
-            <SquarePen size={23} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
+          <Pressable style={styles.contextMenuTapSurface} onPress={(event) => event.stopPropagation()}>
+            <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.contextMenuRowPressed]} onPress={() => onRename(target.conversation)}>
+              <Text style={styles.contextMenuLabel}>Rename</Text>
+              <SquarePen size={23} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
+            </Pressable>
+            <View style={styles.contextDivider} />
+            <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.contextMenuRowPressed]} onPress={() => onDelete(target.conversation)}>
+              <Text style={[styles.contextMenuLabel, styles.dangerText]}>Delete</Text>
+              <Trash2 size={23} color={DANGER_COLOR} strokeWidth={1.9} />
+            </Pressable>
           </Pressable>
-          <View style={styles.contextDivider} />
-          <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.contextMenuRowPressed]} onPress={() => onDelete(target.conversation)}>
-            <Text style={[styles.contextMenuLabel, styles.dangerText]}>Delete</Text>
-            <Trash2 size={23} color={DANGER_COLOR} strokeWidth={1.9} />
-          </Pressable>
-        </Pressable>
+        </RNAnimated.View>
       </Pressable>
     </Modal>
   );
@@ -609,11 +672,7 @@ const styles = StyleSheet.create({
     elevation: 0,
   },
   contextRecentRow: {
-    minHeight: 44,
-    marginLeft: -12,
-    paddingLeft: 12,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    opacity: 0,
   },
   recentTitle: {
     flex: 1,
@@ -674,7 +733,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  contextOverlay: { flex: 1, backgroundColor: 'rgba(209,211,218,0.68)' },
+  contextOverlay: { flex: 1 },
+  contextOverlayTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(209,211,218,0.68)',
+  },
   contextMenu: {
     position: 'absolute',
     overflow: 'hidden',
@@ -687,6 +750,10 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 14 },
     elevation: 14,
+  },
+  contextMenuTapSurface: {
+    overflow: 'hidden',
+    borderRadius: 18,
   },
   contextMenuRow: {
     minHeight: 58,

@@ -284,17 +284,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       });
 
     let conversationIdForSave = activeConversationId;
-    let answerStartHapticPlayed = false;
     let answerCompleteHapticPlayed = false;
-
-    function playAnswerStartHaptic() {
-      if (answerStartHapticPlayed) {
-        return;
-      }
-
-      answerStartHapticPlayed = true;
-      void aurenHaptics.answerStart();
-    }
 
     function playAnswerCompleteHaptic() {
       if (answerCompleteHapticPlayed) {
@@ -351,7 +341,6 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
 
             if (!firstChunkReceived) {
               firstChunkReceived = true;
-              playAnswerStartHaptic();
               stopThinkingForRun(thinkingRunId);
             }
 

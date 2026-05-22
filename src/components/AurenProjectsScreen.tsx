@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Keyboard, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AurenProject } from '../lib/aurenConversations';
-import { colors, shadows } from '../theme';
+import { colors } from '../theme';
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
@@ -263,7 +263,7 @@ function CreateProjectSheet({ visible, submitting, error, onClose, onSubmit }: C
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   header: { height: 94, paddingHorizontal: 31, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  circleButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.82)', borderWidth: 1, borderColor: 'rgba(17,24,39,0.03)', ...shadows.tiny },
+  circleButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 0 },
   headerTitle: { position: 'absolute', left: 110, right: 110, textAlign: 'center', color: colors.text, fontFamily: serifFont, fontSize: 21, lineHeight: 27, fontWeight: '400', letterSpacing: -0.32 },
   projectScroll: { flex: 1 },
   projectList: { paddingTop: 22, paddingHorizontal: 35, paddingBottom: 90 },

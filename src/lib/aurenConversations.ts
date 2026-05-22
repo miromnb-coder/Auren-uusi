@@ -172,6 +172,26 @@ export async function updateAurenConversationTitle(conversationId: string, title
   return mapConversation(data as ConversationRow);
 }
 
+export async function deleteAurenConversation(conversationId: string) {
+  const { error: messagesError } = await supabase
+    .from('messages')
+    .delete()
+    .eq('conversation_id', conversationId);
+
+  if (messagesError) {
+    throw messagesError;
+  }
+
+  const { error: conversationError } = await supabase
+    .from('conversations')
+    .delete()
+    .eq('id', conversationId);
+
+  if (conversationError) {
+    throw conversationError;
+  }
+}
+
 async function maybeGenerateAiConversationTitle(conversationId: string, assistantAnswer: string) {
   const { data, error } = await supabase
     .from('messages')

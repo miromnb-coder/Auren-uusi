@@ -1,4 +1,4 @@
-import { BookOpen, Folder, Home, SquarePen } from 'lucide-react-native';
+import { Folder, Search, Settings, SquarePen, X } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { useEffect, useMemo } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -30,13 +30,9 @@ type AurenSidebarProps = {
   onSelectConversation?: (conversationId: string) => void;
 };
 
-const DRAWER_WIDTH_RATIO = 0.82;
-const DRAWER_MIN_WIDTH = 316;
-const DRAWER_MAX_WIDTH = 470;
-
 const DRAWER_BACKGROUND = '#fbfbfb';
-const SIDEBAR_ICON_COLOR = 'rgba(34,27,23,0.84)';
-const ICON_STROKE_WIDTH = 1.82;
+const SIDEBAR_ICON_COLOR = 'rgba(15,17,21,0.88)';
+const ICON_STROKE_WIDTH = 1.78;
 
 const DRAG_ACTIVATION_DISTANCE = 8;
 const HORIZONTAL_DOMINANCE = 1.18;
@@ -45,10 +41,6 @@ const OPEN_PROGRESS_THRESHOLD = 0.38;
 const CLOSE_PROGRESS_THRESHOLD = 0.62;
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
-
-function sidebarIcon(icon: ReactNode) {
-  return icon;
-}
 
 function clampProgress(value: number) {
   'worklet';
@@ -78,11 +70,7 @@ export function AurenSidebar({
   const rootGestureEligible = useSharedValue(0);
   const drawerCloseGestureStartProgress = useSharedValue(1);
 
-  const drawerWidth = useMemo(() => {
-    const measuredWidth = width * DRAWER_WIDTH_RATIO;
-    return Math.min(Math.max(measuredWidth, DRAWER_MIN_WIDTH), Math.min(DRAWER_MAX_WIDTH, width - 58));
-  }, [width]);
-
+  const drawerWidth = useMemo(() => width, [width]);
   const normalizedGestureBottomExclusion = Math.max(0, gestureBottomExclusion);
 
   useEffect(() => {
@@ -212,20 +200,12 @@ export function AurenSidebar({
     transform: [{ translateX: -drawerWidth + drawerProgress.value * drawerWidth }],
   }));
 
-  const visibleMainWidth = Math.max(width - drawerWidth, 58);
-
   return (
     <GestureDetector gesture={rootGesture}>
       <View style={styles.root}>
         <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>
           {children}
         </Animated.View>
-
-        {open ? (
-          <Animated.View style={[styles.peekCloseArea, { width: visibleMainWidth }]}> 
-            <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-          </Animated.View>
-        ) : null}
 
         <GestureDetector gesture={drawerCloseGesture}>
           <Animated.View
@@ -239,44 +219,47 @@ export function AurenSidebar({
             ]}
           >
             <View style={styles.drawerInner}>
-              <View style={styles.leftShiftedContent}>
-                <View style={styles.topBar}>
-                  <Text style={styles.brand}>Auren</Text>
-                  <Text style={styles.subtitle}>Your study assistant</Text>
+              <View style={styles.headerRow}>
+                <Text style={styles.brand}>Auren</Text>
+
+                <Pressable
+                  onPress={onClose}
+                  style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close menu"
+                >
+                  <X size={32} color="rgba(15,17,21,0.9)" strokeWidth={1.7} />
+                </Pressable>
+              </View>
+
+              <ScrollView
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                bounces
+              >
+                <View style={styles.primaryNav}>
+                  <SidebarItem
+                    icon={<SquarePen size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
+                    label="New chat"
+                    onPress={onNewChat}
+                    highlighted
+                  />
+
+                  <SidebarItem
+                    icon={<Search size={33} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
+                    label="Search chats"
+                  />
+
+                  <SidebarItem
+                    icon={<Folder size={32} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
+                    label="Projects"
+                    onPress={onProjects}
+                  />
                 </View>
 
-                <ScrollView
-                  style={styles.scroll}
-                  contentContainerStyle={styles.scrollContent}
-                  showsVerticalScrollIndicator={false}
-                  bounces
-                >
-                  <View style={styles.primaryNav}>
-                    <SidebarItem
-                      icon={sidebarIcon(<Home size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                      label="Home"
-                      onPress={onClose}
-                    />
-
-                    <SidebarItem
-                      icon={sidebarIcon(<SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                      label="New chat"
-                      onPress={onNewChat}
-                    />
-
-                    <SidebarItem
-                      icon={sidebarIcon(<BookOpen size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                      label="Study modes"
-                    />
-
-                    <SidebarItem
-                      icon={sidebarIcon(<Folder size={28} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />)}
-                      label="Projects"
-                      onPress={onProjects}
-                    />
-                  </View>
-
-                  <View style={styles.divider} />
+                <View style={styles.recentSection}>
+                  <Text style={styles.recentHeader}>Recent</Text>
 
                   <View style={styles.recentList}>
                     {loadingConversations ? (
@@ -305,8 +288,8 @@ export function AurenSidebar({
                       <Text style={styles.emptyRecentText}>Your chats will appear here.</Text>
                     )}
                   </View>
-                </ScrollView>
-              </View>
+                </View>
+              </ScrollView>
 
               <View style={styles.bottomBar}>
                 <Pressable style={({ pressed }) => [styles.profileInline, pressed && styles.pressed]}>
@@ -320,12 +303,11 @@ export function AurenSidebar({
                 </Pressable>
 
                 <Pressable
-                  onPress={onNewChat}
-                  style={({ pressed }) => [styles.composeButton, pressed && styles.pressed]}
+                  style={({ pressed }) => [styles.settingsButton, pressed && styles.pressed]}
                   accessibilityRole="button"
-                  accessibilityLabel="Start a new chat"
+                  accessibilityLabel="Open settings"
                 >
-                  <SquarePen size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={1.85} />
+                  <Settings size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
                 </Pressable>
               </View>
             </View>
@@ -340,13 +322,14 @@ type SidebarItemProps = {
   icon?: ReactNode;
   label: string;
   onPress?: () => void;
+  highlighted?: boolean;
 };
 
-function SidebarItem({ icon, label, onPress }: SidebarItemProps) {
+function SidebarItem({ icon, label, onPress, highlighted = false }: SidebarItemProps) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.navItem, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.navItem, highlighted && styles.highlightedNavItem, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
@@ -366,13 +349,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
   },
-  peekCloseArea: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 12,
-  },
   drawer: {
     position: 'absolute',
     top: 0,
@@ -380,92 +356,94 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 20,
     overflow: 'hidden',
-    borderTopRightRadius: 34,
-    borderBottomRightRadius: 34,
     backgroundColor: DRAWER_BACKGROUND,
-    shadowColor: '#111827',
-    shadowOpacity: 0.055,
-    shadowRadius: 34,
-    shadowOffset: { width: 12, height: 0 },
-    elevation: 10,
   },
   drawerInner: {
     flex: 1,
-    paddingTop: 74,
-    paddingHorizontal: 38,
-    paddingBottom: 24,
+    paddingTop: 84,
+    paddingHorizontal: 46,
+    paddingBottom: 26,
   },
-  leftShiftedContent: {
-    flex: 1,
-    marginLeft: -12,
-    paddingRight: 12,
-  },
-  topBar: {
-    flexShrink: 0,
-    paddingBottom: 38,
-    backgroundColor: DRAWER_BACKGROUND,
+  headerRow: {
+    height: 60,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   brand: {
     color: colors.text,
     fontFamily: serifFont,
-    fontSize: 44,
-    lineHeight: 50,
-    letterSpacing: -1.4,
+    fontSize: 37,
+    lineHeight: 43,
+    letterSpacing: -1.08,
   },
-  subtitle: {
-    marginTop: 7,
-    color: colors.muted,
-    fontSize: 16.5,
-    lineHeight: 22,
-    fontWeight: '400',
-    letterSpacing: -0.14,
+  closeButton: {
+    width: 54,
+    height: 54,
+    marginRight: -10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   scroll: {
     flex: 1,
+    marginTop: 16,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 28,
   },
   primaryNav: {
-    gap: 16,
+    gap: 22,
   },
   navItem: {
-    minHeight: 36,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 35,
+    gap: 36,
+  },
+  highlightedNavItem: {
+    minHeight: 72,
+    marginBottom: 4,
+    paddingHorizontal: 24,
+    marginHorizontal: -4,
+    borderRadius: 30,
+    backgroundColor: 'rgba(17,24,39,0.035)',
   },
   navIconSlot: {
-    width: 36,
+    width: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },
   navLabel: {
     color: colors.text,
-    fontSize: 18.5,
-    lineHeight: 25,
+    fontSize: 20.8,
+    lineHeight: 27,
     fontWeight: '400',
-    letterSpacing: -0.2,
+    letterSpacing: -0.34,
   },
   pressed: {
     opacity: 0.58,
   },
-  divider: {
-    height: 1,
-    marginTop: 28,
-    marginBottom: 24,
-    backgroundColor: 'rgba(17,24,39,0.085)',
+  recentSection: {
+    marginTop: 38,
+    paddingLeft: 29,
+  },
+  recentHeader: {
+    color: colors.muted,
+    fontSize: 17.2,
+    lineHeight: 22,
+    fontWeight: '400',
+    letterSpacing: -0.22,
   },
   recentList: {
-    gap: 12,
+    marginTop: 24,
+    gap: 18,
   },
   recentRow: {
-    minHeight: 38,
+    minHeight: 42,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 0,
-    paddingLeft: 4,
-    paddingRight: 6,
+    paddingRight: 8,
     borderWidth: 0,
     borderColor: 'rgba(255,255,255,0)',
   },
@@ -478,10 +456,10 @@ const styles = StyleSheet.create({
   recentTitle: {
     flex: 1,
     color: colors.text,
-    fontSize: 16.7,
-    lineHeight: 23,
+    fontSize: 18.2,
+    lineHeight: 24,
     fontWeight: '400',
-    letterSpacing: -0.16,
+    letterSpacing: -0.2,
   },
   activeRecentTitle: {
     color: colors.text,
@@ -489,17 +467,16 @@ const styles = StyleSheet.create({
   },
   emptyRecentText: {
     color: colors.muted,
-    fontSize: 15.5,
-    lineHeight: 21,
+    fontSize: 16.2,
+    lineHeight: 22,
     fontWeight: '400',
-    letterSpacing: -0.13,
-    paddingLeft: 4,
+    letterSpacing: -0.14,
   },
   bottomBar: {
     flexShrink: 0,
-    minHeight: 72,
+    minHeight: 70,
     paddingTop: 16,
-    paddingBottom: 4,
+    paddingBottom: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -507,59 +484,39 @@ const styles = StyleSheet.create({
     backgroundColor: DRAWER_BACKGROUND,
   },
   profileInline: {
-    width: 168,
+    flex: 1,
     minHeight: 58,
-    marginLeft: -12,
-    paddingLeft: 10,
-    paddingRight: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 13,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.82)',
-    borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.055)',
-    shadowColor: '#111827',
-    shadowOpacity: 0.028,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
+    gap: 28,
   },
   avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#d89437',
   },
   avatarText: {
     color: '#ffffff',
-    fontSize: 16.5,
-    lineHeight: 20,
+    fontSize: 17.5,
+    lineHeight: 21,
     fontWeight: '700',
   },
   profileName: {
     flexShrink: 1,
     color: colors.text,
-    fontSize: 17.5,
-    lineHeight: 23,
+    fontSize: 19.2,
+    lineHeight: 25,
     fontWeight: '400',
-    letterSpacing: -0.18,
+    letterSpacing: -0.22,
   },
-  composeButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  settingsButton: {
+    width: 58,
+    height: 58,
+    marginRight: -7,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.78)',
-    borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.055)',
-    shadowColor: '#111827',
-    shadowOpacity: 0.035,
-    shadowRadius: 17,
-    shadowOffset: { width: 0, height: 9 },
-    elevation: 3,
   },
 });

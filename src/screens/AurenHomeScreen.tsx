@@ -477,19 +477,21 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
             </View>
           ) : (
             <Pressable style={styles.projectEmptyContent} onPress={Keyboard.dismiss}>
-              <Text style={styles.projectEmptyEyebrow}>Project workspace</Text>
-              <Text style={styles.projectEmptyTitle}>Auren is ready for this project.</Text>
-              <Text style={styles.projectEmptySubtitle}>Make a plan, understand the goal, or start a focused study session.</Text>
-              <View style={styles.projectQuickActionsWrap}>
-                <AurenQuickActions
-                  actions={[
-                    { id: 'project-plan', icon: 'calendar-outline', label: 'Make plan', prompt: `Make a clear study plan for ${activeProject.title}.` },
-                    { id: 'project-goal', icon: 'book-outline', label: 'Explain goal', prompt: `Help me understand the main goal of ${activeProject.title} and what I should focus on first.` },
-                    { id: 'project-session', icon: 'play-circle-outline', label: 'Study session', prompt: `Start a focused study session for ${activeProject.title}.` },
-                  ]}
-                  onActionPress={(action) => action.prompt ? useProjectPrompt(action.prompt) : undefined}
-                />
-              </View>
+              <Animated.View pointerEvents={inputFocused || hasSelectedImages ? 'none' : 'auto'} style={[styles.projectEmptyInner, { opacity: quickActionsProgress, transform: [{ translateY: heroTranslateY }] }]}>
+                <Text style={styles.projectEmptyEyebrow}>Project workspace</Text>
+                <Text style={styles.projectEmptyTitle}>Auren is ready for this project.</Text>
+                <Text style={styles.projectEmptySubtitle}>Make a plan, understand the goal, or start a focused study session.</Text>
+                <View style={styles.projectQuickActionsWrap}>
+                  <AurenQuickActions
+                    actions={[
+                      { id: 'project-plan', icon: 'calendar-outline', label: 'Make plan', prompt: `Make a clear study plan for ${activeProject.title}.` },
+                      { id: 'project-goal', icon: 'book-outline', label: 'Explain goal', prompt: `Help me understand the main goal of ${activeProject.title} and what I should focus on first.` },
+                      { id: 'project-session', icon: 'play-circle-outline', label: 'Study session', prompt: `Start a focused study session for ${activeProject.title}.` },
+                    ]}
+                    onActionPress={(action) => action.prompt ? useProjectPrompt(action.prompt) : undefined}
+                  />
+                </View>
+              </Animated.View>
             </Pressable>
           )}
 
@@ -547,6 +549,7 @@ const styles = StyleSheet.create({
   projectChevron: { color: colors.text, fontSize: 18, lineHeight: 20, fontWeight: '700' },
   projectHeaderSpacer: { width: 48, height: 48 },
   projectEmptyContent: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, paddingBottom: 178 },
+  projectEmptyInner: { width: '100%', alignItems: 'center' },
   projectEmptyEyebrow: { marginBottom: 11, color: 'rgba(104,103,117,0.74)', fontSize: 12.5, lineHeight: 16, fontWeight: '700', letterSpacing: 0.8, textAlign: 'center', textTransform: 'uppercase' },
   projectEmptyTitle: { maxWidth: 330, color: colors.text, fontSize: 30.5, lineHeight: 36.5, fontWeight: '700', letterSpacing: -0.78, textAlign: 'center' },
   projectEmptySubtitle: { marginTop: 13, maxWidth: 318, color: colors.muted, fontSize: 16.2, lineHeight: 22.5, fontWeight: '500', letterSpacing: -0.13, textAlign: 'center' },

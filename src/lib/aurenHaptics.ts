@@ -22,6 +22,10 @@ export const aurenHaptics = {
     return safeHaptic(() => Haptics.selectionAsync());
   },
 
+  contextMenu() {
+    return safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
+  },
+
   panelOpen() {
     return safeHaptic(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light));
   },

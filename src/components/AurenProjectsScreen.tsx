@@ -169,6 +169,10 @@ function CreateProjectSheet({ visible, submitting, error, onClose, onSubmit }: C
         style={styles.keyboardWrap}
       >
         <Animated.View
+          onStartShouldSetResponderCapture={() => {
+            Keyboard.dismiss();
+            return false;
+          }}
           style={[
             styles.createSheet,
             {

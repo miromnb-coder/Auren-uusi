@@ -23,6 +23,7 @@ import {
   saveAurenMessage,
   type AurenConversation,
 } from '../lib/aurenConversations';
+import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
 
 const CLOSED_COMPOSER_BOTTOM = 38;
@@ -127,24 +128,29 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   }
 
   function openSidebar() {
+    void aurenHaptics.panelOpen();
     Keyboard.dismiss();
     setSidebarOpen(true);
   }
 
   function closeSidebar() {
+    void aurenHaptics.panelClose();
     setSidebarOpen(false);
   }
 
   function openPlusSheet() {
+    void aurenHaptics.panelOpen();
     Keyboard.dismiss();
     setPlusSheetOpen(true);
   }
 
   function closePlusSheet() {
+    void aurenHaptics.panelClose();
     setPlusSheetOpen(false);
   }
 
   function usePlusPrompt(prompt: string) {
+    void aurenHaptics.selection();
     setPlusSheetOpen(false);
     setDraft(prompt);
     setInputFocused(true);
@@ -168,6 +174,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   }
 
   function startNewChat() {
+    void aurenHaptics.selection();
     stopThinkingTimeline();
     setActiveConversationId(null);
     setMessages([]);
@@ -178,6 +185,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   }
 
   async function handleSelectConversation(conversationId: string) {
+    void aurenHaptics.selection();
     Keyboard.dismiss();
     setSidebarOpen(false);
 
@@ -208,6 +216,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   async function handleAddImage() {
     const attachment = await pickAurenImageAttachment();
     if (!attachment) return;
+    void aurenHaptics.selection();
     setSelectedImages([attachment]);
     setInputFocused(true);
   }
@@ -218,12 +227,23 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   }
 
   function handleRemoveAttachment(id: string) {
+    void aurenHaptics.selection();
     setSelectedImages((currentImages) => currentImages.filter((image) => image.id !== id));
   }
 
   async function handleSend() {
     const nextContent = draft.trim();
-    if ((!nextContent && !hasSelectedImages) || assistantThinking) return;
+
+    if (assistantThinking) {
+      return;
+    }
+
+    if (!nextContent && !hasSelectedImages) {
+      void aurenHaptics.warning();
+      return;
+    }
+
+    void aurenHaptics.sendMessage();
 
     const imagesForSend = selectedImages;
     const messageContent = nextContent || 'Please explain this image.';
@@ -264,6 +284,26 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       });
 
     let conversationIdForSave = activeConversationId;
+    let answerStartHapticPlayed = false;
+    let answerCompleteHapticPlayed = false;
+
+    function playAnswerStartHaptic() {
+      if (answerStartHapticPlayed) {
+        return;
+      }
+
+      answerStartHapticPlayed = true;
+      void aurenHaptics.answerStart();
+    }
+
+    function playAnswerCompleteHaptic() {
+      if (answerCompleteHapticPlayed) {
+        return;
+      }
+
+      answerCompleteHapticPlayed = true;
+      void aurenHaptics.answerComplete();
+    }
 
     try {
       if (!conversationIdForSave) {
@@ -311,6 +351,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
 
             if (!firstChunkReceived) {
               firstChunkReceived = true;
+              playAnswerStartHaptic();
               stopThinkingForRun(thinkingRunId);
             }
 
@@ -325,6 +366,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
         });
 
         stopThinkingForRun(thinkingRunId);
+        playAnswerCompleteHaptic();
 
         setMessages((currentMessages) =>
           currentMessages.map((message) =>
@@ -342,6 +384,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
         }
 
         stopThinkingForRun(thinkingRunId);
+        playAnswerCompleteHaptic();
 
         setMessages((currentMessages) =>
           currentMessages.map((message) =>
@@ -370,6 +413,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       await refreshConversations();
     } catch (error) {
       console.log('Auren conversation save error:', error);
+      void aurenHaptics.warning();
       stopThinkingForRun(thinkingRunId);
 
       const fallbackMessage: AurenMessage = {

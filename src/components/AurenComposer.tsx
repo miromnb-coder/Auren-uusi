@@ -21,6 +21,8 @@ const ACTIVE_COMPOSER_MIN_HEIGHT = 112;
 type AurenComposerProps = {
   value: string;
   attachments?: AurenImageAttachment[];
+  placeholder?: string;
+  attachmentPlaceholder?: string;
   onChangeText: (value: string) => void;
   onAddImage?: () => void;
   onRemoveAttachment?: (id: string) => void;
@@ -50,6 +52,8 @@ function estimateWrappedInputHeight(text: string, inputWidth: number) {
 export function AurenComposer({
   value,
   attachments = [],
+  placeholder = 'Ask anything about your studies',
+  attachmentPlaceholder = 'Ask Auren about this image',
   onChangeText,
   onAddImage,
   onRemoveAttachment,
@@ -219,7 +223,7 @@ export function AurenComposer({
             multiline
             scrollEnabled={inputCanScroll}
             textAlignVertical="top"
-            placeholder={hasAttachments ? 'Ask Auren about this image' : 'Ask anything about your studies'}
+            placeholder={hasAttachments ? attachmentPlaceholder : placeholder}
             placeholderTextColor={colors.mutedSoft}
             style={[styles.input, isActive ? styles.inputActive : styles.inputIdle, { height: inputHeight }]}
           />

@@ -70,6 +70,7 @@ export function AurenSidebar({
   const drawerProgress = useSharedValue(open ? 1 : 0);
   const openValue = useSharedValue(open ? 1 : 0);
   const gestureStartProgress = useSharedValue(open ? 1 : 0);
+  const gestureEligible = useSharedValue(0);
 
   const drawerWidth = useMemo(() => {
     const measuredWidth = width * DRAWER_WIDTH_RATIO;
@@ -91,8 +92,13 @@ export function AurenSidebar({
         .failOffsetY([-18, 18])
         .onBegin(() => {
           gestureStartProgress.value = drawerProgress.value;
+          gestureEligible.value = 1;
         })
         .onUpdate((event) => {
+          if (!gestureEligible.value) {
+            return;
+          }
+
           const isMostlyHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY) * HORIZONTAL_DOMINANCE;
           if (!isMostlyHorizontal) {
             return;
@@ -101,6 +107,10 @@ export function AurenSidebar({
           drawerProgress.value = clampProgress(gestureStartProgress.value + event.translationX / drawerWidth);
         })
         .onEnd((event) => {
+          if (!gestureEligible.value) {
+            return;
+          }
+
           const shouldOpen =
             event.velocityX > SWIPE_VELOCITY ||
             (event.velocityX > -SWIPE_VELOCITY && drawerProgress.value > OPEN_PROGRESS_THRESHOLD);
@@ -125,8 +135,11 @@ export function AurenSidebar({
               }
             },
           );
+        })
+        .onFinalize(() => {
+          gestureEligible.value = 0;
         }),
-    [drawerProgress, drawerWidth, gestureStartProgress, onClose, onOpen],
+    [drawerProgress, drawerWidth, gestureEligible, gestureStartProgress, onClose, onOpen],
   );
 
   const mainAnimatedStyle = useAnimatedStyle(() => ({
@@ -148,7 +161,14 @@ export function AurenSidebar({
         </Animated.View>
       </GestureDetector>
 
-      {!open ? <View pointerEvents="box-only" style={[styles.composerGestureBlocker, { height: normalizedGestureBottomExclusion }]} /> : null}
+      {!open ? (
+        <GestureDetector gesture={gesture}>
+          <Animated.View
+            pointerEvents="box-none"
+            style={[styles.chatGestureLayer, { bottom: normalizedGestureBottomExclusion }]}
+          />
+        </GestureDetector>
+      ) : null}
 
       {open ? (
         <GestureDetector gesture={gesture}>
@@ -293,11 +313,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
   },
-  composerGestureBlocker: {
+  chatGestureLayer: {
     position: 'absolute',
+    top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
     zIndex: 35,
     backgroundColor: 'rgba(255,255,255,0)',
   },

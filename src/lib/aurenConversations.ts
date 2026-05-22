@@ -185,6 +185,27 @@ export async function createAurenProject({ userId, title, description }: CreateP
   return mapProject(data as ProjectRow);
 }
 
+export async function updateAurenProjectTitle(projectId: string, title: string) {
+  const trimmedTitle = title.trim();
+
+  if (!trimmedTitle) {
+    throw new Error('Project title is required.');
+  }
+
+  const { data, error } = await supabase
+    .from('projects')
+    .update({ title: trimmedTitle, updated_at: new Date().toISOString() })
+    .eq('id', projectId)
+    .select('id,user_id,title,description,created_at,updated_at,last_opened_at')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapProject(data as ProjectRow);
+}
+
 export async function deleteAurenProject(projectId: string) {
   const { error } = await supabase.from('projects').delete().eq('id', projectId);
 

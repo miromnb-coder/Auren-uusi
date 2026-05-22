@@ -20,7 +20,7 @@ export function AurenProjectsScreen({ onBack, onCreateProject }: AurenProjectsSc
           onPress={onBack}
           style={({ pressed }) => [styles.circleButton, pressed && styles.pressed]}
         >
-          <ChevronLeft size={31} color={colors.text} strokeWidth={2.05} />
+          <ChevronLeft size={28} color={colors.text} strokeWidth={2.05} />
         </Pressable>
 
         <Text style={styles.headerTitle}>Projects</Text>
@@ -31,13 +31,13 @@ export function AurenProjectsScreen({ onBack, onCreateProject }: AurenProjectsSc
           onPress={onCreateProject}
           style={({ pressed }) => [styles.circleButton, pressed && styles.pressed]}
         >
-          <Plus size={32} color={colors.text} strokeWidth={2.05} />
+          <Plus size={29} color={colors.text} strokeWidth={2.05} />
         </Pressable>
       </View>
 
       <View style={styles.emptyWrap}>
         <View style={styles.iconWrap}>
-          <Folder size={72} color="rgba(104,103,117,0.72)" strokeWidth={1.75} />
+          <Folder size={59} color="rgba(104,103,117,0.74)" strokeWidth={1.72} />
         </View>
 
         <Text style={styles.emptyTitle}>{'Organize your chats, files,\nand study materials in one place'}</Text>
@@ -64,20 +64,20 @@ const styles = StyleSheet.create({
   },
   header: {
     height: 104,
-    paddingHorizontal: 30,
+    paddingHorizontal: 28,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   circleButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.82)',
     borderWidth: 1,
-    borderColor: 'rgba(17,24,39,0.035)',
+    borderColor: 'rgba(17,24,39,0.032)',
     ...shadows.tiny,
   },
   headerTitle: {
@@ -87,64 +87,64 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: colors.text,
     fontFamily: serifFont,
-    fontSize: 25,
-    lineHeight: 31,
-    fontWeight: '700',
-    letterSpacing: -0.42,
+    fontSize: 23,
+    lineHeight: 29,
+    fontWeight: '600',
+    letterSpacing: -0.36,
   },
   emptyWrap: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 34,
-    paddingBottom: 118,
+    paddingHorizontal: 30,
+    paddingBottom: 6,
   },
   iconWrap: {
-    marginBottom: 62,
+    marginBottom: 66,
     alignItems: 'center',
     justifyContent: 'center',
   },
   emptyTitle: {
-    maxWidth: 360,
+    maxWidth: 350,
     color: '#686775',
     fontFamily: serifFont,
-    fontSize: 35,
-    lineHeight: 43,
-    fontWeight: '700',
-    letterSpacing: -1.1,
+    fontSize: 28.5,
+    lineHeight: 36,
+    fontWeight: '400',
+    letterSpacing: -0.78,
     textAlign: 'center',
   },
   emptySubtitle: {
     marginTop: 24,
-    maxWidth: 320,
+    maxWidth: 300,
     color: colors.muted,
-    fontSize: 20,
-    lineHeight: 29,
+    fontSize: 17.5,
+    lineHeight: 25.5,
     fontWeight: '500',
-    letterSpacing: -0.25,
+    letterSpacing: -0.18,
     textAlign: 'center',
   },
   primaryButton: {
-    marginTop: 64,
-    minWidth: 252,
-    height: 68,
-    paddingHorizontal: 35,
-    borderRadius: 34,
+    marginTop: 58,
+    minWidth: 190,
+    height: 54,
+    paddingHorizontal: 30,
+    borderRadius: 27,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#1d1a18',
     shadowColor: '#111827',
-    shadowOpacity: 0.15,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 8,
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 11 },
+    elevation: 7,
   },
   primaryButtonText: {
     color: '#ffffff',
-    fontSize: 20.5,
-    lineHeight: 25,
-    fontWeight: '600',
-    letterSpacing: -0.28,
+    fontSize: 17.4,
+    lineHeight: 22,
+    fontWeight: '500',
+    letterSpacing: -0.18,
   },
   pressed: {
     opacity: 0.6,

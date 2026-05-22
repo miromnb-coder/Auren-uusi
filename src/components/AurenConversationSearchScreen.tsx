@@ -6,7 +6,6 @@ import type { AurenConversation } from '../lib/aurenConversations';
 import { colors } from '../theme';
 
 type AurenConversationSearchScreenProps = {
-  visible: boolean;
   conversations: AurenConversation[];
   loading?: boolean;
   onBack: () => void;
@@ -27,7 +26,6 @@ function formatConversationDate(conversation: AurenConversation) {
 }
 
 export function AurenConversationSearchScreen({
-  visible,
   conversations,
   loading = false,
   onBack,
@@ -47,10 +45,6 @@ export function AurenConversationSearchScreen({
   function selectConversation(conversationId: string) {
     Keyboard.dismiss();
     onSelectConversation(conversationId);
-  }
-
-  if (!visible) {
-    return null;
   }
 
   return (
@@ -123,8 +117,7 @@ export function AurenConversationSearchScreen({
 
 const styles = StyleSheet.create({
   screen: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 40,
+    flex: 1,
     backgroundColor: colors.background,
   },
   header: {

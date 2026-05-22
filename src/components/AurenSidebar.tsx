@@ -142,19 +142,17 @@ export function AurenSidebar({
 
   return (
     <View style={styles.root}>
-      <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>
-        {children}
-      </Animated.View>
+      <GestureDetector gesture={gesture}>
+        <Animated.View style={[styles.mainScreen, mainAnimatedStyle]}>
+          {children}
+        </Animated.View>
+      </GestureDetector>
 
-      {!open ? (
-        <GestureDetector gesture={gesture}>
-          <Animated.View style={[styles.chatGestureArea, { bottom: normalizedGestureBottomExclusion }]} />
-        </GestureDetector>
-      ) : null}
+      {!open ? <View pointerEvents="box-only" style={[styles.composerGestureBlocker, { height: normalizedGestureBottomExclusion }]} /> : null}
 
       {open ? (
         <GestureDetector gesture={gesture}>
-          <Animated.View style={[styles.peekCloseArea, { width: visibleMainWidth }]}> 
+          <Animated.View style={[styles.peekCloseArea, { width: visibleMainWidth }]}>
             <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
           </Animated.View>
         </GestureDetector>
@@ -295,12 +293,12 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: colors.background,
   },
-  chatGestureArea: {
+  composerGestureBlocker: {
     position: 'absolute',
-    top: 0,
     left: 0,
     right: 0,
-    zIndex: 30,
+    bottom: 0,
+    zIndex: 35,
     backgroundColor: 'rgba(255,255,255,0)',
   },
   peekCloseArea: {

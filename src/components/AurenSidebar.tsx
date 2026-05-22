@@ -1,6 +1,6 @@
 import { Folder, Search, Settings, SquarePen, Trash2, X } from 'lucide-react-native';
-import type { ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import type { ElementRef, ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -14,6 +14,14 @@ import type { AurenConversation } from '../lib/aurenConversations';
 import { colors } from '../theme';
 
 type ActiveSidebarItem = 'newChat' | 'projects' | null;
+
+type ConversationContextTarget = {
+  conversation: AurenConversation;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
 
 type AurenSidebarProps = {
   open: boolean;
@@ -45,12 +53,20 @@ const HORIZONTAL_DOMINANCE = 1.18;
 const SWIPE_VELOCITY = 720;
 const OPEN_PROGRESS_THRESHOLD = 0.38;
 const CLOSE_PROGRESS_THRESHOLD = 0.62;
+const CONTEXT_MENU_WIDTH = 228;
+const CONTEXT_MENU_HEIGHT = 117;
+const CONTEXT_SIDE_PADDING = 30;
+const CONTEXT_VERTICAL_GAP = 10;
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
 function clampProgress(value: number) {
   'worklet';
   return Math.min(Math.max(value, 0), 1);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 export function AurenSidebar({
@@ -73,13 +89,14 @@ export function AurenSidebar({
   onDeleteConversation,
 }: AurenSidebarProps) {
   const { width, height } = useWindowDimensions();
-  const [actionConversation, setActionConversation] = useState<AurenConversation | null>(null);
+  const [actionTarget, setActionTarget] = useState<ConversationContextTarget | null>(null);
   const [renameConversation, setRenameConversation] = useState<AurenConversation | null>(null);
   const [deleteConversation, setDeleteConversation] = useState<AurenConversation | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const [renameError, setRenameError] = useState<string | null>(null);
   const [renameSubmitting, setRenameSubmitting] = useState(false);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const conversationRowRefs = useRef<Record<string, ElementRef<typeof Pressable> | null>>({});
   const drawerProgress = useSharedValue(open ? 1 : 0);
   const openValue = useSharedValue(open ? 1 : 0);
   const rootGestureStartProgress = useSharedValue(open ? 1 : 0);
@@ -98,15 +115,36 @@ export function AurenSidebar({
   }, [drawerProgress, open, openValue]);
 
   function openConversationActions(conversation: AurenConversation) {
-    setActionConversation(conversation);
+    const rowRef = conversationRowRefs.current[conversation.id];
+
+    if (!rowRef?.measureInWindow) {
+      setActionTarget({
+        conversation,
+        x: 32,
+        y: Math.round(height * 0.52),
+        width: width - 64,
+        height: 44,
+      });
+      return;
+    }
+
+    rowRef.measureInWindow((x, y, rowWidth, rowHeight) => {
+      setActionTarget({
+        conversation,
+        x,
+        y,
+        width: rowWidth,
+        height: rowHeight,
+      });
+    });
   }
 
   function closeConversationActions() {
-    setActionConversation(null);
+    setActionTarget(null);
   }
 
   function openRenameConversation(conversation: AurenConversation) {
-    setActionConversation(null);
+    setActionTarget(null);
     setRenameError(null);
     setRenameDraft(conversation.title);
     setRenameConversation(conversation);
@@ -142,7 +180,7 @@ export function AurenSidebar({
   }
 
   function openDeleteConversation(conversation: AurenConversation) {
-    setActionConversation(null);
+    setActionTarget(null);
     setDeleteConversation(conversation);
   }
 
@@ -354,13 +392,16 @@ export function AurenSidebar({
                         return (
                           <Pressable
                             key={chat.id}
+                            ref={(node) => {
+                              conversationRowRefs.current[chat.id] = node;
+                            }}
                             onPress={() => onSelectConversation?.(chat.id)}
                             onLongPress={() => openConversationActions(chat)}
                             delayLongPress={330}
                             style={({ pressed }) => [
                               styles.recentRow,
                               isActive && styles.activeRecentRow,
-                              actionConversation?.id === chat.id && styles.contextRecentRow,
+                              actionTarget?.conversation.id === chat.id && styles.contextRecentRow,
                               pressed && styles.pressed,
                             ]}
                           >
@@ -401,7 +442,9 @@ export function AurenSidebar({
         </GestureDetector>
 
         <ConversationActionMenu
-          conversation={actionConversation}
+          target={actionTarget}
+          screenWidth={width}
+          screenHeight={height}
           onClose={closeConversationActions}
           onRename={openRenameConversation}
           onDelete={openDeleteConversation}
@@ -450,34 +493,67 @@ function SidebarItem({ icon, label, onPress, active = false }: SidebarItemProps)
 }
 
 type ConversationActionMenuProps = {
-  conversation: AurenConversation | null;
+  target: ConversationContextTarget | null;
+  screenWidth: number;
+  screenHeight: number;
   onClose: () => void;
   onRename: (conversation: AurenConversation) => void;
   onDelete: (conversation: AurenConversation) => void;
 };
 
-function ConversationActionMenu({ conversation, onClose, onRename, onDelete }: ConversationActionMenuProps) {
-  return (
-    <Modal visible={Boolean(conversation)} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.contextOverlay} onPress={onClose}>
-        <Pressable style={styles.contextContent} onPress={(event) => event.stopPropagation()}>
-          <View style={styles.contextMenu}>
-            <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.pressed]} onPress={() => conversation ? onRename(conversation) : undefined}>
-              <Text style={styles.contextMenuLabel}>Rename</Text>
-              <SquarePen size={23} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
-            </Pressable>
-            <View style={styles.contextDivider} />
-            <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.pressed]} onPress={() => conversation ? onDelete(conversation) : undefined}>
-              <Text style={[styles.contextMenuLabel, styles.dangerText]}>Delete</Text>
-              <Trash2 size={23} color={DANGER_COLOR} strokeWidth={1.9} />
-            </Pressable>
-          </View>
+function ConversationActionMenu({ target, screenWidth, screenHeight, onClose, onRename, onDelete }: ConversationActionMenuProps) {
+  if (!target) {
+    return null;
+  }
 
-          {conversation ? (
-            <View style={styles.contextSelectedPill}>
-              <Text numberOfLines={1} style={styles.contextSelectedTitle}>{conversation.title}</Text>
-            </View>
-          ) : null}
+  const pillLeft = clamp(target.x, CONTEXT_SIDE_PADDING, Math.max(CONTEXT_SIDE_PADDING, screenWidth - target.width - CONTEXT_SIDE_PADDING));
+  const pillWidth = Math.min(target.width, screenWidth - CONTEXT_SIDE_PADDING * 2);
+  const pillHeight = Math.max(50, target.height + 10);
+  const pillTop = clamp(target.y - 5, 72, screenHeight - pillHeight - 92);
+  const menuLeft = clamp(pillLeft, CONTEXT_SIDE_PADDING, Math.max(CONTEXT_SIDE_PADDING, screenWidth - CONTEXT_MENU_WIDTH - CONTEXT_SIDE_PADDING));
+  const hasSpaceAbove = pillTop > CONTEXT_MENU_HEIGHT + 78;
+  const menuTop = hasSpaceAbove
+    ? pillTop - CONTEXT_MENU_HEIGHT - CONTEXT_VERTICAL_GAP
+    : Math.min(screenHeight - CONTEXT_MENU_HEIGHT - 96, pillTop + pillHeight + CONTEXT_VERTICAL_GAP);
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <Pressable style={styles.contextOverlay} onPress={onClose}>
+        <View
+          pointerEvents="none"
+          style={[
+            styles.contextSelectedPill,
+            {
+              left: pillLeft,
+              top: pillTop,
+              width: pillWidth,
+              minHeight: pillHeight,
+            },
+          ]}
+        >
+          <Text numberOfLines={1} style={styles.contextSelectedTitle}>{target.conversation.title}</Text>
+        </View>
+
+        <Pressable
+          style={[
+            styles.contextMenu,
+            {
+              left: menuLeft,
+              top: menuTop,
+              width: CONTEXT_MENU_WIDTH,
+            },
+          ]}
+          onPress={(event) => event.stopPropagation()}
+        >
+          <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.pressed]} onPress={() => onRename(target.conversation)}>
+            <Text style={styles.contextMenuLabel}>Rename</Text>
+            <SquarePen size={23} color={SIDEBAR_ICON_COLOR} strokeWidth={1.8} />
+          </Pressable>
+          <View style={styles.contextDivider} />
+          <Pressable style={({ pressed }) => [styles.contextMenuRow, pressed && styles.pressed]} onPress={() => onDelete(target.conversation)}>
+            <Text style={[styles.contextMenuLabel, styles.dangerText]}>Delete</Text>
+            <Trash2 size={23} color={DANGER_COLOR} strokeWidth={1.9} />
+          </Pressable>
         </Pressable>
       </Pressable>
     </Modal>
@@ -751,17 +827,10 @@ const styles = StyleSheet.create({
   },
   contextOverlay: {
     flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 30,
     backgroundColor: 'rgba(20,22,28,0.22)',
   },
-  contextContent: {
-    width: '100%',
-    gap: 12,
-  },
   contextMenu: {
-    alignSelf: 'flex-start',
-    minWidth: 228,
+    position: 'absolute',
     overflow: 'hidden',
     borderRadius: 18,
     backgroundColor: 'rgba(250,250,250,0.96)',
@@ -794,7 +863,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(17,24,39,0.12)',
   },
   contextSelectedPill: {
-    minHeight: 58,
+    position: 'absolute',
     justifyContent: 'center',
     borderRadius: 29,
     paddingHorizontal: 26,

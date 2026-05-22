@@ -20,7 +20,7 @@ type AurenProjectsScreenProps = {
   onCloseCreateProject: () => void;
   onSubmitCreateProject: (payload: CreateProjectPayload) => void;
   onOpenProject?: (project: AurenProject) => void;
-  onRenameProject?: (project: AurenProject) => void;
+  onRenameProject?: (project: AurenProject, title: string) => void | Promise<void>;
   onDeleteProject?: (project: AurenProject) => void;
 };
 
@@ -40,10 +40,26 @@ function formatProjectDate(value: string | null) {
 
 export function AurenProjectsScreen({ onBack, projects = [], loadingProjects = false, createSheetVisible, createProjectSubmitting = false, createProjectError = null, onOpenCreateProject, onCloseCreateProject, onSubmitCreateProject, onOpenProject, onRenameProject, onDeleteProject }: AurenProjectsScreenProps) {
   const [actionProject, setActionProject] = useState<AurenProject | null>(null);
+  const [renameProject, setRenameProject] = useState<AurenProject | null>(null);
+  const [renameSubmitting, setRenameSubmitting] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
   const hasProjects = projects.length > 0;
 
   function closeActions() { setActionProject(null); }
-  function handleRenameProject() { if (!actionProject) return; onRenameProject?.(actionProject); closeActions(); }
+  function openRenameSheet() { if (!actionProject) return; setRenameProject(actionProject); setRenameError(null); closeActions(); }
+  async function handleRenameProject(title: string) {
+    if (!renameProject || renameSubmitting) return;
+    setRenameSubmitting(true);
+    setRenameError(null);
+    try {
+      await onRenameProject?.(renameProject, title);
+      setRenameProject(null);
+    } catch (error) {
+      setRenameError(error instanceof Error ? error.message : 'Could not rename project. Please try again.');
+    } finally {
+      setRenameSubmitting(false);
+    }
+  }
   function handleDeleteProject() { if (!actionProject) return; onDeleteProject?.(actionProject); closeActions(); }
 
   return (
@@ -84,7 +100,8 @@ export function AurenProjectsScreen({ onBack, projects = [], loadingProjects = f
         </View>
       )}
 
-      <ProjectActionsSheet visible={Boolean(actionProject)} onClose={closeActions} onRename={handleRenameProject} onDelete={handleDeleteProject} />
+      <ProjectActionsSheet visible={Boolean(actionProject)} onClose={closeActions} onRename={openRenameSheet} onDelete={handleDeleteProject} />
+      <RenameProjectSheet visible={Boolean(renameProject)} project={renameProject} submitting={renameSubmitting} error={renameError} onClose={() => setRenameProject(null)} onSubmit={handleRenameProject} />
       <CreateProjectSheet visible={createSheetVisible} submitting={createProjectSubmitting} error={createProjectError} onClose={onCloseCreateProject} onSubmit={onSubmitCreateProject} />
     </SafeAreaView>
   );
@@ -92,7 +109,7 @@ export function AurenProjectsScreen({ onBack, projects = [], loadingProjects = f
 
 type ProjectActionsSheetProps = { visible: boolean; onClose: () => void; onRename: () => void; onDelete: () => void };
 
-function ProjectActionsSheet({ visible, onClose, onRename, onDelete }: ProjectActionsSheetProps) {
+export function ProjectActionsSheet({ visible, onClose, onRename, onDelete }: ProjectActionsSheetProps) {
   const insets = useSafeAreaInsets();
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const [mounted, setMounted] = useState(visible);
@@ -120,6 +137,63 @@ function ProjectActionsSheet({ visible, onClose, onRename, onDelete }: ProjectAc
           <Text style={styles.deleteText}>Delete</Text>
         </Pressable>
       </Animated.View>
+    </View>
+  );
+}
+
+type RenameProjectSheetProps = { visible: boolean; project: AurenProject | null; submitting?: boolean; error?: string | null; onClose: () => void; onSubmit: (title: string) => void };
+
+export function RenameProjectSheet({ visible, project, submitting = false, error = null, onClose, onSubmit }: RenameProjectSheetProps) {
+  const insets = useSafeAreaInsets();
+  const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const keyboardLift = useRef(new Animated.Value(0)).current;
+  const [mounted, setMounted] = useState(visible);
+  const [title, setTitle] = useState(project?.title ?? '');
+  const canSubmit = title.trim().length > 0 && !submitting && title.trim() !== (project?.title.trim() ?? '');
+
+  useEffect(() => {
+    if (visible) { setMounted(true); setTitle(project?.title ?? ''); keyboardLift.setValue(0); }
+    Animated.timing(progress, { toValue: visible ? 1 : 0, duration: visible ? 235 : 185, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(({ finished }) => { if (finished && !visible) setMounted(false); });
+  }, [keyboardLift, progress, project?.title, visible]);
+
+  useEffect(() => {
+    if (!mounted) return undefined;
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      Animated.timing(keyboardLift, { toValue: Math.max(0, event.endCoordinates.height - insets.bottom - 8), duration: event.duration ?? 250, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    });
+    const hideSub = Keyboard.addListener(hideEvent, (event) => {
+      Animated.timing(keyboardLift, { toValue: 0, duration: event.duration ?? 220, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    });
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, [insets.bottom, keyboardLift, mounted]);
+
+  if (!mounted) return null;
+
+  const overlayOpacity = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 0.18] });
+  const sheetTranslateY = progress.interpolate({ inputRange: [0, 1], outputRange: [420, 0] });
+  const combinedTranslateY = Animated.add(sheetTranslateY, Animated.multiply(keyboardLift, -1));
+
+  function handleClose() { Keyboard.dismiss(); onClose(); }
+  function handleSubmit() { if (!canSubmit) return; Keyboard.dismiss(); onSubmit(title.trim()); }
+
+  return (
+    <View pointerEvents={visible ? 'auto' : 'none'} style={styles.actionsRoot}>
+      <Animated.View style={[styles.actionsOverlay, { opacity: overlayOpacity }]}><Pressable style={StyleSheet.absoluteFill} onPress={handleClose} /></Animated.View>
+      <View pointerEvents="box-none" style={styles.keyboardWrap}>
+        <Animated.View style={[styles.renameSheet, { paddingBottom: Math.max(insets.bottom + 20, 36), transform: [{ translateY: combinedTranslateY }] }]}>
+          <View style={styles.actionsHandle} />
+          <View style={styles.renameHeader}>
+            <Text style={styles.renameTitle}>Rename project</Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Save project name" disabled={!canSubmit} onPress={handleSubmit} style={({ pressed }) => [styles.renameDoneButton, pressed && canSubmit && styles.pressed, !canSubmit && styles.confirmButtonDisabled]}>
+              <Check size={22} color={colors.text} strokeWidth={1.9} />
+            </Pressable>
+          </View>
+          <TextInput value={title} onChangeText={setTitle} autoFocus autoCapitalize="sentences" autoCorrect returnKeyType="done" onSubmitEditing={handleSubmit} placeholder="Project title" placeholderTextColor="rgba(104,103,117,0.42)" style={styles.renameInput} />
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        </Animated.View>
+      </View>
     </View>
   );
 }
@@ -214,6 +288,11 @@ const styles = StyleSheet.create({
   actionPressed: { opacity: 0.58 },
   actionText: { color: colors.text, fontSize: 20, lineHeight: 26, fontWeight: '500', letterSpacing: -0.22 },
   deleteText: { color: '#a62935', fontSize: 20, lineHeight: 26, fontWeight: '600', letterSpacing: -0.22 },
+  renameSheet: { position: 'absolute', left: 0, right: 0, bottom: 0, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingTop: 12, paddingHorizontal: 31, backgroundColor: '#fffefb', shadowColor: '#111827', shadowOpacity: 0.1, shadowRadius: 24, shadowOffset: { width: 0, height: -12 }, elevation: 16 },
+  renameHeader: { minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 },
+  renameTitle: { color: colors.text, fontSize: 21, lineHeight: 27, fontWeight: '700', letterSpacing: -0.25 },
+  renameDoneButton: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(244,241,237,0.78)', borderWidth: 1, borderColor: 'rgba(17,24,39,0.035)' },
+  renameInput: { minHeight: 61, borderRadius: 18, paddingHorizontal: 21, color: colors.text, fontSize: 19, lineHeight: 24, fontWeight: '400', letterSpacing: -0.22, backgroundColor: 'rgba(250,249,247,0.86)', borderWidth: 1, borderColor: 'rgba(104,103,117,0.16)' },
   sheetRoot: { ...StyleSheet.absoluteFillObject, zIndex: 90 },
   sheetOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#111111' },
   keyboardWrap: { ...StyleSheet.absoluteFillObject, justifyContent: 'flex-end' },

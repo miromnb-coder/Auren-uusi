@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   },
   topBar: {
     flexShrink: 0,
-    paddingBottom: 44,
+    paddingBottom: 38,
     backgroundColor: DRAWER_BACKGROUND,
   },
   brand: {
@@ -420,10 +420,10 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   primaryNav: {
-    gap: 26,
+    gap: 16,
   },
   navItem: {
-    minHeight: 38,
+    minHeight: 36,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 35,
@@ -445,15 +445,15 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    marginTop: 36,
-    marginBottom: 27,
+    marginTop: 28,
+    marginBottom: 24,
     backgroundColor: 'rgba(17,24,39,0.085)',
   },
   recentList: {
-    gap: 19,
+    gap: 12,
   },
   recentRow: {
-    minHeight: 43,
+    minHeight: 38,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 0,

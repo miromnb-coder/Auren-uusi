@@ -13,6 +13,8 @@ import Animated, {
 import type { AurenConversation } from '../lib/aurenConversations';
 import { colors } from '../theme';
 
+type ActiveSidebarItem = 'newChat' | 'projects' | null;
+
 type AurenSidebarProps = {
   open: boolean;
   children: ReactNode;
@@ -24,6 +26,7 @@ type AurenSidebarProps = {
   gestureBottomExclusion?: number;
   conversations?: AurenConversation[];
   activeConversationId?: string | null;
+  activeItem?: ActiveSidebarItem;
   profileName?: string;
   avatarLetter?: string;
   loadingConversations?: boolean;
@@ -58,6 +61,7 @@ export function AurenSidebar({
   gestureBottomExclusion = 0,
   conversations = [],
   activeConversationId = null,
+  activeItem = null,
   profileName = 'Auren user',
   avatarLetter = 'A',
   loadingConversations = false,
@@ -243,7 +247,7 @@ export function AurenSidebar({
                     icon={<SquarePen size={30} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
                     label="New chat"
                     onPress={onNewChat}
-                    highlighted
+                    active={activeItem === 'newChat'}
                   />
 
                   <SidebarItem
@@ -255,6 +259,7 @@ export function AurenSidebar({
                     icon={<Folder size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
                     label="Projects"
                     onPress={onProjects}
+                    active={activeItem === 'projects'}
                   />
                 </View>
 
@@ -322,14 +327,14 @@ type SidebarItemProps = {
   icon?: ReactNode;
   label: string;
   onPress?: () => void;
-  highlighted?: boolean;
+  active?: boolean;
 };
 
-function SidebarItem({ icon, label, onPress, highlighted = false }: SidebarItemProps) {
+function SidebarItem({ icon, label, onPress, active = false }: SidebarItemProps) {
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.navItem, highlighted && styles.highlightedNavItem, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.navItem, active && styles.activeNavItem, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={label}
     >
@@ -355,17 +360,17 @@ const styles = StyleSheet.create({
     left: 0,
     bottom: 0,
     zIndex: 20,
-    overflow: 'hidden',
+    overflow: 'visible',
     backgroundColor: DRAWER_BACKGROUND,
   },
   drawerInner: {
     flex: 1,
     paddingTop: 66,
-    paddingHorizontal: 32,
     paddingBottom: 20,
   },
   headerRow: {
     height: 50,
+    paddingHorizontal: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -389,9 +394,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   scrollContent: {
-    paddingBottom: 22,
+    paddingBottom: 34,
   },
   primaryNav: {
+    paddingHorizontal: 32,
     gap: 12,
   },
   navItem: {
@@ -400,7 +406,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 22,
   },
-  highlightedNavItem: {
+  activeNavItem: {
     minHeight: 66,
     marginBottom: 4,
     paddingHorizontal: 16,
@@ -425,7 +431,7 @@ const styles = StyleSheet.create({
   },
   recentSection: {
     marginTop: 30,
-    paddingLeft: 8,
+    paddingHorizontal: 32,
   },
   recentHeader: {
     color: colors.muted,
@@ -448,7 +454,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0)',
   },
   activeRecentRow: {
-    backgroundColor: 'transparent',
+    minHeight: 44,
+    marginLeft: -12,
+    paddingLeft: 12,
+    borderRadius: 22,
+    backgroundColor: 'rgba(17,24,39,0.035)',
     borderColor: 'rgba(255,255,255,0)',
     shadowOpacity: 0,
     elevation: 0,
@@ -477,6 +487,7 @@ const styles = StyleSheet.create({
     minHeight: 70,
     paddingTop: 12,
     paddingBottom: 2,
+    paddingHorizontal: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

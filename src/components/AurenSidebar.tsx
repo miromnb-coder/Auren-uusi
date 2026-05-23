@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { AurenProfileSheet } from './AurenProfileSheet';
-import type { AurenConversation } from '../lib/aurenConversations';
+import type { AurenConversation, AurenProject } from '../lib/aurenConversations';
 import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
 
@@ -37,12 +37,16 @@ type AurenSidebarProps = {
   gesturesEnabled?: boolean;
   gestureBottomExclusion?: number;
   conversations?: AurenConversation[];
+  projects?: AurenProject[];
   activeConversationId?: string | null;
+  activeProjectId?: string | null;
   activeItem?: ActiveSidebarItem;
   profileName?: string;
   avatarLetter?: string;
   loadingConversations?: boolean;
+  loadingProjects?: boolean;
   onSelectConversation?: (conversationId: string) => void;
+  onSelectProject?: (project: AurenProject) => void;
   onRenameConversation?: (conversation: AurenConversation, title: string) => Promise<void> | void;
   onDeleteConversation?: (conversation: AurenConversation) => Promise<void> | void;
 };
@@ -63,6 +67,7 @@ const CONTEXT_SIDE_PADDING = 30;
 const CONTEXT_VERTICAL_GAP = 12;
 const CONTEXT_PILL_HORIZONTAL_INSET = 0;
 const CONVERSATION_LONG_PRESS_DELAY = 355;
+const SIDEBAR_PROJECT_LIMIT = 5;
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
@@ -91,12 +96,16 @@ export function AurenSidebar({
   gesturesEnabled = true,
   gestureBottomExclusion = 0,
   conversations = [],
+  projects = [],
   activeConversationId = null,
+  activeProjectId = null,
   activeItem = null,
   profileName = 'Auren user',
   avatarLetter = 'A',
   loadingConversations = false,
+  loadingProjects = false,
   onSelectConversation,
+  onSelectProject,
   onRenameConversation,
   onDeleteConversation,
 }: AurenSidebarProps) {
@@ -112,6 +121,7 @@ export function AurenSidebar({
   const drawerCloseGestureStartProgress = useSharedValue(1);
 
   const drawerWidth = useMemo(() => width, [width]);
+  const visibleProjects = useMemo(() => projects.slice(0, SIDEBAR_PROJECT_LIMIT), [projects]);
   const normalizedGestureBottomExclusion = Math.max(0, gestureBottomExclusion);
 
   useEffect(() => {
@@ -140,6 +150,12 @@ export function AurenSidebar({
     void aurenHaptics.selection();
     setActionTarget(null);
     onNewProject?.();
+  }
+
+  function openSidebarProject(project: AurenProject) {
+    void aurenHaptics.selection();
+    setActionTarget(null);
+    onSelectProject?.(project);
   }
 
   function openProfileSheet() {
@@ -331,6 +347,33 @@ export function AurenSidebar({
                   <SidebarItem icon={<FolderPlus size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />} label="New project" onPress={openNewProject} />
                 </View>
 
+                {(loadingProjects || visibleProjects.length > 0) ? (
+                  <View style={styles.projectSection}>
+                    <Text style={styles.recentHeader}>Projects</Text>
+                    <View style={styles.projectList}>
+                      {loadingProjects && visibleProjects.length === 0 ? (
+                        <Text style={styles.emptyRecentText}>Loading projects...</Text>
+                      ) : (
+                        visibleProjects.map((project) => {
+                          const isActive = project.id === activeProjectId;
+                          return (
+                            <Pressable
+                              key={project.id}
+                              onPress={() => openSidebarProject(project)}
+                              style={({ pressed }) => [styles.projectRow, isActive && styles.activeProjectRow, pressed && styles.pressedProjectRow]}
+                              accessibilityRole="button"
+                              accessibilityLabel={project.title}
+                            >
+                              <Folder size={20} color={SIDEBAR_ICON_COLOR} strokeWidth={1.72} />
+                              <Text style={[styles.projectTitle, isActive && styles.activeProjectTitle]} numberOfLines={1}>{project.title}</Text>
+                            </Pressable>
+                          );
+                        })
+                      )}
+                    </View>
+                  </View>
+                ) : null}
+
                 <View style={styles.recentSection}>
                   <Text style={styles.recentHeader}>Recent</Text>
                   <View style={styles.recentList}>
@@ -494,6 +537,13 @@ const styles = StyleSheet.create({
   navIconSlot: { width: 38, alignItems: 'center', justifyContent: 'center' },
   navLabel: { color: colors.text, fontSize: 20.2, lineHeight: 26, fontWeight: '400', letterSpacing: -0.32 },
   pressed: { opacity: 0.58 },
+  projectSection: { marginTop: 24, paddingHorizontal: 32 },
+  projectList: { marginTop: 14, gap: 10 },
+  projectRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 14, paddingRight: 8 },
+  activeProjectRow: { minHeight: 43, marginLeft: -12, paddingLeft: 12, paddingRight: 12, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.035)' },
+  pressedProjectRow: { minHeight: 43, marginLeft: -12, paddingLeft: 12, paddingRight: 12, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.045)', transform: [{ scale: 0.996 }] },
+  projectTitle: { flex: 1, color: colors.text, fontSize: 17.2, lineHeight: 22, fontWeight: '400', letterSpacing: -0.16 },
+  activeProjectTitle: { color: colors.text, fontWeight: '500' },
   recentSection: { marginTop: 30, paddingHorizontal: 32 },
   recentHeader: { color: colors.muted, fontSize: 16.8, lineHeight: 22, fontWeight: '400', letterSpacing: -0.22 },
   recentList: { marginTop: 18, gap: 13 },

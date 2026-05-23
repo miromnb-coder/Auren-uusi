@@ -138,6 +138,23 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
+  function renderCategory(category: { label: ProjectCategory; icon: 'homework' | 'writing' | 'health' | 'language' }) {
+    const active = category.label === selectedCategory;
+
+    return (
+      <Pressable
+        key={category.label}
+        accessibilityRole="button"
+        accessibilityLabel={category.label}
+        onPress={() => handleSelectCategory(category.label)}
+        style={({ pressed }) => [styles.categoryPill, active && styles.categoryPillActive, pressed && styles.pressed]}
+      >
+        <CategoryIcon icon={category.icon} active={active} />
+        <Text style={[styles.categoryLabel, active && styles.categoryLabelActive]}>{category.label}</Text>
+      </Pressable>
+    );
+  }
+
   return (
     <Modal visible={mounted} transparent animationType="none" statusBarTranslucent onRequestClose={handleClose}>
       <View pointerEvents={visible ? 'auto' : 'none'} style={styles.root}>
@@ -162,27 +179,14 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
               autoCapitalize="sentences"
               autoCorrect
               blurOnSubmit={false}
-              returnKeyType="done"
+              returnKeyType="default"
               onSubmitEditing={handleSubmit}
               style={styles.input}
             />
 
             <View style={styles.categoryGrid}>
-              {CATEGORIES.map((category) => {
-                const active = category.label === selectedCategory;
-                return (
-                  <Pressable
-                    key={category.label}
-                    accessibilityRole="button"
-                    accessibilityLabel={category.label}
-                    onPress={() => handleSelectCategory(category.label)}
-                    style={({ pressed }) => [styles.categoryPill, active && styles.categoryPillActive, pressed && styles.pressed]}
-                  >
-                    <CategoryIcon icon={category.icon} active={active} />
-                    <Text style={[styles.categoryLabel, active && styles.categoryLabelActive]}>{category.label}</Text>
-                  </Pressable>
-                );
-              })}
+              <View style={styles.categoryRow}>{CATEGORIES.slice(0, 2).map(renderCategory)}</View>
+              <View style={[styles.categoryRow, styles.categoryRowSecond]}>{CATEGORIES.slice(2, 4).map(renderCategory)}</View>
             </View>
 
             {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -262,7 +266,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(104,103,117,0.2)',
   },
-  categoryGrid: { marginTop: 20, flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  categoryGrid: {
+    marginTop: 20,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  categoryRowSecond: {
+    marginTop: 10,
+  },
   categoryPill: {
     width: '48.5%',
     minHeight: 52,

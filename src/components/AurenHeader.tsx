@@ -1,5 +1,5 @@
 import { ArrowUpRight, CalendarDays, ChevronRight, Clock3, MoreHorizontal, Share2, Sparkles, User } from 'lucide-react-native';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme';
 
@@ -13,6 +13,7 @@ type AurenHeaderProps = {
   showCreditsBadge?: boolean;
   showConversationActions?: boolean;
   credits?: number;
+  creditsDismissKey?: number;
   onShareConversation?: () => void;
   onOpenConversationMenu?: () => void;
 };
@@ -22,10 +23,21 @@ export function AurenHeader({
   showCreditsBadge = false,
   showConversationActions = false,
   credits = 300,
+  creditsDismissKey = 0,
   onShareConversation,
   onOpenConversationMenu,
 }: AurenHeaderProps) {
   const [creditsOpen, setCreditsOpen] = useState(false);
+
+  useEffect(() => {
+    setCreditsOpen(false);
+  }, [creditsDismissKey]);
+
+  useEffect(() => {
+    if (!showCreditsBadge) {
+      setCreditsOpen(false);
+    }
+  }, [showCreditsBadge]);
 
   function toggleCreditsOpen() {
     setCreditsOpen((current) => !current);
@@ -272,7 +284,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderTopLeftRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: '#ffffff',
     transform: [{ rotate: '45deg' }],
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -285,7 +297,7 @@ const styles = StyleSheet.create({
     paddingTop: 18,
     paddingHorizontal: 23,
     paddingBottom: 17,
-    backgroundColor: 'rgba(255,255,255,0.96)',
+    backgroundColor: '#ffffff',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(17,24,39,0.1)',
     shadowColor: '#111827',
@@ -465,7 +477,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(17,24,39,0.11)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.64)',
+    backgroundColor: '#ffffff',
   },
   freePillText: {
     color: colors.text,

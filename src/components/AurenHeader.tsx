@@ -1,6 +1,7 @@
 import { ArrowUpRight, CalendarDays, ChevronRight, Clock3, MoreHorizontal, Share2, Sparkles, User } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { AurenCreditSummary } from '../lib/aurenCredits';
 import { colors } from '../theme';
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
@@ -13,6 +14,7 @@ type AurenHeaderProps = {
   showCreditsBadge?: boolean;
   showConversationActions?: boolean;
   credits?: number;
+  creditSummary?: AurenCreditSummary | null;
   creditsDismissKey?: number;
   onShareConversation?: () => void;
   onOpenConversationMenu?: () => void;
@@ -23,11 +25,13 @@ export function AurenHeader({
   showCreditsBadge = false,
   showConversationActions = false,
   credits = 300,
+  creditSummary = null,
   creditsDismissKey = 0,
   onShareConversation,
   onOpenConversationMenu,
 }: AurenHeaderProps) {
   const [creditsOpen, setCreditsOpen] = useState(false);
+  const visibleCredits = creditSummary?.available ?? credits;
 
   useEffect(() => {
     setCreditsOpen(false);
@@ -73,7 +77,7 @@ export function AurenHeader({
             style={({ pressed }) => [styles.creditsBadge, pressed && styles.menuButtonPressed]}
           >
             <Sparkles size={20} color={colors.text} strokeWidth={1.85} />
-            <Text style={styles.creditsText}>{credits}</Text>
+            <Text style={styles.creditsText}>{visibleCredits}</Text>
           </Pressable>
         ) : showConversationActions ? (
           <View style={styles.conversationActions}>
@@ -100,7 +104,7 @@ export function AurenHeader({
       {showCreditsBadge && creditsOpen ? (
         <>
           <Pressable style={styles.creditsDismissLayer} onPress={closeCreditsOpen} />
-          <CreditsPopover credits={credits} />
+          <CreditsPopover credits={visibleCredits} creditSummary={creditSummary} />
         </>
       ) : null}
     </View>
@@ -113,7 +117,28 @@ type UsageRowProps = {
   progress: number;
 };
 
-function CreditsPopover({ credits }: { credits: number }) {
+function formatMonthValue(summary: AurenCreditSummary | null) {
+  if (!summary) return '214 / 500';
+
+  const monthlySoftCap = summary.plan?.monthlySoftCap;
+
+  if (monthlySoftCap && monthlySoftCap > 0) {
+    return `${summary.usedThisMonth} / ${monthlySoftCap}`;
+  }
+
+  return `${summary.usedThisMonth}`;
+}
+
+function CreditsPopover({ credits, creditSummary }: { credits: number; creditSummary: AurenCreditSummary | null }) {
+  const dailyAllowance = creditSummary?.dailyAllowance ?? 40;
+  const usedToday = creditSummary?.usedToday ?? 24;
+  const usedThisWeek = creditSummary?.usedThisWeek ?? 96;
+  const usedThisMonth = creditSummary?.usedThisMonth ?? 214;
+  const todayProgress = creditSummary?.todayProgress ?? 0.6;
+  const monthProgress = creditSummary?.monthProgress ?? 0.43;
+  const refillLabel = creditSummary?.nextRefillLabel ?? 'Daily refill in 5 hours';
+  const planLabel = creditSummary?.planLabel ?? 'Free';
+
   return (
     <View pointerEvents="box-none" style={styles.creditsPopoverWrap}>
       <View style={styles.creditsPopoverPointer} />
@@ -132,21 +157,21 @@ function CreditsPopover({ credits }: { credits: number }) {
           <View style={styles.dailyIconBubble}>
             <CalendarDays size={13} color={CREDIT_ACCENT} strokeWidth={1.9} />
           </View>
-          <Text style={styles.dailyAllowanceText}>Daily credits: 40/day</Text>
+          <Text style={styles.dailyAllowanceText}>Daily credits: {dailyAllowance}/day</Text>
         </View>
 
-        <UsageRow label="Used today" value="24 / 40" progress={0.6} />
+        <UsageRow label="Used today" value={`${usedToday} / ${dailyAllowance}`} progress={todayProgress} />
 
         <View style={styles.dailyPill}>
-          <Text style={styles.dailyPillText}>+40 credits every day</Text>
+          <Text style={styles.dailyPillText}>+{dailyAllowance} credits every day</Text>
         </View>
 
-        <UsageRow label="Used this week" value="96" progress={0.57} />
-        <UsageRow label="Used this month" value="214 / 500" progress={0.43} />
+        <UsageRow label="Used this week" value={`${usedThisWeek}`} progress={Math.min(Math.max(usedThisWeek / Math.max(dailyAllowance * 7, 1), 0), 1)} />
+        <UsageRow label="Used this month" value={formatMonthValue(creditSummary)} progress={monthProgress} />
 
         <View style={styles.refillRow}>
           <Clock3 size={14} color={CREDIT_MUTED} strokeWidth={1.8} />
-          <Text style={styles.refillText}>Daily refill in 5 hours</Text>
+          <Text style={styles.refillText}>{refillLabel}</Text>
         </View>
 
         <View style={styles.popoverDividerCompact} />
@@ -154,10 +179,10 @@ function CreditsPopover({ credits }: { credits: number }) {
         <View style={styles.planRow}>
           <View style={styles.planLeft}>
             <User size={17} color={colors.text} strokeWidth={1.8} />
-            <Text style={styles.planText}>Plan: Free</Text>
+            <Text style={styles.planText}>Plan: {planLabel}</Text>
           </View>
           <View style={styles.freePill}>
-            <Text style={styles.freePillText}>Free</Text>
+            <Text style={styles.freePillText}>{planLabel}</Text>
           </View>
         </View>
 

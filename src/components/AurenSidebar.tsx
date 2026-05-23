@@ -1,4 +1,4 @@
-import { Folder, FolderPlus, Library, Search, SquarePen, Trash2, X } from 'lucide-react-native';
+import { Search, SquarePen, Trash2, X } from 'lucide-react-native';
 import type { ElementRef, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated as RNAnimated, Easing as RNEasing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -67,7 +67,7 @@ const CONTEXT_SIDE_PADDING = 30;
 const CONTEXT_VERTICAL_GAP = 12;
 const CONTEXT_PILL_HORIZONTAL_INSET = 0;
 const CONVERSATION_LONG_PRESS_DELAY = 355;
-const SIDEBAR_PROJECT_LIMIT = 5;
+const SIDEBAR_PROJECT_LIMIT = 4;
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
@@ -84,6 +84,13 @@ function getActionErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function getSpaceMarker(index: number, active: boolean) {
+  if (active || index === 0) return '✧';
+  if (index === 1) return '○';
+  if (index === 2) return '◇';
+  return '⌁';
+}
+
 export function AurenSidebar({
   open,
   children,
@@ -91,7 +98,6 @@ export function AurenSidebar({
   onOpen,
   onNewChat,
   onSearchChats,
-  onProjects,
   onNewProject,
   gesturesEnabled = true,
   gestureBottomExclusion = 0,
@@ -99,7 +105,6 @@ export function AurenSidebar({
   projects = [],
   activeConversationId = null,
   activeProjectId = null,
-  activeItem = null,
   profileName = 'Auren user',
   avatarLetter = 'A',
   loadingConversations = false,
@@ -122,6 +127,7 @@ export function AurenSidebar({
 
   const drawerWidth = useMemo(() => width, [width]);
   const visibleProjects = useMemo(() => projects.slice(0, SIDEBAR_PROJECT_LIMIT), [projects]);
+  const continueProjectTitle = visibleProjects[0]?.title ?? 'Opiskelu';
   const normalizedGestureBottomExclusion = Math.max(0, gestureBottomExclusion);
 
   useEffect(() => {
@@ -144,6 +150,12 @@ export function AurenSidebar({
     void aurenHaptics.selection();
     setActionTarget(null);
     onSearchChats?.();
+  }
+
+  function openAskAuren() {
+    void aurenHaptics.selection();
+    setActionTarget(null);
+    onNewChat?.();
   }
 
   function openNewProject() {
@@ -241,7 +253,7 @@ export function AurenSidebar({
   function openDeleteConversation(conversation: AurenConversation) {
     void aurenHaptics.selection();
     setActionTarget(null);
-    Alert.alert('Delete chat?', 'This chat will be removed from your recent list.', [
+    Alert.alert('Delete chat?', 'This chat will be removed from your study history.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => void deleteConversationWithNativeAlert(conversation) },
     ]);
@@ -335,50 +347,75 @@ export function AurenSidebar({
             <View style={styles.drawerInner}>
               <View style={styles.headerRow}>
                 <Text style={styles.brand}>Auren</Text>
-                <Pressable onPress={onClose} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Close menu">
-                  <X size={31} color="rgba(15,17,21,0.9)" strokeWidth={1.7} />
-                </Pressable>
+                <View style={styles.headerActions}>
+                  <Pressable onPress={openSearchChats} style={({ pressed }) => [styles.headerIconButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Search study history">
+                    <Search size={32} color="rgba(15,17,21,0.92)" strokeWidth={1.75} />
+                  </Pressable>
+                  <Pressable onPress={onClose} style={({ pressed }) => [styles.headerIconButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Close menu">
+                    <X size={33} color="rgba(15,17,21,0.9)" strokeWidth={1.7} />
+                  </Pressable>
+                </View>
               </View>
 
               <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces>
-                <View style={styles.primaryNav}>
-                  <SidebarItem icon={<SquarePen size={30} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />} label="New chat" onPress={onNewChat} active={activeItem === 'newChat'} />
-                  <SidebarItem icon={<Folder size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />} label="Projects" onPress={onProjects} active={activeItem === 'projects'} />
-                  <SidebarItem icon={<FolderPlus size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />} label="New project" onPress={openNewProject} />
-                </View>
+                <Pressable onPress={openAskAuren} style={({ pressed }) => [styles.askRow, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Ask Auren">
+                  <Text style={styles.askIcon}>✧</Text>
+                  <Text style={styles.askLabel}>Ask Auren</Text>
+                </Pressable>
 
-                {(loadingProjects || visibleProjects.length > 0) ? (
-                  <View style={styles.projectSection}>
-                    <Text style={styles.recentHeader}>Projects</Text>
-                    <View style={styles.projectList}>
-                      {loadingProjects && visibleProjects.length === 0 ? (
-                        <Text style={styles.emptyRecentText}>Loading projects...</Text>
-                      ) : (
-                        visibleProjects.map((project) => {
-                          const isActive = project.id === activeProjectId;
-                          return (
-                            <Pressable
-                              key={project.id}
-                              onPress={() => openSidebarProject(project)}
-                              style={({ pressed }) => [styles.projectRow, isActive && styles.activeProjectRow, pressed && styles.pressedProjectRow]}
-                              accessibilityRole="button"
-                              accessibilityLabel={project.title}
-                            >
-                              <Folder size={20} color={SIDEBAR_ICON_COLOR} strokeWidth={1.72} />
-                              <Text style={[styles.projectTitle, isActive && styles.activeProjectTitle]} numberOfLines={1}>{project.title}</Text>
-                            </Pressable>
-                          );
-                        })
-                      )}
+                <View style={styles.todaySection}>
+                  <Text style={styles.sectionTitle}>Today</Text>
+                  <View style={styles.todayList}>
+                    <Pressable onPress={() => (visibleProjects[0] ? openSidebarProject(visibleProjects[0]) : undefined)} style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`Continue ${continueProjectTitle}`}>
+                      <Text style={styles.lineIcon}>▷</Text>
+                      <Text style={styles.todayText} numberOfLines={1}>Continue: {continueProjectTitle}</Text>
+                    </Pressable>
+                    <View style={styles.todayRow}>
+                      <Text style={styles.lineIcon}>□</Text>
+                      <Text style={styles.todayText} numberOfLines={1}>Next: Review biology notes</Text>
                     </View>
                   </View>
-                ) : null}
+                </View>
 
-                <View style={styles.recentSection}>
-                  <Text style={styles.recentHeader}>Recent</Text>
-                  <View style={styles.recentList}>
+                <View style={styles.sectionDivider} />
+
+                <View style={styles.spacesSection}>
+                  <Text style={styles.sectionTitle}>Spaces</Text>
+                  <View style={styles.spaceList}>
+                    <Pressable onPress={openNewProject} style={({ pressed }) => [styles.spaceRow, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="New space">
+                      <Text style={styles.spaceIcon}>⊕</Text>
+                      <Text style={styles.spaceTitle}>New space</Text>
+                    </Pressable>
+
+                    {loadingProjects && visibleProjects.length === 0 ? (
+                      <Text style={styles.emptyRecentText}>Loading spaces...</Text>
+                    ) : (
+                      visibleProjects.map((project, index) => {
+                        const isActive = project.id === activeProjectId;
+                        return (
+                          <Pressable
+                            key={project.id}
+                            onPress={() => openSidebarProject(project)}
+                            style={({ pressed }) => [styles.spaceRow, isActive && styles.activeSpaceRow, pressed && styles.pressedSpaceRow]}
+                            accessibilityRole="button"
+                            accessibilityLabel={project.title}
+                          >
+                            <Text style={[styles.spaceIcon, isActive && styles.activeSpaceIcon]}>{getSpaceMarker(index, isActive)}</Text>
+                            <Text style={[styles.spaceTitle, isActive && styles.activeSpaceTitle]} numberOfLines={1}>{project.title}</Text>
+                          </Pressable>
+                        );
+                      })
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.sectionDivider} />
+
+                <View style={styles.historySection}>
+                  <Text style={styles.sectionTitle}>Study history</Text>
+                  <View style={styles.historyList}>
                     {loadingConversations ? (
-                      <Text style={styles.emptyRecentText}>Loading chats...</Text>
+                      <Text style={styles.emptyRecentText}>Loading history...</Text>
                     ) : conversations.length > 0 ? (
                       conversations.map((chat) => {
                         const isActive = chat.id === activeConversationId;
@@ -393,14 +430,14 @@ export function AurenSidebar({
                             onPress={() => onSelectConversation?.(chat.id)}
                             onLongPress={() => openConversationActions(chat)}
                             delayLongPress={CONVERSATION_LONG_PRESS_DELAY}
-                            style={({ pressed }) => [styles.recentRow, isActive && styles.activeRecentRow, pressed && !isContextTarget && styles.pressedRecentRow, isContextTarget && styles.contextRecentRow]}
+                            style={({ pressed }) => [styles.historyRow, isActive && styles.activeHistoryRow, pressed && !isContextTarget && styles.pressedHistoryRow, isContextTarget && styles.contextRecentRow]}
                           >
-                            <Text style={[styles.recentTitle, isActive && styles.activeRecentTitle]} numberOfLines={1}>{chat.title}</Text>
+                            <Text style={[styles.historyTitle, isActive && styles.activeHistoryTitle]} numberOfLines={1}>{chat.title}</Text>
                           </Pressable>
                         );
                       })
                     ) : (
-                      <Text style={styles.emptyRecentText}>Your chats will appear here.</Text>
+                      <Text style={styles.emptyRecentText}>Your study history will appear here.</Text>
                     )}
                   </View>
                 </View>
@@ -412,14 +449,9 @@ export function AurenSidebar({
                   <Text style={styles.profileName} numberOfLines={1}>{profileName}</Text>
                 </Pressable>
 
-                <View style={styles.bottomActions}>
-                  <Pressable style={({ pressed }) => [styles.bottomIconButton, pressed && styles.iconPressed]} accessibilityRole="button" accessibilityLabel="Library">
-                    <Library size={25} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
-                  </Pressable>
-                  <Pressable onPress={openSearchChats} style={({ pressed }) => [styles.bottomIconButton, pressed && styles.iconPressed]} accessibilityRole="button" accessibilityLabel="Search chats">
-                    <Search size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
-                  </Pressable>
-                </View>
+                <Pressable onPress={openProfileSheet} style={({ pressed }) => [styles.settingsButton, pressed && styles.iconPressed]} accessibilityRole="button" accessibilityLabel="Open settings">
+                  <Text style={styles.settingsIcon}>⚙</Text>
+                </Pressable>
               </View>
             </View>
           </Animated.View>
@@ -429,22 +461,6 @@ export function AurenSidebar({
         <AurenProfileSheet visible={profileSheetOpen} profileName={profileName} avatarLetter={avatarLetter} onClose={closeProfileSheet} />
       </View>
     </GestureDetector>
-  );
-}
-
-type SidebarItemProps = {
-  icon?: ReactNode;
-  label: string;
-  onPress?: () => void;
-  active?: boolean;
-};
-
-function SidebarItem({ icon, label, onPress, active = false }: SidebarItemProps) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.navItem, active && styles.activeNavItem, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={label}>
-      <View style={styles.navIconSlot}>{icon}</View>
-      <Text style={styles.navLabel}>{label}</Text>
-    </Pressable>
   );
 }
 
@@ -526,42 +542,49 @@ const styles = StyleSheet.create({
   mainScreen: { ...StyleSheet.absoluteFillObject, backgroundColor: colors.background },
   drawer: { position: 'absolute', top: 0, left: 0, bottom: 0, zIndex: 20, overflow: 'visible', backgroundColor: DRAWER_BACKGROUND },
   drawerInner: { flex: 1, paddingTop: 66, paddingBottom: 20 },
-  headerRow: { height: 50, paddingHorizontal: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  brand: { color: colors.text, fontFamily: serifFont, fontSize: 34, lineHeight: 40, letterSpacing: -0.98 },
-  closeButton: { width: 50, height: 50, marginRight: -5, alignItems: 'center', justifyContent: 'center' },
-  scroll: { flex: 1, marginTop: 12 },
-  scrollContent: { paddingBottom: 34 },
-  primaryNav: { paddingHorizontal: 32, gap: 12 },
-  navItem: { minHeight: 54, flexDirection: 'row', alignItems: 'center', gap: 22 },
-  activeNavItem: { minHeight: 66, marginBottom: 4, paddingHorizontal: 16, marginHorizontal: -4, borderRadius: 30, backgroundColor: 'rgba(17,24,39,0.035)' },
-  navIconSlot: { width: 38, alignItems: 'center', justifyContent: 'center' },
-  navLabel: { color: colors.text, fontSize: 20.2, lineHeight: 26, fontWeight: '400', letterSpacing: -0.32 },
-  pressed: { opacity: 0.58 },
-  projectSection: { marginTop: 24, paddingHorizontal: 32 },
-  projectList: { marginTop: 14, gap: 10 },
-  projectRow: { minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 14, paddingRight: 8 },
-  activeProjectRow: { minHeight: 43, marginLeft: -12, paddingLeft: 12, paddingRight: 12, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.035)' },
-  pressedProjectRow: { minHeight: 43, marginLeft: -12, paddingLeft: 12, paddingRight: 12, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.045)', transform: [{ scale: 0.996 }] },
-  projectTitle: { flex: 1, color: colors.text, fontSize: 17.2, lineHeight: 22, fontWeight: '400', letterSpacing: -0.16 },
-  activeProjectTitle: { color: colors.text, fontWeight: '500' },
-  recentSection: { marginTop: 30, paddingHorizontal: 32 },
-  recentHeader: { color: colors.muted, fontSize: 16.8, lineHeight: 22, fontWeight: '400', letterSpacing: -0.22 },
-  recentList: { marginTop: 18, gap: 13 },
-  recentRow: { minHeight: 39, flexDirection: 'row', alignItems: 'center', paddingRight: 8 },
-  activeRecentRow: { minHeight: 44, marginLeft: -12, paddingLeft: 12, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.035)' },
-  pressedRecentRow: { minHeight: 44, marginLeft: -12, paddingLeft: 12, paddingRight: 12, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.045)', transform: [{ scale: 0.996 }] },
+  headerRow: { height: 62, paddingHorizontal: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  brand: { color: colors.text, fontFamily: serifFont, fontSize: 43, lineHeight: 50, letterSpacing: -1.25 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 18, marginRight: -4 },
+  headerIconButton: { width: 46, height: 50, alignItems: 'center', justifyContent: 'center' },
+  scroll: { flex: 1, marginTop: 26 },
+  scrollContent: { paddingHorizontal: 32, paddingBottom: 34 },
+  askRow: { minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 22, marginBottom: 25 },
+  askIcon: { width: 38, color: SIDEBAR_ICON_COLOR, fontSize: 31, lineHeight: 36, textAlign: 'center', fontWeight: '300' },
+  askLabel: { color: colors.text, fontSize: 17.8, lineHeight: 23, fontWeight: '400', letterSpacing: -0.18 },
+  sectionTitle: { color: colors.text, fontSize: 16.2, lineHeight: 21, fontWeight: '700', letterSpacing: -0.16 },
+  todaySection: { marginTop: 0 },
+  todayList: { marginTop: 20, gap: 22 },
+  todayRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 24 },
+  lineIcon: { width: 34, color: SIDEBAR_ICON_COLOR, fontSize: 24, lineHeight: 29, textAlign: 'center', fontWeight: '400' },
+  todayText: { flex: 1, color: colors.text, fontSize: 16.4, lineHeight: 22, fontWeight: '400', letterSpacing: -0.13 },
+  sectionDivider: { height: StyleSheet.hairlineWidth, marginTop: 31, marginBottom: 26, backgroundColor: 'rgba(17,24,39,0.13)' },
+  spacesSection: { marginTop: 0 },
+  spaceList: { marginTop: 21, gap: 19 },
+  spaceRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 24, paddingRight: 8 },
+  activeSpaceRow: { minHeight: 41, marginLeft: -12, paddingLeft: 12, paddingRight: 12, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.035)' },
+  pressedSpaceRow: { minHeight: 41, marginLeft: -12, paddingLeft: 12, paddingRight: 12, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.045)', transform: [{ scale: 0.996 }] },
+  spaceIcon: { width: 34, color: SIDEBAR_ICON_COLOR, fontSize: 26, lineHeight: 30, textAlign: 'center', fontWeight: '300' },
+  activeSpaceIcon: { color: colors.text },
+  spaceTitle: { flex: 1, color: colors.text, fontSize: 16.5, lineHeight: 22, fontWeight: '400', letterSpacing: -0.14 },
+  activeSpaceTitle: { color: colors.text, fontWeight: '500' },
+  historySection: { marginTop: 0 },
+  historyList: { marginTop: 10, gap: 8 },
+  historyRow: { minHeight: 23, justifyContent: 'center', paddingRight: 8 },
+  activeHistoryRow: { minHeight: 33, marginLeft: -12, paddingLeft: 12, borderRadius: 17, backgroundColor: 'rgba(17,24,39,0.035)' },
+  pressedHistoryRow: { minHeight: 33, marginLeft: -12, paddingLeft: 12, paddingRight: 12, borderRadius: 17, backgroundColor: 'rgba(17,24,39,0.045)', transform: [{ scale: 0.996 }] },
   contextRecentRow: { opacity: 0 },
-  recentTitle: { flex: 1, color: colors.text, fontSize: 17.7, lineHeight: 23, fontWeight: '400', letterSpacing: -0.18 },
-  activeRecentTitle: { color: colors.text, fontWeight: '400' },
-  emptyRecentText: { color: colors.muted, fontSize: 16, lineHeight: 22, fontWeight: '400', letterSpacing: -0.14 },
-  bottomBar: { flexShrink: 0, minHeight: 70, paddingTop: 12, paddingBottom: 2, paddingHorizontal: 32, flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: DRAWER_BACKGROUND },
+  historyTitle: { color: colors.text, fontSize: 15.8, lineHeight: 21, fontWeight: '400', letterSpacing: -0.11 },
+  activeHistoryTitle: { color: colors.text, fontWeight: '500' },
+  emptyRecentText: { color: colors.muted, fontSize: 15.2, lineHeight: 21, fontWeight: '400', letterSpacing: -0.12 },
+  bottomBar: { flexShrink: 0, minHeight: 76, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(17,24,39,0.13)', paddingTop: 12, paddingBottom: 2, paddingHorizontal: 32, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: DRAWER_BACKGROUND },
   profileInline: { flex: 1, minHeight: 58, flexDirection: 'row', alignItems: 'center', gap: 22 },
   profilePressed: { opacity: 0.62, transform: [{ scale: 0.99 }] },
-  avatar: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: '#d89437' },
-  avatarText: { color: '#ffffff', fontSize: 17.5, lineHeight: 21, fontWeight: '700' },
-  profileName: { flexShrink: 1, color: colors.text, fontSize: 18.8, lineHeight: 25, fontWeight: '400', letterSpacing: -0.22 },
-  bottomActions: { flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 15 },
-  bottomIconButton: { width: 34, height: 46, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
+  avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 1, borderColor: 'rgba(15,17,21,0.86)' },
+  avatarText: { color: colors.text, fontSize: 15.2, lineHeight: 19, fontWeight: '500' },
+  profileName: { flexShrink: 1, color: colors.text, fontSize: 17.8, lineHeight: 24, fontWeight: '400', letterSpacing: -0.18 },
+  settingsButton: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
+  settingsIcon: { color: colors.text, fontSize: 30, lineHeight: 35, fontWeight: '400' },
+  pressed: { opacity: 0.58 },
   iconPressed: { opacity: 0.54, transform: [{ scale: 0.96 }] },
   contextOverlay: { flex: 1 },
   contextOverlayTint: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(209,211,218,0.68)' },

@@ -6,8 +6,9 @@ import { colors } from '../theme';
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const CATEGORY_ICON_COLOR = 'rgba(15,17,21,0.9)';
+const SHEET_BACKGROUND = '#f7f7f5';
 const KEYBOARD_FALLBACK_HEIGHT = 336;
-const KEYBOARD_SHEET_GAP = 34;
+const KEYBOARD_SHEET_GAP = 18;
 
 type ProjectCategory = 'Homework' | 'Writing' | 'Health' | 'Language';
 
@@ -42,6 +43,7 @@ function CategoryIcon({ icon }: { icon: 'homework' | 'writing' | 'health' | 'lan
 export function AurenCreateProjectSheet({ visible, submitting = false, error = null, onClose, onSubmit }: AurenCreateProjectSheetProps) {
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
+  const closeRequestedRef = useRef(false);
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const keyboardHeight = useRef(new Animated.Value(visible ? KEYBOARD_FALLBACK_HEIGHT + KEYBOARD_SHEET_GAP : 0)).current;
   const [mounted, setMounted] = useState(visible);
@@ -56,6 +58,7 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
 
   useEffect(() => {
     if (visible) {
+      closeRequestedRef.current = false;
       setMounted(true);
       setProjectName('');
       setSelectedCategory('Homework');
@@ -77,6 +80,7 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
       if (finished && !visible) {
         setMounted(false);
         keyboardHeight.setValue(0);
+        closeRequestedRef.current = false;
       }
     });
   }, [keyboardHeight, progress, visible]);
@@ -96,7 +100,7 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
       }).start();
     });
     const hideSub = Keyboard.addListener(hideEvent, () => {
-      if (!visible) {
+      if (!visible || closeRequestedRef.current) {
         Animated.timing(keyboardHeight, {
           toValue: 0,
           duration: 220,
@@ -121,12 +125,15 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
   const sheetTranslateY = progress.interpolate({ inputRange: [0, 1], outputRange: [360, 0] });
 
   function handleClose() {
+    if (submitting) return;
+    closeRequestedRef.current = true;
     Keyboard.dismiss();
     onClose();
   }
 
   function handleSubmit() {
     if (!canSubmit) return;
+    closeRequestedRef.current = true;
     onSubmit({
       title: projectName.trim(),
       description: selectedCategory ? `Category: ${selectedCategory}` : null,
@@ -159,7 +166,10 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
   return (
     <Modal visible={mounted} transparent animationType="none" statusBarTranslucent onRequestClose={handleClose}>
       <View pointerEvents={visible ? 'auto' : 'none'} style={styles.root}>
-        <Animated.View pointerEvents="none" style={[styles.overlay, { opacity: overlayOpacity }]} />
+        <Pressable accessibilityRole="button" accessibilityLabel="Close new project" onPress={handleClose} style={StyleSheet.absoluteFill}>
+          <Animated.View pointerEvents="none" style={[styles.overlay, { opacity: overlayOpacity }]} />
+        </Pressable>
+
         <View pointerEvents="box-none" style={styles.sheetHost}>
           <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetTranslateY }] }]}> 
             <View style={styles.handle} />
@@ -197,7 +207,7 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
             </Pressable>
           </Animated.View>
 
-          <Animated.View pointerEvents="none" style={{ height: keyboardHeight }} />
+          <Animated.View pointerEvents="none" style={[styles.keyboardSpacer, { height: keyboardHeight }]} />
         </View>
       </View>
     </Modal>
@@ -206,7 +216,7 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#f7f7f5' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: SHEET_BACKGROUND },
   sheetHost: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     width: '100%',
@@ -215,12 +225,16 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingHorizontal: 34,
     paddingBottom: 14,
-    backgroundColor: '#f7f7f5',
+    backgroundColor: SHEET_BACKGROUND,
     shadowColor: '#111827',
     shadowOpacity: 0.055,
     shadowRadius: 22,
     shadowOffset: { width: 0, height: -10 },
     elevation: 12,
+  },
+  keyboardSpacer: {
+    width: '100%',
+    backgroundColor: SHEET_BACKGROUND,
   },
   handle: {
     alignSelf: 'center',

@@ -1,6 +1,6 @@
 import type { AurenMessage } from '../components/AurenMessageList';
 import type { AurenImageAttachment } from './aurenAttachments';
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase';
+import { SUPABASE_ANON_KEY, SUPABASE_URL, supabase } from './supabase';
 
 const SUPABASE_FUNCTION_URL =
   process.env.EXPO_PUBLIC_AUREN_CHAT_FUNCTION_URL ?? `${SUPABASE_URL}/functions/v1/auren-chat`;
@@ -23,9 +23,19 @@ type AurenChatResponse = {
   };
 };
 
+type AurenChatCreditSpend = {
+  amount: number;
+  reason: string;
+  conversationId?: string | null;
+  projectId?: string | null;
+  idempotencyKey?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
 type SendAurenChatMessageOptions = {
   images?: AurenImageAttachment[];
   modelMode?: 'fast' | 'smart';
+  creditSpend?: AurenChatCreditSpend | null;
 };
 
 type SendAurenChatMessageStreamOptions = SendAurenChatMessageOptions & {
@@ -54,13 +64,17 @@ function createRequestBody(messages: AurenMessage[], options: SendAurenChatMessa
       mimeType: image.mimeType,
       base64: image.base64,
     })),
+    creditSpend: options.creditSpend ?? null,
   });
 }
 
-function createHeaders() {
+async function createHeaders() {
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token ?? SUPABASE_ANON_KEY;
+
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    Authorization: `Bearer ${accessToken}`,
     apikey: SUPABASE_ANON_KEY,
   };
 }
@@ -174,7 +188,7 @@ export async function sendAurenChatMessage(
 ) {
   const response = await fetch(SUPABASE_FUNCTION_URL, {
     method: 'POST',
-    headers: createHeaders(),
+    headers: await createHeaders(),
     body: createRequestBody(messages, options),
   });
 
@@ -197,7 +211,7 @@ export async function sendAurenChatMessageStream(
 ) {
   const response = await fetch(SUPABASE_STREAM_FUNCTION_URL, {
     method: 'POST',
-    headers: createHeaders(),
+    headers: await createHeaders(),
     body: createRequestBody(messages, options),
   });
 

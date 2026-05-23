@@ -13,6 +13,7 @@ import { AurenSidebar } from '../components/AurenSidebar';
 import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
 import { generateAurenThinkingTimeline, sendAurenChatMessage, sendAurenChatMessageStream, type AurenThinkingStep } from '../lib/aurenAiClient';
 import { createAurenConversation, createAurenProject, createConversationTitle, deleteAurenConversation, deleteAurenProject, listAurenConversations, listAurenProjects, loadAurenMessages, saveAurenMessage, updateAurenConversationTitle, updateAurenProjectTitle, type AurenConversation, type AurenProject } from '../lib/aurenConversations';
+import { getAurenCreditSummary, type AurenCreditSummary } from '../lib/aurenCredits';
 import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
 
@@ -79,6 +80,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const [thinkingTimeline, setThinkingTimeline] = useState<AurenThinkingStep[]>([]);
   const [thinkingStepIndex, setThinkingStepIndex] = useState(0);
   const [loadingConversations, setLoadingConversations] = useState(false);
+  const [creditSummary, setCreditSummary] = useState<AurenCreditSummary | null>(null);
   const [composerHeight, setComposerHeight] = useState(116);
   const [composerBottomInset, setComposerBottomInset] = useState(CLOSED_COMPOSER_BOTTOM);
   const composerBottom = useRef(new Animated.Value(CLOSED_COMPOSER_BOTTOM)).current;
@@ -102,6 +104,18 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     const next = await listAurenConversations(userId);
     setConversations(next);
     return next;
+  }
+
+  async function refreshCreditSummary() {
+    try {
+      const next = await getAurenCreditSummary(userId);
+      setCreditSummary(next);
+      return next;
+    } catch (error) {
+      console.log('Auren credits load error:', error);
+      setCreditSummary(null);
+      return null;
+    }
   }
 
   function stopThinkingTimeline() { thinkingRunRef.current += 1; setAssistantThinking(false); setThinkingTimeline([]); setThinkingStepIndex(0); }
@@ -436,6 +450,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
       const savedAssistantMessage = await saveAurenMessage({ conversationId: conversationIdForSave, userId, role: 'assistant', content: answer });
       setMessages((items) => items.map((item) => item.id === assistantMessage.id ? savedAssistantMessage : item));
       await refreshConversations();
+      await refreshCreditSummary();
     } catch (error) {
       console.log('Auren conversation save error:', error);
       void aurenHaptics.warning();
@@ -450,6 +465,12 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     let mounted = true;
     setLoadingConversations(true);
     listAurenConversations(userId).then((items) => { if (mounted) setConversations(items); }).catch((error) => console.log('Auren conversations load error:', error)).finally(() => { if (mounted) setLoadingConversations(false); });
+    return () => { mounted = false; };
+  }, [userId]);
+
+  useEffect(() => {
+    let mounted = true;
+    getAurenCreditSummary(userId).then((summary) => { if (mounted) setCreditSummary(summary); }).catch((error) => { console.log('Auren credits load error:', error); if (mounted) setCreditSummary(null); });
     return () => { mounted = false; };
   }, [userId]);
 
@@ -586,7 +607,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
             onOpenMenu={openSidebar}
             showCreditsBadge={showStartHeaderBadge}
             showConversationActions={showChatHeaderActions}
-            credits={300}
+            credits={creditSummary?.available ?? 300}
+            creditSummary={creditSummary}
             onShareConversation={handleHeaderShareConversation}
             onOpenConversationMenu={handleHeaderConversationMenu}
           />

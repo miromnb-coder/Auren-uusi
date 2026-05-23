@@ -88,6 +88,7 @@ export function useAurenChat({
   const [thinkingStepIndex, setThinkingStepIndex] = useState(0);
   const [loadingConversations, setLoadingConversations] = useState(false);
   const thinkingRunRef = useRef(0);
+  const sendInFlightRef = useRef(false);
 
   const hasMessages = messages.length > 0;
   const hasSelectedImages = selectedImages.length > 0;
@@ -108,6 +109,7 @@ export function useAurenChat({
 
   function stopThinkingTimeline() {
     thinkingRunRef.current += 1;
+    sendInFlightRef.current = false;
     cancelCurrentAurenResponse();
     clearThinkingTimeline();
     setAssistantGenerating(false);
@@ -123,6 +125,7 @@ export function useAurenChat({
     if (!isAssistantBusy) return;
     void aurenHaptics.selection();
     thinkingRunRef.current += 1;
+    sendInFlightRef.current = false;
     cancelCurrentAurenResponse();
     clearThinkingTimeline();
     setAssistantGenerating(false);
@@ -236,11 +239,13 @@ export function useAurenChat({
 
   async function handleSend() {
     const text = draft.trim();
-    if (isAssistantBusy) return;
+    if (sendInFlightRef.current || isAssistantBusy) return;
     if (!text && !hasSelectedImages) {
       void aurenHaptics.warning();
       return;
     }
+
+    sendInFlightRef.current = true;
 
     const imagesForSend = selectedImages;
     const content = text || 'Please explain this image.';
@@ -274,6 +279,7 @@ export function useAurenChat({
           content: createCreditBlockedMessage(creditError),
         },
       ]);
+      sendInFlightRef.current = false;
       return;
     }
 
@@ -403,6 +409,7 @@ export function useAurenChat({
         },
       ]);
     } finally {
+      sendInFlightRef.current = false;
       if (thinkingRunRef.current === runId) {
         clearThinkingTimeline();
         setAssistantGenerating(false);

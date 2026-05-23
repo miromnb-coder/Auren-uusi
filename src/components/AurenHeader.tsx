@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme';
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
+const MENU_ICON_COLOR = 'rgba(17,24,39,0.78)';
 
 type AurenHeaderProps = {
   onOpenMenu?: () => void;
@@ -98,13 +99,13 @@ const styles = StyleSheet.create({
     width: 29,
     height: 3.2,
     borderRadius: 999,
-    backgroundColor: colors.text,
+    backgroundColor: MENU_ICON_COLOR,
   },
   menuLineBottom: {
     width: 20,
     height: 3.2,
     borderRadius: 999,
-    backgroundColor: colors.text,
+    backgroundColor: MENU_ICON_COLOR,
   },
   title: {
     position: 'absolute',

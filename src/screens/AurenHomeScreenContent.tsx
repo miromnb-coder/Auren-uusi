@@ -4,6 +4,7 @@ import { Animated, Easing, Keyboard, Platform, Pressable, StyleSheet, Text, View
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AurenComposer } from '../components/AurenComposer';
 import { AurenConversationSearchScreen } from '../components/AurenConversationSearchScreen';
+import { AurenCreateProjectSheet } from '../components/AurenCreateProjectSheet';
 import { AurenHeader } from '../components/AurenHeader';
 import { AurenMessageList } from '../components/AurenMessageList';
 import { AurenPlusSheet } from '../components/AurenPlusSheet';
@@ -23,7 +24,7 @@ const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: '
 
 type AurenHomeScreenProps = { session: Session };
 type AurenScreenMode = 'chat' | 'conversationSearch' | 'projects' | 'projectDetail';
-type CreateProjectPayload = { title: string; description: string | null };
+type CreateProjectPayload = { title: string; description: string | null; category?: string };
 
 function toTitleCase(value: string) {
   return value.split(/[._\-\s]+/).filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
@@ -130,8 +131,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     void aurenHaptics.selection(); setProjectActionsOpen(false); setRenameProjectError(null); setRenameProjectTarget(activeProject);
   }
 
-  function openCreateProjectSheet() { void aurenHaptics.panelOpen(); Keyboard.dismiss(); setCreateProjectError(null); setCreateProjectSheetOpen(true); }
-  function closeCreateProjectSheet() { void aurenHaptics.panelClose(); Keyboard.dismiss(); setCreateProjectError(null); setCreateProjectSheetOpen(false); }
+  function openCreateProjectSheet() { void aurenHaptics.panelOpen(); setCreateProjectError(null); setCreateProjectSheetOpen(true); }
+  function closeCreateProjectSheet() { void aurenHaptics.panelClose(); setCreateProjectError(null); setCreateProjectSheetOpen(false); }
 
   async function handleCreateProject(payload: CreateProjectPayload) {
     if (createProjectSubmitting) return;
@@ -139,7 +140,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     try {
       const createdProject = await createAurenProject({ userId, title: payload.title, description: payload.description });
       setProjects((items) => [createdProject, ...items.filter((project) => project.id !== createdProject.id)]);
-      void aurenHaptics.success(); setCreateProjectSheetOpen(false); openProjectDetail(createdProject);
+      void aurenHaptics.success(); setCreateProjectSheetOpen(false); setSidebarOpen(false); openProjectDetail(createdProject);
     } catch (error) {
       console.log('Auren project create error:', error); void aurenHaptics.warning(); setCreateProjectError(error instanceof Error ? error.message : 'Could not create project. Please try again.');
     } finally {
@@ -232,11 +233,11 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   );
 
   return (
-    <AurenSidebar open={sidebarOpen} onOpen={handleSidebarOpen} onClose={closeSidebar} onNewChat={startNewChat} onSearchChats={openConversationSearch} onProjects={openProjects} gesturesEnabled={!plusSheetOpen && !createProjectSheetOpen && activeScreen !== 'projectDetail'} gestureBottomExclusion={activeScreen === 'chat' ? sidebarGestureBottomExclusion : 0} conversations={chat.conversations} activeConversationId={chat.activeConversationId} activeItem={sidebarActiveItem} profileName={profileName} avatarLetter={avatarLetter} loadingConversations={chat.loadingConversations} onSelectConversation={handleSelectConversation} onRenameConversation={chat.handleRenameConversation} onDeleteConversation={chat.handleDeleteConversation}>
+    <AurenSidebar open={sidebarOpen} onOpen={handleSidebarOpen} onClose={closeSidebar} onNewChat={startNewChat} onSearchChats={openConversationSearch} onProjects={openProjects} onNewProject={openCreateProjectSheet} gesturesEnabled={!plusSheetOpen && !createProjectSheetOpen && activeScreen !== 'projectDetail'} gestureBottomExclusion={activeScreen === 'chat' ? sidebarGestureBottomExclusion : 0} conversations={chat.conversations} activeConversationId={chat.activeConversationId} activeItem={sidebarActiveItem} profileName={profileName} avatarLetter={avatarLetter} loadingConversations={chat.loadingConversations} onSelectConversation={handleSelectConversation} onRenameConversation={chat.handleRenameConversation} onDeleteConversation={chat.handleDeleteConversation}>
       {activeScreen === 'conversationSearch' ? (
         <AurenConversationSearchScreen conversations={chat.conversations} loading={chat.loadingConversations} onBack={returnFromConversationSearchToSidebar} onSelectConversation={handleSelectConversation} />
       ) : activeScreen === 'projects' ? (
-        <AurenProjectsScreen onBack={returnFromProjectsToSidebar} projects={projects} loadingProjects={loadingProjects} createSheetVisible={createProjectSheetOpen} createProjectSubmitting={createProjectSubmitting} createProjectError={createProjectError} onOpenCreateProject={openCreateProjectSheet} onCloseCreateProject={closeCreateProjectSheet} onSubmitCreateProject={handleCreateProject} onOpenProject={openProjectDetail} onRenameProject={handleRenameProject} onDeleteProject={handleDeleteProject} />
+        <AurenProjectsScreen onBack={returnFromProjectsToSidebar} projects={projects} loadingProjects={loadingProjects} createSheetVisible={false} createProjectSubmitting={createProjectSubmitting} createProjectError={createProjectError} onOpenCreateProject={openCreateProjectSheet} onCloseCreateProject={closeCreateProjectSheet} onSubmitCreateProject={handleCreateProject} onOpenProject={openProjectDetail} onRenameProject={handleRenameProject} onDeleteProject={handleDeleteProject} />
       ) : inProjectDetail ? (
         <SafeAreaView style={styles.screen}>
           <View style={styles.projectHeader}>
@@ -284,6 +285,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
           {sharedPlusSheet}
         </SafeAreaView>
       )}
+      <AurenCreateProjectSheet visible={createProjectSheetOpen} submitting={createProjectSubmitting} error={createProjectError} onClose={closeCreateProjectSheet} onSubmit={handleCreateProject} />
     </AurenSidebar>
   );
 }

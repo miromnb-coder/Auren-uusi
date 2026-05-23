@@ -89,6 +89,8 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   const hasMessages = messages.length > 0;
   const hasSelectedImages = selectedImages.length > 0;
   const inProjectDetail = activeScreen === 'projectDetail' && activeProject !== null;
+  const showStartHeaderBadge = activeScreen === 'chat' && !hasMessages && !assistantThinking;
+  const showChatHeaderActions = activeScreen === 'chat' && (hasMessages || assistantThinking);
   const currentThinkingLines = thinkingTimeline[thinkingStepIndex]?.lines ?? [];
   const messageListBottomInset = useMemo(() => composerHeight + composerBottomInset + MESSAGE_LIST_BOTTOM_GAP, [composerBottomInset, composerHeight]);
   const sidebarGestureBottomExclusion = useMemo(() => composerHeight + composerBottomInset + 24, [composerBottomInset, composerHeight]);
@@ -118,6 +120,14 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   function closeSidebar() { void aurenHaptics.panelClose(); setSidebarOpen(false); }
   function closePlusSheet() { void aurenHaptics.panelClose(); setPlusSheetOpen(false); }
   function openPlusSheet() { void aurenHaptics.panelOpen(); Keyboard.dismiss(); setPlusSheetOpen(true); }
+
+  function handleHeaderShareConversation() {
+    void aurenHaptics.selection();
+  }
+
+  function handleHeaderConversationMenu() {
+    void aurenHaptics.selection();
+  }
 
   function returnFromProjectsToSidebar() {
     void aurenHaptics.panelOpen();
@@ -572,7 +582,14 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
         </SafeAreaView>
       ) : (
         <SafeAreaView style={styles.screen}>
-          <AurenHeader onOpenMenu={openSidebar} />
+          <AurenHeader
+            onOpenMenu={openSidebar}
+            showCreditsBadge={showStartHeaderBadge}
+            showConversationActions={showChatHeaderActions}
+            credits={300}
+            onShareConversation={handleHeaderShareConversation}
+            onOpenConversationMenu={handleHeaderConversationMenu}
+          />
           {hasMessages || assistantThinking ? (
             <View style={styles.chatContent}>
               <AurenMessageList messages={messages} thinking={assistantThinking} thinkingLines={currentThinkingLines} bottomInset={messageListBottomInset} />

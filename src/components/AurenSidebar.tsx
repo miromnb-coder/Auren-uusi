@@ -1,4 +1,4 @@
-import { BookOpen, Folder, Search, SquarePen, Trash2, X } from 'lucide-react-native';
+import { Folder, Library, Search, SquarePen, Trash2, X } from 'lucide-react-native';
 import type { ElementRef, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated as RNAnimated, Easing as RNEasing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -462,7 +462,7 @@ export function AurenSidebar({
                     accessibilityRole="button"
                     accessibilityLabel="Library"
                   >
-                    <BookOpen size={29} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
+                    <Library size={25} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
                   </Pressable>
                   <Pressable
                     onPress={openSearchChats}
@@ -470,7 +470,7 @@ export function AurenSidebar({
                     accessibilityRole="button"
                     accessibilityLabel="Search chats"
                   >
-                    <Search size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
+                    <Search size={27} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
                   </Pressable>
                 </View>
               </View>
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 18,
+    gap: 16,
     backgroundColor: DRAWER_BACKGROUND,
   },
   profileInline: {
@@ -793,11 +793,11 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 15,
   },
   bottomIconButton: {
-    width: 38,
-    height: 50,
+    width: 34,
+    height: 46,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',

@@ -31,14 +31,11 @@ const CATEGORIES: Array<{ label: ProjectCategory; icon: 'homework' | 'writing' |
   { label: 'Language', icon: 'language' },
 ];
 
-function CategoryIcon({ icon, active }: { icon: 'homework' | 'writing' | 'health' | 'language'; active: boolean }) {
-  const color = CATEGORY_ICON_COLOR;
-  const strokeWidth = active ? 1.86 : 1.72;
-
-  if (icon === 'homework') return <GraduationCap size={21} color={color} strokeWidth={strokeWidth} />;
-  if (icon === 'writing') return <Leaf size={21} color={color} strokeWidth={strokeWidth} />;
-  if (icon === 'health') return <HeartPulse size={21} color={color} strokeWidth={strokeWidth} />;
-  return <Globe2 size={21} color={color} strokeWidth={strokeWidth} />;
+function CategoryIcon({ icon }: { icon: 'homework' | 'writing' | 'health' | 'language' }) {
+  if (icon === 'homework') return <GraduationCap size={16} color={CATEGORY_ICON_COLOR} strokeWidth={1.74} />;
+  if (icon === 'writing') return <Leaf size={16} color={CATEGORY_ICON_COLOR} strokeWidth={1.74} />;
+  if (icon === 'health') return <HeartPulse size={16} color={CATEGORY_ICON_COLOR} strokeWidth={1.74} />;
+  return <Globe2 size={16} color={CATEGORY_ICON_COLOR} strokeWidth={1.74} />;
 }
 
 export function AurenCreateProjectSheet({ visible, submitting = false, error = null, onClose, onSubmit }: AurenCreateProjectSheetProps) {
@@ -116,8 +113,8 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
 
   if (!mounted) return null;
 
-  const overlayOpacity = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 0.08] });
-  const sheetTranslateY = progress.interpolate({ inputRange: [0, 1], outputRange: [500, 0] });
+  const overlayOpacity = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 0.03] });
+  const sheetTranslateY = progress.interpolate({ inputRange: [0, 1], outputRange: [360, 0] });
 
   function handleClose() {
     Keyboard.dismiss();
@@ -149,7 +146,7 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
         onPress={() => handleSelectCategory(category.label)}
         style={({ pressed }) => [styles.categoryPill, active && styles.categoryPillActive, pressed && styles.pressed]}
       >
-        <CategoryIcon icon={category.icon} active={active} />
+        <CategoryIcon icon={category.icon} />
         <Text style={[styles.categoryLabel, active && styles.categoryLabelActive]}>{category.label}</Text>
       </Pressable>
     );
@@ -163,7 +160,7 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
           <Animated.View style={[styles.sheet, { transform: [{ translateY: sheetTranslateY }] }]}> 
             <View style={styles.handle} />
             <Pressable accessibilityRole="button" accessibilityLabel="Close new project" disabled={submitting} onPress={handleClose} style={({ pressed }) => [styles.closeButton, pressed && styles.pressed, submitting && styles.disabled]}>
-              <X size={24} color={colors.text} strokeWidth={1.85} />
+              <X size={19} color={colors.text} strokeWidth={1.8} />
             </Pressable>
 
             <Text style={styles.title}>New project</Text>
@@ -205,110 +202,103 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: 'transparent' },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#111111' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: '#f7f7f5' },
   sheetHost: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     width: '100%',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    paddingTop: 24,
-    paddingHorizontal: 32,
-    paddingBottom: 24,
-    backgroundColor: '#fffefb',
+    paddingTop: 12,
+    paddingHorizontal: 34,
+    paddingBottom: 14,
+    backgroundColor: '#f7f7f5',
     shadowColor: '#111827',
-    shadowOpacity: 0.1,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: -12 },
-    elevation: 20,
+    shadowOpacity: 0.055,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: -10 },
+    elevation: 12,
   },
   handle: {
     alignSelf: 'center',
-    width: 49,
-    height: 5,
+    width: 43,
+    height: 4,
     borderRadius: 999,
-    marginBottom: 28,
-    backgroundColor: 'rgba(104,103,117,0.23)',
+    marginBottom: 20,
+    backgroundColor: 'rgba(104,103,117,0.24)',
   },
   closeButton: {
     position: 'absolute',
-    top: 41,
+    top: 28,
     right: 32,
-    width: 49,
-    height: 49,
-    borderRadius: 24.5,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(244,241,237,0.88)',
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.035)',
   },
-  title: { color: colors.text, fontFamily: serifFont, fontSize: 27, lineHeight: 33, letterSpacing: -0.68 },
+  title: { color: colors.text, fontFamily: serifFont, fontSize: 21.5, lineHeight: 27, letterSpacing: -0.52 },
   subtitle: {
-    marginTop: 13,
-    maxWidth: 330,
+    marginTop: 7,
+    maxWidth: 285,
     color: colors.muted,
-    fontSize: 15.8,
-    lineHeight: 22.2,
+    fontSize: 12.8,
+    lineHeight: 17.2,
     fontWeight: '500',
-    letterSpacing: -0.1,
+    letterSpacing: -0.08,
   },
   input: {
-    height: 68,
-    marginTop: 28,
-    borderRadius: 18,
-    paddingHorizontal: 21,
+    height: 43,
+    marginTop: 22,
+    borderRadius: 17,
+    paddingHorizontal: 17,
     color: colors.text,
-    fontSize: 18,
-    lineHeight: 23,
+    fontSize: 14.7,
+    lineHeight: 19,
     fontWeight: '400',
-    letterSpacing: -0.2,
-    backgroundColor: 'rgba(255,255,255,0.82)',
+    letterSpacing: -0.14,
+    backgroundColor: 'rgba(255,255,255,0.55)',
     borderWidth: 1,
-    borderColor: 'rgba(104,103,117,0.2)',
+    borderColor: 'rgba(104,103,117,0.18)',
   },
-  categoryGrid: {
-    marginTop: 20,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  categoryRowSecond: {
-    marginTop: 10,
-  },
+  categoryGrid: { marginTop: 16 },
+  categoryRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  categoryRowSecond: { marginTop: 8 },
   categoryPill: {
     width: '48.5%',
-    minHeight: 52,
-    borderRadius: 26,
-    paddingHorizontal: 18,
+    minHeight: 36,
+    borderRadius: 18,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 13,
-    backgroundColor: 'rgba(255,255,255,0.68)',
+    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.5)',
     borderWidth: 1,
-    borderColor: 'rgba(104,103,117,0.17)',
+    borderColor: 'rgba(104,103,117,0.15)',
   },
-  categoryPillActive: { backgroundColor: 'rgba(255,255,255,0.78)', borderColor: 'rgba(104,103,117,0.3)' },
-  categoryLabel: { color: colors.text, fontSize: 15.8, lineHeight: 20, fontWeight: '500', letterSpacing: -0.15 },
+  categoryPillActive: { backgroundColor: 'rgba(255,255,255,0.62)', borderColor: 'rgba(104,103,117,0.24)' },
+  categoryLabel: { color: colors.text, fontSize: 12.8, lineHeight: 16, fontWeight: '500', letterSpacing: -0.11 },
   categoryLabelActive: { color: colors.text },
   createButton: {
-    height: 62,
-    marginTop: 22,
-    borderRadius: 31,
+    height: 42,
+    marginTop: 16,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#1d1a18',
     shadowColor: '#111827',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
-  createButtonDisabled: { backgroundColor: 'rgba(29,26,24,0.55)', shadowOpacity: 0, elevation: 0 },
-  createButtonText: { color: '#ffffff', fontSize: 17.4, lineHeight: 22, fontWeight: '600', letterSpacing: -0.18 },
+  createButtonDisabled: { backgroundColor: 'rgba(29,26,24,0.48)', shadowOpacity: 0, elevation: 0 },
+  createButtonText: { color: '#ffffff', fontSize: 14.3, lineHeight: 18, fontWeight: '600', letterSpacing: -0.12 },
   createButtonTextDisabled: { color: 'rgba(255,255,255,0.9)' },
-  errorText: { marginTop: 13, color: '#9f2f2f', fontSize: 13.8, lineHeight: 19, fontWeight: '500', letterSpacing: -0.08 },
+  errorText: { marginTop: 9, color: '#9f2f2f', fontSize: 11.8, lineHeight: 16, fontWeight: '500', letterSpacing: -0.05 },
   pressed: { opacity: 0.62, transform: [{ scale: 0.985 }] },
   createButtonPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
   disabled: { opacity: 0.48 },

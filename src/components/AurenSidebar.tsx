@@ -1,5 +1,6 @@
 import { Folder, FolderPlus, Library, Search, SquarePen, X } from 'lucide-react-native';
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { AurenProfileSheet } from './AurenProfileSheet';
@@ -56,14 +57,14 @@ export function AurenSidebar({
   const drawerProgress = useSharedValue(open ? 1 : 0);
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     drawerProgress.value = withTiming(open ? 1 : 0, {
       duration: open ? 310 : 255,
       easing: Easing.out(Easing.cubic),
     });
   }, [drawerProgress, open]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) onOpen?.();
   }, [onOpen, open]);
 

@@ -20,7 +20,6 @@ type AurenChatResponse = {
   routing?: {
     provider?: string;
     textModel?: string;
-    visionModel?: string | null;
     hasImages?: boolean;
   };
 };
@@ -35,12 +34,10 @@ type AurenChatCreditSpend = {
 };
 
 type AurenModelMode = 'auto' | 'fast' | 'smart';
-type AurenModelProvider = 'auto' | 'openai' | 'groq';
 
 type SendAurenChatMessageOptions = {
   images?: AurenImageAttachment[];
   modelMode?: AurenModelMode;
-  modelProvider?: AurenModelProvider;
   creditSpend?: AurenChatCreditSpend | null;
 };
 
@@ -62,7 +59,7 @@ type GenerateAurenConversationTitleInput = {
 function createRequestBody(messages: AurenMessage[], options: SendAurenChatMessageOptions = {}) {
   return JSON.stringify({
     modelMode: options.modelMode ?? 'auto',
-    modelProvider: options.modelProvider ?? 'auto',
+    modelProvider: 'openai',
     messages: messages.map((message) => ({
       role: message.role,
       content: message.content,
@@ -106,7 +103,6 @@ function createDebugErrorMessage(response: Response, data: AurenChatResponse) {
     data.model ? `Model: ${data.model}` : null,
     data.routing?.provider ? `Provider: ${data.routing.provider}` : null,
     data.routing?.textModel ? `Text model: ${data.routing.textModel}` : null,
-    data.routing?.visionModel ? `Vision model: ${data.routing.visionModel}` : null,
     typeof data.routing?.hasImages === 'boolean' ? `Has images: ${data.routing.hasImages}` : null,
   ].filter(Boolean);
 

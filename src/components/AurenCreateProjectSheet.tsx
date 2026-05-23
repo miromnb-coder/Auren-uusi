@@ -32,8 +32,8 @@ const CATEGORIES: Array<{ label: ProjectCategory; icon: 'homework' | 'writing' |
 ];
 
 function CategoryIcon({ icon, active }: { icon: 'homework' | 'writing' | 'health' | 'language'; active: boolean }) {
-  const color = active ? '#ffffff' : CATEGORY_ICON_COLOR;
-  const strokeWidth = active ? 2.05 : 1.72;
+  const color = CATEGORY_ICON_COLOR;
+  const strokeWidth = active ? 1.86 : 1.72;
 
   if (icon === 'homework') return <GraduationCap size={21} color={color} strokeWidth={strokeWidth} />;
   if (icon === 'writing') return <Leaf size={21} color={color} strokeWidth={strokeWidth} />;
@@ -116,8 +116,8 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
 
   if (!mounted) return null;
 
-  const overlayOpacity = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 0.1] });
-  const sheetTranslateY = progress.interpolate({ inputRange: [0, 1], outputRange: [460, 0] });
+  const overlayOpacity = progress.interpolate({ inputRange: [0, 1], outputRange: [0, 0.08] });
+  const sheetTranslateY = progress.interpolate({ inputRange: [0, 1], outputRange: [500, 0] });
 
   function handleClose() {
     Keyboard.dismiss();
@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     width: '100%',
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
-    paddingTop: 28,
+    paddingTop: 24,
     paddingHorizontal: 32,
     paddingBottom: 24,
     backgroundColor: '#fffefb',
@@ -219,22 +219,22 @@ const styles = StyleSheet.create({
   },
   handle: {
     alignSelf: 'center',
-    width: 48,
+    width: 49,
     height: 5,
     borderRadius: 999,
-    marginBottom: 26,
+    marginBottom: 28,
     backgroundColor: 'rgba(104,103,117,0.23)',
   },
   closeButton: {
     position: 'absolute',
-    top: 46,
+    top: 41,
     right: 32,
     width: 49,
     height: 49,
     borderRadius: 24.5,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(244,241,237,0.86)',
+    backgroundColor: 'rgba(244,241,237,0.88)',
     borderWidth: 1,
     borderColor: 'rgba(17,24,39,0.035)',
   },
@@ -276,9 +276,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(104,103,117,0.17)',
   },
-  categoryPillActive: { backgroundColor: '#1d1a18', borderColor: '#1d1a18' },
+  categoryPillActive: { backgroundColor: 'rgba(255,255,255,0.78)', borderColor: 'rgba(104,103,117,0.3)' },
   categoryLabel: { color: colors.text, fontSize: 15.8, lineHeight: 20, fontWeight: '500', letterSpacing: -0.15 },
-  categoryLabelActive: { color: '#ffffff' },
+  categoryLabelActive: { color: colors.text },
   createButton: {
     height: 62,
     marginTop: 22,
@@ -292,9 +292,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 8,
   },
-  createButtonDisabled: { backgroundColor: 'rgba(29,26,24,0.5)', shadowOpacity: 0, elevation: 0 },
+  createButtonDisabled: { backgroundColor: 'rgba(29,26,24,0.55)', shadowOpacity: 0, elevation: 0 },
   createButtonText: { color: '#ffffff', fontSize: 17.4, lineHeight: 22, fontWeight: '600', letterSpacing: -0.18 },
-  createButtonTextDisabled: { color: 'rgba(255,255,255,0.86)' },
+  createButtonTextDisabled: { color: 'rgba(255,255,255,0.9)' },
   errorText: { marginTop: 13, color: '#9f2f2f', fontSize: 13.8, lineHeight: 19, fontWeight: '500', letterSpacing: -0.08 },
   pressed: { opacity: 0.62, transform: [{ scale: 0.985 }] },
   createButtonPressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },

@@ -16,7 +16,9 @@ type AurenChatResponse = {
   error?: string;
   detail?: string;
   model?: string;
+  provider?: string;
   routing?: {
+    provider?: string;
     textModel?: string;
     visionModel?: string | null;
     hasImages?: boolean;
@@ -32,9 +34,13 @@ type AurenChatCreditSpend = {
   metadata?: Record<string, unknown>;
 };
 
+type AurenModelMode = 'auto' | 'fast' | 'smart';
+type AurenModelProvider = 'auto' | 'openai' | 'groq';
+
 type SendAurenChatMessageOptions = {
   images?: AurenImageAttachment[];
-  modelMode?: 'fast' | 'smart';
+  modelMode?: AurenModelMode;
+  modelProvider?: AurenModelProvider;
   creditSpend?: AurenChatCreditSpend | null;
 };
 
@@ -55,7 +61,8 @@ type GenerateAurenConversationTitleInput = {
 
 function createRequestBody(messages: AurenMessage[], options: SendAurenChatMessageOptions = {}) {
   return JSON.stringify({
-    modelMode: options.modelMode,
+    modelMode: options.modelMode ?? 'auto',
+    modelProvider: options.modelProvider ?? 'auto',
     messages: messages.map((message) => ({
       role: message.role,
       content: message.content,
@@ -95,7 +102,9 @@ function createDebugErrorMessage(response: Response, data: AurenChatResponse) {
     `HTTP ${response.status}`,
     data.error ? `Error: ${data.error}` : null,
     data.detail ? `Detail: ${data.detail}` : null,
+    data.provider ? `Provider: ${data.provider}` : null,
     data.model ? `Model: ${data.model}` : null,
+    data.routing?.provider ? `Provider: ${data.routing.provider}` : null,
     data.routing?.textModel ? `Text model: ${data.routing.textModel}` : null,
     data.routing?.visionModel ? `Vision model: ${data.routing.visionModel}` : null,
     typeof data.routing?.hasImages === 'boolean' ? `Has images: ${data.routing.hasImages}` : null,
@@ -297,7 +306,7 @@ export async function generateAurenThinkingTimeline({
   const prompt = [
     'You create public thinking-status updates for Auren, a calm personal study assistant UI.',
     'Generate dynamic status updates for the loading bubble while Auren prepares the final answer.',
-    'Do not answer the user. Do not reveal hidden chain-of-thought or private reasoning.',
+    'Do not answer the user. Do not reveal private internal reasoning.',
     'Only describe visible work at a high level, like understanding, organizing, comparing, planning, checking clarity.',
     'Make the text specific to the user request. Do not use generic repeated loading phrases.',
     'Use the same language as the user message when clear.',

@@ -69,6 +69,43 @@ export type AurenCreditSummary = {
   planLabel: string;
 };
 
+export type AurenCreditSpendReason = 'chat_message' | 'image_message' | 'project_message' | string;
+
+export type AurenCreditSpendInput = {
+  amount: number;
+  reason: AurenCreditSpendReason;
+  conversationId?: string | null;
+  projectId?: string | null;
+  idempotencyKey?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+export type AurenCreditSpendResult = {
+  ok: boolean;
+  errorCode: string | null;
+  cost: number;
+  balance: number;
+  dailyAllowance: number;
+  maxBalance: number;
+  usedToday: number;
+  usedThisWeek: number;
+  usedThisMonth: number;
+  nextRefillAt: string;
+  nextRefillLabel: string;
+};
+
+export class AurenCreditsError extends Error {
+  code: string;
+  result: AurenCreditSpendResult | null;
+
+  constructor(message: string, code: string, result: AurenCreditSpendResult | null = null) {
+    super(message);
+    this.name = 'AurenCreditsError';
+    this.code = code;
+    this.result = result;
+  }
+}
+
 type CreditPlanRow = {
   plan: string;
   display_name: string;
@@ -110,6 +147,19 @@ type CreditEventRow = {
   conversation_id: string | null;
   project_id: string | null;
   created_at: string;
+};
+
+type CreditSpendRpcRow = {
+  ok: boolean;
+  error_code: string | null;
+  cost: number;
+  balance: number;
+  daily_allowance: number;
+  max_balance: number;
+  used_today: number;
+  used_this_week: number;
+  used_this_month: number;
+  next_refill_at: string;
 };
 
 const DEFAULT_PLAN: AurenCreditPlan = {
@@ -231,6 +281,42 @@ function createCreditSummary(account: AurenCreditAccount, plan: AurenCreditPlan 
   };
 }
 
+function mapSpendResult(row: CreditSpendRpcRow): AurenCreditSpendResult {
+  return {
+    ok: row.ok,
+    errorCode: row.error_code,
+    cost: row.cost,
+    balance: row.balance,
+    dailyAllowance: row.daily_allowance,
+    maxBalance: row.max_balance,
+    usedToday: row.used_today,
+    usedThisWeek: row.used_this_week,
+    usedThisMonth: row.used_this_month,
+    nextRefillAt: row.next_refill_at,
+    nextRefillLabel: createRefillLabel(row.next_refill_at),
+  };
+}
+
+function createSpendErrorMessage(result: AurenCreditSpendResult) {
+  if (result.errorCode === 'out_of_credits') {
+    return `You need ${result.cost} credits for this. You have ${result.balance} available. ${result.nextRefillLabel}.`;
+  }
+
+  if (result.errorCode === 'not_authenticated') {
+    return 'Please sign in to use credits.';
+  }
+
+  return `Could not spend credits${result.errorCode ? ` (${result.errorCode})` : ''}.`;
+}
+
+export function createAurenCreditSpendKey(prefix = 'message') {
+  return `${prefix}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function isAurenOutOfCreditsError(error: unknown) {
+  return error instanceof AurenCreditsError && error.code === 'out_of_credits';
+}
+
 export async function listAurenCreditPlans() {
   const { data, error } = await supabase
     .from('auren_credit_plans')
@@ -331,6 +417,42 @@ export async function listAurenCreditEvents(userId: string, limit = 30) {
   }
 
   return ((data ?? []) as CreditEventRow[]).map(mapCreditEvent);
+}
+
+export async function spendAurenCredits(input: AurenCreditSpendInput) {
+  const amount = Math.max(1, Math.floor(input.amount));
+  const reason = input.reason.trim();
+
+  if (!reason) {
+    throw new AurenCreditsError('Credit spend reason is required.', 'missing_reason');
+  }
+
+  const { data, error } = await supabase.rpc('auren_spend_credits', {
+    p_amount: amount,
+    p_reason: reason,
+    p_conversation_id: input.conversationId ?? null,
+    p_project_id: input.projectId ?? null,
+    p_idempotency_key: input.idempotencyKey ?? null,
+    p_metadata: input.metadata ?? {},
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const firstRow = Array.isArray(data) ? data[0] : data;
+
+  if (!firstRow) {
+    throw new AurenCreditsError('Credit spend returned no result.', 'empty_result');
+  }
+
+  const result = mapSpendResult(firstRow as CreditSpendRpcRow);
+
+  if (!result.ok) {
+    throw new AurenCreditsError(createSpendErrorMessage(result), result.errorCode ?? 'credit_spend_failed', result);
+  }
+
+  return result;
 }
 
 export async function getAurenCreditSummary(userId: string) {

@@ -419,20 +419,22 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     const content = text || 'Please explain this image.';
     const creditCost = estimateAurenCreditCost({ hasImages: imagesForSend.length > 0, inProject: inProjectDetail });
     const creditReason = imagesForSend.length > 0 ? 'image_message' : inProjectDetail ? 'project_message' : 'chat_message';
+    const creditSpendKey = createAurenCreditSpendKey(creditReason);
+    const creditSpendPayload = {
+      amount: creditCost,
+      reason: creditReason,
+      conversationId: activeConversationId,
+      projectId: inProjectDetail ? activeProject?.id ?? null : null,
+      idempotencyKey: creditSpendKey,
+      metadata: {
+        hasImages: imagesForSend.length > 0,
+        inProject: inProjectDetail,
+        messageLength: content.length,
+      },
+    };
 
     try {
-      await spendAurenCredits({
-        amount: creditCost,
-        reason: creditReason,
-        conversationId: activeConversationId,
-        projectId: inProjectDetail ? activeProject?.id ?? null : null,
-        idempotencyKey: createAurenCreditSpendKey(creditReason),
-        metadata: {
-          hasImages: imagesForSend.length > 0,
-          inProject: inProjectDetail,
-          messageLength: content.length,
-        },
-      });
+      await spendAurenCredits(creditSpendPayload);
       await refreshCreditSummary();
     } catch (creditError) {
       console.log('Auren credit spend error:', creditError);
@@ -473,20 +475,21 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
         setActiveConversationId(created.id);
         setConversations((items) => [created, ...items.filter((item) => item.id !== created.id)]);
       }
+      const creditSpendForAi = { ...creditSpendPayload, conversationId: conversationIdForSave };
       const savedUserMessage = await saveAurenMessage({ conversationId: conversationIdForSave, userId, role: 'user', content, images: imagesForSend });
       setMessages((items) => items.map((item) => item.id === optimisticUserMessage.id ? { ...savedUserMessage, images: imagesForSend } : item));
       const assistantMessage: AurenMessage = { id: createMessageId('assistant'), role: 'assistant', content: '' };
       setMessages((items) => [...items, assistantMessage]);
       let answer = '';
       try {
-        answer = await sendAurenChatMessageStream(nextMessages, { images: imagesForSend, onChunk: (chunk) => {
+        answer = await sendAurenChatMessageStream(nextMessages, { images: imagesForSend, creditSpend: creditSpendForAi, onChunk: (chunk) => {
           if (thinkingRunRef.current !== runId) return;
           stopThinkingForRun(runId);
           setMessages((items) => items.map((item) => item.id === assistantMessage.id ? { ...item, content: `${item.content}${chunk}` } : item));
         }});
       } catch (streamError) {
         console.log('Auren stream error:', streamError);
-        try { answer = await sendAurenChatMessage(nextMessages, { images: imagesForSend }); }
+        try { answer = await sendAurenChatMessage(nextMessages, { images: imagesForSend, creditSpend: creditSpendForAi }); }
         catch (error) { console.log('Auren AI error:', error); answer = createFallbackAurenResponse(content); }
       }
       stopThinkingForRun(runId);

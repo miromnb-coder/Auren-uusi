@@ -8,7 +8,7 @@ const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: '
 const CATEGORY_ICON_COLOR = 'rgba(15,17,21,0.9)';
 const SHEET_BACKGROUND = '#f7f7f5';
 const KEYBOARD_FALLBACK_HEIGHT = 336;
-const KEYBOARD_SHEET_GAP = 18;
+const KEYBOARD_SHEET_GAP = 28;
 
 type ProjectCategory = 'Homework' | 'Writing' | 'Health' | 'Language';
 

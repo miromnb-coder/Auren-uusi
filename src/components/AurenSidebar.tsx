@@ -1,4 +1,4 @@
-import { Search, SquarePen, Trash2, X } from 'lucide-react-native';
+import { Calendar, Circle, CirclePlus, Diamond, PlayCircle, Search, Settings, Sparkles, SquarePen, Trash2, X } from 'lucide-react-native';
 import type { ElementRef, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated as RNAnimated, Easing as RNEasing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -84,11 +84,19 @@ function getActionErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
-function getSpaceMarker(index: number, active: boolean) {
-  if (active || index === 0) return '✧';
-  if (index === 1) return '○';
-  if (index === 2) return '◇';
-  return '⌁';
+function IconSlot({ children }: { children: ReactNode }) {
+  return <View style={styles.iconSlot}>{children}</View>;
+}
+
+function SpaceIcon({ project, index, active }: { project: AurenProject; index: number; active: boolean }) {
+  const normalizedTitle = project.title.trim().toLowerCase();
+  const iconProps = { size: 24, color: SIDEBAR_ICON_COLOR, strokeWidth: ICON_STROKE_WIDTH };
+
+  if (active || normalizedTitle.includes('opiskelu')) return <Sparkles {...iconProps} />;
+  if (normalizedTitle.includes('biology') || index === 0) return <Circle {...iconProps} />;
+  if (normalizedTitle.includes('writing') || index === 1) return <Diamond {...iconProps} />;
+
+  return <Text style={styles.waveIcon}>⌁</Text>;
 }
 
 export function AurenSidebar({
@@ -127,7 +135,12 @@ export function AurenSidebar({
 
   const drawerWidth = useMemo(() => width, [width]);
   const visibleProjects = useMemo(() => projects.slice(0, SIDEBAR_PROJECT_LIMIT), [projects]);
-  const continueProjectTitle = visibleProjects[0]?.title ?? 'Opiskelu';
+  const activeProject = useMemo(() => projects.find((project) => project.id === activeProjectId) ?? null, [activeProjectId, projects]);
+  const preferredContinueProject = useMemo(
+    () => activeProject ?? projects.find((project) => project.title.trim().toLowerCase().includes('opiskelu')) ?? visibleProjects[0] ?? null,
+    [activeProject, projects, visibleProjects],
+  );
+  const continueProjectTitle = preferredContinueProject?.title ?? 'Opiskelu';
   const normalizedGestureBottomExclusion = Math.max(0, gestureBottomExclusion);
 
   useEffect(() => {
@@ -168,6 +181,11 @@ export function AurenSidebar({
     void aurenHaptics.selection();
     setActionTarget(null);
     onSelectProject?.(project);
+  }
+
+  function openContinueProject() {
+    if (!preferredContinueProject) return;
+    openSidebarProject(preferredContinueProject);
   }
 
   function openProfileSheet() {
@@ -349,29 +367,29 @@ export function AurenSidebar({
                 <Text style={styles.brand}>Auren</Text>
                 <View style={styles.headerActions}>
                   <Pressable onPress={openSearchChats} style={({ pressed }) => [styles.headerIconButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Search study history">
-                    <Search size={32} color="rgba(15,17,21,0.92)" strokeWidth={1.75} />
+                    <Search size={32} color="rgba(15,17,21,0.92)" strokeWidth={1.85} />
                   </Pressable>
                   <Pressable onPress={onClose} style={({ pressed }) => [styles.headerIconButton, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Close menu">
-                    <X size={33} color="rgba(15,17,21,0.9)" strokeWidth={1.7} />
+                    <X size={33} color="rgba(15,17,21,0.9)" strokeWidth={1.75} />
                   </Pressable>
                 </View>
               </View>
 
               <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces>
                 <Pressable onPress={openAskAuren} style={({ pressed }) => [styles.askRow, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="Ask Auren">
-                  <Text style={styles.askIcon}>✧</Text>
+                  <IconSlot><Sparkles size={26} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} /></IconSlot>
                   <Text style={styles.askLabel}>Ask Auren</Text>
                 </Pressable>
 
                 <View style={styles.todaySection}>
                   <Text style={styles.sectionTitle}>Today</Text>
                   <View style={styles.todayList}>
-                    <Pressable onPress={() => (visibleProjects[0] ? openSidebarProject(visibleProjects[0]) : undefined)} style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`Continue ${continueProjectTitle}`}>
-                      <Text style={styles.lineIcon}>▷</Text>
+                    <Pressable onPress={openContinueProject} style={({ pressed }) => [styles.todayRow, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel={`Continue ${continueProjectTitle}`}>
+                      <IconSlot><PlayCircle size={25} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} /></IconSlot>
                       <Text style={styles.todayText} numberOfLines={1}>Continue: {continueProjectTitle}</Text>
                     </Pressable>
                     <View style={styles.todayRow}>
-                      <Text style={styles.lineIcon}>□</Text>
+                      <IconSlot><Calendar size={25} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} /></IconSlot>
                       <Text style={styles.todayText} numberOfLines={1}>Next: Review biology notes</Text>
                     </View>
                   </View>
@@ -383,7 +401,7 @@ export function AurenSidebar({
                   <Text style={styles.sectionTitle}>Spaces</Text>
                   <View style={styles.spaceList}>
                     <Pressable onPress={openNewProject} style={({ pressed }) => [styles.spaceRow, pressed && styles.pressed]} accessibilityRole="button" accessibilityLabel="New space">
-                      <Text style={styles.spaceIcon}>⊕</Text>
+                      <IconSlot><CirclePlus size={25} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} /></IconSlot>
                       <Text style={styles.spaceTitle}>New space</Text>
                     </Pressable>
 
@@ -400,7 +418,7 @@ export function AurenSidebar({
                             accessibilityRole="button"
                             accessibilityLabel={project.title}
                           >
-                            <Text style={[styles.spaceIcon, isActive && styles.activeSpaceIcon]}>{getSpaceMarker(index, isActive)}</Text>
+                            <IconSlot><SpaceIcon project={project} index={index} active={isActive} /></IconSlot>
                             <Text style={[styles.spaceTitle, isActive && styles.activeSpaceTitle]} numberOfLines={1}>{project.title}</Text>
                           </Pressable>
                         );
@@ -450,7 +468,7 @@ export function AurenSidebar({
                 </Pressable>
 
                 <Pressable onPress={openProfileSheet} style={({ pressed }) => [styles.settingsButton, pressed && styles.iconPressed]} accessibilityRole="button" accessibilityLabel="Open settings">
-                  <Text style={styles.settingsIcon}>⚙</Text>
+                  <Settings size={32} color={SIDEBAR_ICON_COLOR} strokeWidth={1.85} />
                 </Pressable>
               </View>
             </View>
@@ -548,14 +566,13 @@ const styles = StyleSheet.create({
   headerIconButton: { width: 46, height: 50, alignItems: 'center', justifyContent: 'center' },
   scroll: { flex: 1, marginTop: 26 },
   scrollContent: { paddingHorizontal: 32, paddingBottom: 34 },
+  iconSlot: { width: 38, alignItems: 'center', justifyContent: 'center' },
   askRow: { minHeight: 42, flexDirection: 'row', alignItems: 'center', gap: 22, marginBottom: 25 },
-  askIcon: { width: 38, color: SIDEBAR_ICON_COLOR, fontSize: 31, lineHeight: 36, textAlign: 'center', fontWeight: '300' },
   askLabel: { color: colors.text, fontSize: 17.8, lineHeight: 23, fontWeight: '400', letterSpacing: -0.18 },
   sectionTitle: { color: colors.text, fontSize: 16.2, lineHeight: 21, fontWeight: '700', letterSpacing: -0.16 },
   todaySection: { marginTop: 0 },
   todayList: { marginTop: 20, gap: 22 },
   todayRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 24 },
-  lineIcon: { width: 34, color: SIDEBAR_ICON_COLOR, fontSize: 24, lineHeight: 29, textAlign: 'center', fontWeight: '400' },
   todayText: { flex: 1, color: colors.text, fontSize: 16.4, lineHeight: 22, fontWeight: '400', letterSpacing: -0.13 },
   sectionDivider: { height: StyleSheet.hairlineWidth, marginTop: 31, marginBottom: 26, backgroundColor: 'rgba(17,24,39,0.13)' },
   spacesSection: { marginTop: 0 },
@@ -563,8 +580,7 @@ const styles = StyleSheet.create({
   spaceRow: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 24, paddingRight: 8 },
   activeSpaceRow: { minHeight: 41, marginLeft: -12, paddingLeft: 12, paddingRight: 12, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.035)' },
   pressedSpaceRow: { minHeight: 41, marginLeft: -12, paddingLeft: 12, paddingRight: 12, borderRadius: 22, backgroundColor: 'rgba(17,24,39,0.045)', transform: [{ scale: 0.996 }] },
-  spaceIcon: { width: 34, color: SIDEBAR_ICON_COLOR, fontSize: 26, lineHeight: 30, textAlign: 'center', fontWeight: '300' },
-  activeSpaceIcon: { color: colors.text },
+  waveIcon: { color: SIDEBAR_ICON_COLOR, fontSize: 23, lineHeight: 26, fontWeight: '500' },
   spaceTitle: { flex: 1, color: colors.text, fontSize: 16.5, lineHeight: 22, fontWeight: '400', letterSpacing: -0.14 },
   activeSpaceTitle: { color: colors.text, fontWeight: '500' },
   historySection: { marginTop: 0 },
@@ -583,7 +599,6 @@ const styles = StyleSheet.create({
   avatarText: { color: colors.text, fontSize: 15.2, lineHeight: 19, fontWeight: '500' },
   profileName: { flexShrink: 1, color: colors.text, fontSize: 17.8, lineHeight: 24, fontWeight: '400', letterSpacing: -0.18 },
   settingsButton: { width: 46, height: 46, alignItems: 'center', justifyContent: 'center' },
-  settingsIcon: { color: colors.text, fontSize: 30, lineHeight: 35, fontWeight: '400' },
   pressed: { opacity: 0.58 },
   iconPressed: { opacity: 0.54, transform: [{ scale: 0.96 }] },
   contextOverlay: { flex: 1 },

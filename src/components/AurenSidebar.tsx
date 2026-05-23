@@ -46,7 +46,7 @@ type AurenSidebarProps = {
   onDeleteConversation?: (conversation: AurenConversation) => Promise<void> | void;
 };
 
-const DRAWER_BACKGROUND = '#fbfbfb';
+const DRAWER_BACKGROUND = colors.background;
 const SIDEBAR_ICON_COLOR = 'rgba(15,17,21,0.88)';
 const DANGER_COLOR = '#ef4444';
 const ICON_STROKE_WIDTH = 1.78;

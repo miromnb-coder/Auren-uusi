@@ -7,6 +7,7 @@ import { colors } from '../theme';
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 const CATEGORY_ICON_COLOR = 'rgba(15,17,21,0.9)';
 const KEYBOARD_FALLBACK_HEIGHT = 336;
+const KEYBOARD_SHEET_GAP = 34;
 
 type ProjectCategory = 'Homework' | 'Writing' | 'Health' | 'Language';
 
@@ -42,13 +43,16 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
   const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const keyboardHeight = useRef(new Animated.Value(visible ? KEYBOARD_FALLBACK_HEIGHT : 0)).current;
+  const keyboardHeight = useRef(new Animated.Value(visible ? KEYBOARD_FALLBACK_HEIGHT + KEYBOARD_SHEET_GAP : 0)).current;
   const [mounted, setMounted] = useState(visible);
   const [projectName, setProjectName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ProjectCategory>('Homework');
   const canSubmit = projectName.trim().length > 0 && !submitting;
 
-  const keyboardTarget = useMemo(() => Math.max(KEYBOARD_FALLBACK_HEIGHT - insets.bottom, 292), [insets.bottom]);
+  const keyboardTarget = useMemo(
+    () => Math.max(KEYBOARD_FALLBACK_HEIGHT - insets.bottom + KEYBOARD_SHEET_GAP, 292 + KEYBOARD_SHEET_GAP),
+    [insets.bottom],
+  );
 
   useEffect(() => {
     if (visible) {
@@ -83,7 +87,7 @@ export function AurenCreateProjectSheet({ visible, submitting = false, error = n
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
     const showSub = Keyboard.addListener(showEvent, (event) => {
-      const nextHeight = Math.max(0, event.endCoordinates.height - insets.bottom);
+      const nextHeight = Math.max(0, event.endCoordinates.height - insets.bottom + KEYBOARD_SHEET_GAP);
       Animated.timing(keyboardHeight, {
         toValue: nextHeight,
         duration: event.duration ?? 250,

@@ -1,6 +1,6 @@
 import { MoreHorizontal, Share2, Sparkles } from 'lucide-react-native';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, spacing } from '../theme';
+import { colors } from '../theme';
 
 const serifFont = Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' });
 
@@ -26,14 +26,17 @@ export function AurenHeader({
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open menu"
+        hitSlop={{ top: 18, right: 22, bottom: 18, left: 14 }}
         onPress={onOpenMenu}
         style={({ pressed }) => [styles.menuButton, pressed && styles.menuButtonPressed]}
       >
-        <View style={styles.menuLine} />
-        <View style={styles.menuLine} />
+        <View style={styles.menuIcon}>
+          <View style={styles.menuLineTop} />
+          <View style={styles.menuLineBottom} />
+        </View>
       </Pressable>
 
-      <Text style={styles.title}>Auren</Text>
+      <Text pointerEvents="none" style={styles.title}>Auren</Text>
 
       <View style={styles.rightSlot}>
         {showCreditsBadge ? (
@@ -69,27 +72,39 @@ export function AurenHeader({
 const styles = StyleSheet.create({
   header: {
     height: 82,
-    paddingLeft: 14,
+    paddingLeft: 13,
     paddingRight: 13,
     alignItems: 'center',
     justifyContent: 'space-between',
     flexDirection: 'row',
   },
   menuButton: {
-    width: 58,
-    height: 56,
+    width: 62,
+    height: 62,
     alignItems: 'flex-start',
     justifyContent: 'center',
-    gap: 8,
+    zIndex: 3,
   },
   menuButtonPressed: {
     opacity: 0.58,
   },
-  menuLine: {
-    width: 25,
-    height: 2.2,
+  menuIcon: {
+    width: 31,
+    height: 22,
+    justifyContent: 'center',
+    gap: 8,
+  },
+  menuLineTop: {
+    width: 29,
+    height: 3.2,
     borderRadius: 999,
-    backgroundColor: '#72737c',
+    backgroundColor: colors.text,
+  },
+  menuLineBottom: {
+    width: 20,
+    height: 3.2,
+    borderRadius: 999,
+    backgroundColor: colors.text,
   },
   title: {
     position: 'absolute',

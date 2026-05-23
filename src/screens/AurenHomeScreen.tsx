@@ -13,7 +13,7 @@ import { AurenSidebar } from '../components/AurenSidebar';
 import { pickAurenImageAttachment, type AurenImageAttachment } from '../lib/aurenAttachments';
 import { generateAurenThinkingTimeline, sendAurenChatMessage, sendAurenChatMessageStream, type AurenThinkingStep } from '../lib/aurenAiClient';
 import { createAurenConversation, createAurenProject, createConversationTitle, deleteAurenConversation, deleteAurenProject, listAurenConversations, listAurenProjects, loadAurenMessages, saveAurenMessage, updateAurenConversationTitle, updateAurenProjectTitle, type AurenConversation, type AurenProject } from '../lib/aurenConversations';
-import { getAurenCreditSummary, type AurenCreditSummary } from '../lib/aurenCredits';
+import { createAurenCreditSpendKey, estimateAurenCreditCost, getAurenCreditSummary, isAurenOutOfCreditsError, spendAurenCredits, type AurenCreditSummary } from '../lib/aurenCredits';
 import { aurenHaptics } from '../lib/aurenHaptics';
 import { colors } from '../theme';
 
@@ -39,6 +39,18 @@ function createDebugAurenResponse(error: unknown) {
 function createFallbackAurenResponse(message: string) {
   const cleaned = message.trim() || 'this topic';
   return `I cannot connect to Auren AI right now. Tell me what feels confusing about ${cleaned}, and I will help you break it down.`;
+}
+
+function createCreditBlockedMessage(error: unknown) {
+  if (isAurenOutOfCreditsError(error) && error instanceof Error) {
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return `I could not check your credits right now.\n\n${error.message}`;
+  }
+
+  return 'I could not check your credits right now.';
 }
 
 function toTitleCase(value: string) {
@@ -402,10 +414,43 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     const text = draft.trim();
     if (assistantThinking) return;
     if (!text && !hasSelectedImages) { void aurenHaptics.warning(); return; }
-    void aurenHaptics.sendMessage();
-    if (!inProjectDetail) setActiveScreen('chat');
+
     const imagesForSend = selectedImages;
     const content = text || 'Please explain this image.';
+    const creditCost = estimateAurenCreditCost({ hasImages: imagesForSend.length > 0, inProject: inProjectDetail });
+    const creditReason = imagesForSend.length > 0 ? 'image_message' : inProjectDetail ? 'project_message' : 'chat_message';
+
+    try {
+      await spendAurenCredits({
+        amount: creditCost,
+        reason: creditReason,
+        conversationId: activeConversationId,
+        projectId: inProjectDetail ? activeProject?.id ?? null : null,
+        idempotencyKey: createAurenCreditSpendKey(creditReason),
+        metadata: {
+          hasImages: imagesForSend.length > 0,
+          inProject: inProjectDetail,
+          messageLength: content.length,
+        },
+      });
+      await refreshCreditSummary();
+    } catch (creditError) {
+      console.log('Auren credit spend error:', creditError);
+      void aurenHaptics.warning();
+      await refreshCreditSummary();
+      setMessages((items) => [
+        ...items,
+        {
+          id: createMessageId('assistant'),
+          role: 'assistant',
+          content: createCreditBlockedMessage(creditError),
+        },
+      ]);
+      return;
+    }
+
+    void aurenHaptics.sendMessage();
+    if (!inProjectDetail) setActiveScreen('chat');
     const runId = thinkingRunRef.current + 1;
     thinkingRunRef.current = runId;
     const optimisticUserMessage: AurenMessage = { id: createMessageId('user'), role: 'user', content, images: imagesForSend };

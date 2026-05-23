@@ -43,6 +43,10 @@ export function AurenHeader({
     setCreditsOpen((current) => !current);
   }
 
+  function closeCreditsOpen() {
+    setCreditsOpen(false);
+  }
+
   return (
     <View style={styles.header}>
       <Pressable
@@ -93,7 +97,12 @@ export function AurenHeader({
         ) : null}
       </View>
 
-      {showCreditsBadge && creditsOpen ? <CreditsPopover credits={credits} /> : null}
+      {showCreditsBadge && creditsOpen ? (
+        <>
+          <Pressable style={styles.creditsDismissLayer} onPress={closeCreditsOpen} />
+          <CreditsPopover credits={credits} />
+        </>
+      ) : null}
     </View>
   );
 }
@@ -267,6 +276,15 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  creditsDismissLayer: {
+    position: 'absolute',
+    top: 82,
+    left: -13,
+    right: -13,
+    height: 1200,
+    zIndex: 35,
     backgroundColor: 'transparent',
   },
   creditsPopoverWrap: {

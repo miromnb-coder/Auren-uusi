@@ -23,12 +23,14 @@ type AurenComposerProps = {
   attachments?: AurenImageAttachment[];
   placeholder?: string;
   attachmentPlaceholder?: string;
+  isGenerating?: boolean;
   onChangeText: (value: string) => void;
   onAddImage?: () => void;
   onRemoveAttachment?: (id: string) => void;
   onFocus?: () => void;
   onBlur?: () => void;
   onSend?: () => void;
+  onStopGenerating?: () => void;
   onHeightChange?: (height: number) => void;
 };
 
@@ -49,17 +51,23 @@ function estimateWrappedInputHeight(text: string, inputWidth: number) {
   return Math.max(MIN_INPUT_HEIGHT, estimatedLines * INPUT_LINE_HEIGHT);
 }
 
+function StopGlyph() {
+  return <View style={styles.stopGlyph} />;
+}
+
 export function AurenComposer({
   value,
   attachments = [],
   placeholder = 'Ask anything about your studies',
   attachmentPlaceholder = 'Ask Auren about this image',
+  isGenerating = false,
   onChangeText,
   onAddImage,
   onRemoveAttachment,
   onFocus,
   onBlur,
   onSend,
+  onStopGenerating,
   onHeightChange,
 }: AurenComposerProps) {
   const inputRef = useRef<TextInput>(null);
@@ -148,8 +156,17 @@ export function AurenComposer({
   }
 
   function handleSend() {
+    if (isGenerating) {
+      onStopGenerating?.();
+      return;
+    }
+
     if (!canSend) return;
     onSend?.();
+  }
+
+  function handleStop() {
+    onStopGenerating?.();
   }
 
   function handleContentSizeChange(height: number) {
@@ -225,13 +242,26 @@ export function AurenComposer({
             textAlignVertical="top"
             placeholder={hasAttachments ? attachmentPlaceholder : placeholder}
             placeholderTextColor={colors.mutedSoft}
-            style={[styles.input, isActive ? styles.inputActive : styles.inputIdle, { height: inputHeight }]}
+            style={[
+              styles.input,
+              isActive ? styles.inputActive : styles.inputIdle,
+              !isActive && isGenerating ? styles.inputIdleWithStop : null,
+              { height: inputHeight },
+            ]}
           />
 
           {!isActive ? (
             <View style={styles.idleLeftSlot} pointerEvents="box-none">
               <ComposerButton accessibilityLabel="Add image" onPress={onAddImage} active={hasAttachments} size="idle">
                 <Ionicons name="add-outline" size={30} color={COMPOSER_ICON_COLOR} />
+              </ComposerButton>
+            </View>
+          ) : null}
+
+          {!isActive && isGenerating ? (
+            <View style={styles.idleRightSlot} pointerEvents="box-none">
+              <ComposerButton accessibilityLabel="Stop response" onPress={handleStop} filled send size="idle">
+                <StopGlyph />
               </ComposerButton>
             </View>
           ) : null}
@@ -251,13 +281,17 @@ export function AurenComposer({
               </ComposerButton>
 
               <ComposerButton
-                accessibilityLabel="Send message"
-                disabled={!canSend}
-                onPress={handleSend}
-                filled={canSend}
+                accessibilityLabel={isGenerating ? 'Stop response' : 'Send message'}
+                disabled={!isGenerating && !canSend}
+                onPress={isGenerating ? handleStop : handleSend}
+                filled={isGenerating || canSend}
                 send
               >
-                <Ionicons name="arrow-up-outline" size={25} color={canSend ? '#ffffff' : DISABLED_ICON_COLOR} />
+                {isGenerating ? (
+                  <StopGlyph />
+                ) : (
+                  <Ionicons name="arrow-up-outline" size={25} color={canSend ? '#ffffff' : DISABLED_ICON_COLOR} />
+                )}
               </ComposerButton>
             </View>
           </View>
@@ -353,6 +387,10 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
 
+  inputIdleWithStop: {
+    paddingRight: 66,
+  },
+
   inputActive: {
     width: '100%',
   },
@@ -360,6 +398,12 @@ const styles = StyleSheet.create({
   idleLeftSlot: {
     position: 'absolute',
     left: 0,
+    top: -1,
+  },
+
+  idleRightSlot: {
+    position: 'absolute',
+    right: 0,
     top: -1,
   },
 
@@ -396,6 +440,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
+  },
+
+  stopGlyph: {
+    width: 13,
+    height: 13,
+    borderRadius: 3.5,
+    backgroundColor: '#ffffff',
   },
 
   buttonPressed: {

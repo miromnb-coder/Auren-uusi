@@ -131,7 +131,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   }
 
   function stopThinkingTimeline() { thinkingRunRef.current += 1; setAssistantThinking(false); setThinkingTimeline([]); setThinkingStepIndex(0); }
-  function stopThinkingForRun(runId: number) { if (thinkingRunRef.current === runId) stopThinkingTimeline(); }
+  function stopThinkingForRun(runId: number) { if (thinkingRunRef.current === runId) { setAssistantThinking(false); setThinkingTimeline([]); setThinkingStepIndex(0); } }
 
   function resetChatSurface() {
     stopThinkingTimeline();

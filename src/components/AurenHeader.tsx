@@ -38,7 +38,7 @@ export function AurenHeader({
       <View style={styles.rightSlot}>
         {showCreditsBadge ? (
           <View style={styles.creditsBadge}>
-            <Sparkles size={23} color={colors.text} strokeWidth={1.85} />
+            <Sparkles size={20} color={colors.text} strokeWidth={1.85} />
             <Text style={styles.creditsText}>{credits}</Text>
           </View>
         ) : showConversationActions ? (
@@ -49,7 +49,7 @@ export function AurenHeader({
               onPress={onShareConversation}
               style={({ pressed }) => [styles.actionButton, pressed && styles.menuButtonPressed]}
             >
-              <Share2 size={25} color={colors.text} strokeWidth={1.85} />
+              <Share2 size={23} color={colors.text} strokeWidth={1.85} />
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -57,7 +57,7 @@ export function AurenHeader({
               onPress={onOpenConversationMenu}
               style={({ pressed }) => [styles.actionButton, pressed && styles.menuButtonPressed]}
             >
-              <MoreHorizontal size={28} color={colors.text} strokeWidth={1.9} />
+              <MoreHorizontal size={26} color={colors.text} strokeWidth={1.9} />
             </Pressable>
           </View>
         ) : null}
@@ -69,13 +69,14 @@ export function AurenHeader({
 const styles = StyleSheet.create({
   header: {
     height: 82,
-    paddingHorizontal: spacing.screenX,
+    paddingLeft: 14,
+    paddingRight: 13,
     alignItems: 'center',
     justifyContent: 'space-between',
     flexDirection: 'row',
   },
   menuButton: {
-    width: 68,
+    width: 58,
     height: 56,
     alignItems: 'flex-start',
     justifyContent: 'center',
@@ -103,16 +104,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   rightSlot: {
-    width: 118,
+    width: 104,
     height: 56,
     alignItems: 'flex-end',
     justifyContent: 'center',
     zIndex: 2,
   },
   creditsBadge: {
-    minWidth: 92,
-    height: 43,
-    paddingHorizontal: 15,
+    minWidth: 82,
+    height: 38,
+    paddingHorizontal: 13,
     borderRadius: 999,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(17,24,39,0.18)',
@@ -120,23 +121,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 9,
+    gap: 8,
   },
   creditsText: {
     color: colors.text,
-    fontSize: 19,
-    lineHeight: 24,
+    fontSize: 17,
+    lineHeight: 22,
     fontWeight: '700',
-    letterSpacing: -0.2,
+    letterSpacing: -0.18,
   },
   conversationActions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 11,
+    gap: 8,
   },
   actionButton: {
-    width: 36,
+    width: 32,
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',

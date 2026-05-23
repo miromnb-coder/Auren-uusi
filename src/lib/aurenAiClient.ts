@@ -6,6 +6,8 @@ const SUPABASE_FUNCTION_URL =
   process.env.EXPO_PUBLIC_AUREN_CHAT_FUNCTION_URL ?? `${SUPABASE_URL}/functions/v1/auren-chat`;
 const SUPABASE_STREAM_FUNCTION_URL =
   process.env.EXPO_PUBLIC_AUREN_CHAT_STREAM_FUNCTION_URL ?? `${SUPABASE_URL}/functions/v1/auren-chat-stream`;
+const STREAM_FIRST_CHUNK_DELAY_MS = 720;
+const STREAM_VISUAL_CHUNK_INTERVAL_MS = 18;
 
 export type AurenThinkingStep = {
   lines: string[];
@@ -81,6 +83,35 @@ async function createHeaders() {
     Authorization: `Bearer ${accessToken}`,
     apikey: SUPABASE_ANON_KEY,
   };
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getVisualChunkSize(textLength: number) {
+  if (textLength > 1600) {
+    return 14;
+  }
+
+  if (textLength > 900) {
+    return 10;
+  }
+
+  if (textLength > 420) {
+    return 7;
+  }
+
+  return 4;
+}
+
+async function emitAnswerVisually(text: string, onChunk: (chunk: string) => void) {
+  const chunkSize = getVisualChunkSize(text.length);
+
+  for (let index = 0; index < text.length; index += chunkSize) {
+    onChunk(text.slice(index, index + chunkSize));
+    await wait(STREAM_VISUAL_CHUNK_INTERVAL_MS);
+  }
 }
 
 async function parseErrorResponse(response: Response) {
@@ -225,10 +256,24 @@ export async function sendAurenChatMessageStream(
   }
 
   const reader = response.body?.getReader?.();
+  let hasStartedVisualAnswer = false;
+
+  async function emitChunk(chunk: string) {
+    if (!chunk) {
+      return;
+    }
+
+    if (!hasStartedVisualAnswer) {
+      hasStartedVisualAnswer = true;
+      await wait(STREAM_FIRST_CHUNK_DELAY_MS);
+    }
+
+    await emitAnswerVisually(chunk, options.onChunk);
+  }
 
   if (!reader) {
     const fallbackAnswer = await sendAurenChatMessage(messages, options);
-    options.onChunk(fallbackAnswer);
+    await emitChunk(fallbackAnswer);
     return fallbackAnswer;
   }
 
@@ -246,14 +291,14 @@ export async function sendAurenChatMessageStream(
 
     if (chunk.length > 0) {
       fullAnswer += chunk;
-      options.onChunk(chunk);
+      await emitChunk(chunk);
     }
   }
 
   const finalTail = decoder.decode();
   if (finalTail.length > 0) {
     fullAnswer += finalTail;
-    options.onChunk(finalTail);
+    await emitChunk(finalTail);
   }
 
   if (!fullAnswer.trim()) {

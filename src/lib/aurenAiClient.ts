@@ -9,6 +9,31 @@ const SUPABASE_STREAM_FUNCTION_URL =
 const STREAM_FIRST_CHUNK_DELAY_MS = 720;
 const STREAM_VISUAL_CHUNK_INTERVAL_MS = 18;
 
+type AurenStreamListener = (isRunning: boolean) => void;
+
+let activeReader: { cancel?: () => Promise<unknown> } | null = null;
+let activeStreamId = 0;
+let activeStreamRunning = false;
+const streamListeners = new Set<AurenStreamListener>();
+
+function setAurenStreamRunning(nextValue: boolean) {
+  activeStreamRunning = nextValue;
+  streamListeners.forEach((listener) => listener(nextValue));
+}
+
+export function subscribeToAurenStreamState(listener: AurenStreamListener) {
+  listener(activeStreamRunning);
+  streamListeners.add(listener);
+  return () => streamListeners.delete(listener);
+}
+
+export function cancelCurrentAurenResponse() {
+  activeStreamId += 1;
+  activeReader?.cancel?.().catch(() => undefined);
+  activeReader = null;
+  setAurenStreamRunning(false);
+}
+
 export type AurenThinkingStep = {
   lines: string[];
 };
@@ -105,10 +130,14 @@ function getVisualChunkSize(textLength: number) {
   return 4;
 }
 
-async function emitAnswerVisually(text: string, onChunk: (chunk: string) => void) {
+async function emitAnswerVisually(text: string, onChunk: (chunk: string) => void, streamId: number) {
   const chunkSize = getVisualChunkSize(text.length);
 
   for (let index = 0; index < text.length; index += chunkSize) {
+    if (activeStreamId !== streamId) {
+      return;
+    }
+
     onChunk(text.slice(index, index + chunkSize));
     await wait(STREAM_VISUAL_CHUNK_INTERVAL_MS);
   }
@@ -245,67 +274,95 @@ export async function sendAurenChatMessageStream(
   messages: AurenMessage[],
   options: SendAurenChatMessageStreamOptions,
 ) {
-  const response = await fetch(SUPABASE_STREAM_FUNCTION_URL, {
-    method: 'POST',
-    headers: await createHeaders(),
-    body: createRequestBody(messages, options),
-  });
+  activeStreamId += 1;
+  const streamId = activeStreamId;
+  setAurenStreamRunning(true);
 
-  if (!response.ok) {
-    throw new Error(await parseErrorResponse(response));
-  }
-
-  const reader = response.body?.getReader?.();
-  let hasStartedVisualAnswer = false;
-
-  async function emitChunk(chunk: string) {
-    if (!chunk) {
-      return;
-    }
-
-    if (!hasStartedVisualAnswer) {
-      hasStartedVisualAnswer = true;
-      await wait(STREAM_FIRST_CHUNK_DELAY_MS);
-    }
-
-    await emitAnswerVisually(chunk, options.onChunk);
-  }
-
-  if (!reader) {
-    const fallbackAnswer = await sendAurenChatMessage(messages, options);
-    await emitChunk(fallbackAnswer);
-    return fallbackAnswer;
-  }
-
-  const decoder = new TextDecoder();
   let fullAnswer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
+  try {
+    const response = await fetch(SUPABASE_STREAM_FUNCTION_URL, {
+      method: 'POST',
+      headers: await createHeaders(),
+      body: createRequestBody(messages, options),
+    });
 
-    if (done) {
-      break;
+    if (!response.ok) {
+      throw new Error(await parseErrorResponse(response));
     }
 
-    const chunk = decoder.decode(value, { stream: true });
+    const reader = response.body?.getReader?.();
+    let hasStartedVisualAnswer = false;
 
-    if (chunk.length > 0) {
-      fullAnswer += chunk;
-      await emitChunk(chunk);
+    async function emitChunk(chunk: string) {
+      if (!chunk || activeStreamId !== streamId) {
+        return;
+      }
+
+      if (!hasStartedVisualAnswer) {
+        hasStartedVisualAnswer = true;
+        await wait(STREAM_FIRST_CHUNK_DELAY_MS);
+      }
+
+      if (activeStreamId !== streamId) {
+        return;
+      }
+
+      await emitAnswerVisually(chunk, options.onChunk, streamId);
+    }
+
+    if (!reader) {
+      const fallbackAnswer = await sendAurenChatMessage(messages, options);
+      fullAnswer = fallbackAnswer;
+      await emitChunk(fallbackAnswer);
+      return fallbackAnswer;
+    }
+
+    activeReader = reader;
+    const decoder = new TextDecoder();
+
+    while (activeStreamId === streamId) {
+      const { done, value } = await reader.read();
+
+      if (done) {
+        break;
+      }
+
+      const chunk = decoder.decode(value, { stream: true });
+
+      if (chunk.length > 0) {
+        fullAnswer += chunk;
+        await emitChunk(chunk);
+      }
+    }
+
+    const finalTail = decoder.decode();
+    if (finalTail.length > 0 && activeStreamId === streamId) {
+      fullAnswer += finalTail;
+      await emitChunk(finalTail);
+    }
+
+    if (activeStreamId !== streamId) {
+      return fullAnswer.trim();
+    }
+
+    if (!fullAnswer.trim()) {
+      throw new Error('Auren AI stream returned an empty answer');
+    }
+
+    return fullAnswer.trim();
+  } catch (error) {
+    if (activeStreamId !== streamId) {
+      return fullAnswer.trim();
+    }
+
+    throw error;
+  } finally {
+    if (activeStreamId === streamId) {
+      activeReader = null;
+      setAurenStreamRunning(false);
     }
   }
-
-  const finalTail = decoder.decode();
-  if (finalTail.length > 0) {
-    fullAnswer += finalTail;
-    await emitChunk(finalTail);
-  }
-
-  if (!fullAnswer.trim()) {
-    throw new Error('Auren AI stream returned an empty answer');
-  }
-
-  return fullAnswer.trim();
 }
 
 export async function generateAurenConversationTitle({

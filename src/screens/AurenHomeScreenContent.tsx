@@ -119,6 +119,11 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
     void aurenHaptics.selection(); Keyboard.dismiss(); chat.resetChatSurface(); setPlusSheetOpen(false); setCreateProjectSheetOpen(false); setCreateProjectError(null); setProjectActionsOpen(false); setRenameProjectTarget(null); setActiveProject(project); setActiveScreen('projectDetail');
   }
 
+  function openProjectFromSidebar(project: AurenProject) {
+    setSidebarOpen(false);
+    openProjectDetail(project);
+  }
+
   function closeProjectDetail() {
     void aurenHaptics.selection(); Keyboard.dismiss(); chat.resetChatSurface(); setProjectActionsOpen(false); setRenameProjectTarget(null); setActiveProject(null); setActiveScreen('projects');
   }
@@ -233,7 +238,7 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   );
 
   return (
-    <AurenSidebar open={sidebarOpen} onOpen={handleSidebarOpen} onClose={closeSidebar} onNewChat={startNewChat} onSearchChats={openConversationSearch} onProjects={openProjects} onNewProject={openCreateProjectSheet} gesturesEnabled={!plusSheetOpen && !createProjectSheetOpen && activeScreen !== 'projectDetail'} gestureBottomExclusion={activeScreen === 'chat' ? sidebarGestureBottomExclusion : 0} conversations={chat.conversations} activeConversationId={chat.activeConversationId} activeItem={sidebarActiveItem} profileName={profileName} avatarLetter={avatarLetter} loadingConversations={chat.loadingConversations} onSelectConversation={handleSelectConversation} onRenameConversation={chat.handleRenameConversation} onDeleteConversation={chat.handleDeleteConversation}>
+    <AurenSidebar open={sidebarOpen} onOpen={handleSidebarOpen} onClose={closeSidebar} onNewChat={startNewChat} onSearchChats={openConversationSearch} onProjects={openProjects} onNewProject={openCreateProjectSheet} projects={projects} loadingProjects={loadingProjects} activeProjectId={activeProject?.id ?? null} onSelectProject={openProjectFromSidebar} gesturesEnabled={!plusSheetOpen && !createProjectSheetOpen && activeScreen !== 'projectDetail'} gestureBottomExclusion={activeScreen === 'chat' ? sidebarGestureBottomExclusion : 0} conversations={chat.conversations} activeConversationId={chat.activeConversationId} activeItem={sidebarActiveItem} profileName={profileName} avatarLetter={avatarLetter} loadingConversations={chat.loadingConversations} onSelectConversation={handleSelectConversation} onRenameConversation={chat.handleRenameConversation} onDeleteConversation={chat.handleDeleteConversation}>
       {activeScreen === 'conversationSearch' ? (
         <AurenConversationSearchScreen conversations={chat.conversations} loading={chat.loadingConversations} onBack={returnFromConversationSearchToSidebar} onSelectConversation={handleSelectConversation} />
       ) : activeScreen === 'projects' ? (

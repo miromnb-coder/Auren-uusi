@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import type { AurenImageAttachment } from '../lib/aurenAttachments';
+import { cancelCurrentAurenResponse, subscribeToAurenStreamState } from '../lib/aurenAiClient';
 import { colors, shadows } from '../theme';
 import { AurenAttachmentTray } from './AurenAttachmentTray';
 
@@ -76,6 +77,7 @@ export function AurenComposer({
 
   const [focused, setFocused] = useState(false);
   const [forcedActive, setForcedActive] = useState(false);
+  const [streamRunning, setStreamRunning] = useState(false);
   const [measuredContentHeight, setMeasuredContentHeight] = useState(MIN_INPUT_HEIGHT);
   const [stableInputHeight, setStableInputHeight] = useState(MIN_INPUT_HEIGHT);
   const [inputWidth, setInputWidth] = useState(0);
@@ -83,6 +85,7 @@ export function AurenComposer({
   const hasText = value.trim().length > 0;
   const hasAttachments = attachments.length > 0;
   const canSend = hasText || hasAttachments;
+  const effectiveIsGenerating = isGenerating || streamRunning;
   const isActive = forcedActive || focused || hasText || hasAttachments;
 
   const estimatedInputHeight = useMemo(
@@ -94,6 +97,8 @@ export function AurenComposer({
   const targetInputHeight = Math.min(rawInputHeight, MAX_INPUT_HEIGHT);
   const inputHeight = isActive ? stableInputHeight : MIN_INPUT_HEIGHT;
   const inputCanScroll = isActive && rawInputHeight > MAX_INPUT_HEIGHT;
+
+  useEffect(() => subscribeToAurenStreamState(setStreamRunning), []);
 
   useEffect(() => {
     Animated.timing(transition, {
@@ -156,8 +161,8 @@ export function AurenComposer({
   }
 
   function handleSend() {
-    if (isGenerating) {
-      onStopGenerating?.();
+    if (effectiveIsGenerating) {
+      handleStop();
       return;
     }
 
@@ -166,6 +171,7 @@ export function AurenComposer({
   }
 
   function handleStop() {
+    cancelCurrentAurenResponse();
     onStopGenerating?.();
   }
 
@@ -245,7 +251,7 @@ export function AurenComposer({
             style={[
               styles.input,
               isActive ? styles.inputActive : styles.inputIdle,
-              !isActive && isGenerating ? styles.inputIdleWithStop : null,
+              !isActive && effectiveIsGenerating ? styles.inputIdleWithStop : null,
               { height: inputHeight },
             ]}
           />
@@ -258,7 +264,7 @@ export function AurenComposer({
             </View>
           ) : null}
 
-          {!isActive && isGenerating ? (
+          {!isActive && effectiveIsGenerating ? (
             <View style={styles.idleRightSlot} pointerEvents="box-none">
               <ComposerButton accessibilityLabel="Stop response" onPress={handleStop} filled send size="idle">
                 <StopGlyph />
@@ -281,13 +287,13 @@ export function AurenComposer({
               </ComposerButton>
 
               <ComposerButton
-                accessibilityLabel={isGenerating ? 'Stop response' : 'Send message'}
-                disabled={!isGenerating && !canSend}
-                onPress={isGenerating ? handleStop : handleSend}
-                filled={isGenerating || canSend}
+                accessibilityLabel={effectiveIsGenerating ? 'Stop response' : 'Send message'}
+                disabled={!effectiveIsGenerating && !canSend}
+                onPress={effectiveIsGenerating ? handleStop : handleSend}
+                filled={effectiveIsGenerating || canSend}
                 send
               >
-                {isGenerating ? (
+                {effectiveIsGenerating ? (
                   <StopGlyph />
                 ) : (
                   <Ionicons name="arrow-up-outline" size={25} color={canSend ? '#ffffff' : DISABLED_ICON_COLOR} />

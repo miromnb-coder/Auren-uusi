@@ -47,6 +47,7 @@ const OPEN_PROGRESS_THRESHOLD = 0.38;
 const CLOSE_PROGRESS_THRESHOLD = 0.62;
 const SIDEBAR_PROJECT_LIMIT = 4;
 const MAIN_CARD_OPEN_TRANSLATE = 1;
+const MAIN_CARD_DRAG_DISTANCE = 0.62;
 const MAIN_CARD_OPEN_RADIUS = 38;
 const MAIN_CARD_OPEN_SCALE = 0.985;
 const DRAWER_PARALLAX_OFFSET = 24;
@@ -176,7 +177,7 @@ export function AurenSidebar({
           if (!isMostlyHorizontal) return;
           if (openValue.value < 0.01 && event.translationX < 0) return;
           if (openValue.value > 0.01 && event.translationX > 0) return;
-          drawerProgress.value = clampProgress(rootGestureStartProgress.value + event.translationX / (drawerWidth * MAIN_CARD_OPEN_TRANSLATE));
+          drawerProgress.value = clampProgress(rootGestureStartProgress.value + event.translationX / (drawerWidth * MAIN_CARD_DRAG_DISTANCE));
         })
         .onEnd((event) => {
           if (!rootGestureEligible.value) return;
@@ -214,7 +215,7 @@ export function AurenSidebar({
         .onUpdate((event) => {
           const isMostlyHorizontal = Math.abs(event.translationX) > Math.abs(event.translationY) * HORIZONTAL_DOMINANCE;
           if (!isMostlyHorizontal || event.translationX >= 0) return;
-          drawerProgress.value = clampProgress(drawerCloseGestureStartProgress.value + event.translationX / (drawerWidth * MAIN_CARD_OPEN_TRANSLATE));
+          drawerProgress.value = clampProgress(drawerCloseGestureStartProgress.value + event.translationX / (drawerWidth * MAIN_CARD_DRAG_DISTANCE));
         })
         .onEnd((event) => {
           const shouldClose = event.velocityX < -SWIPE_VELOCITY || (event.velocityX < SWIPE_VELOCITY && drawerProgress.value < CLOSE_PROGRESS_THRESHOLD);

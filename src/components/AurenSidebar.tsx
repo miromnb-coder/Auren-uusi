@@ -1,4 +1,4 @@
-import { Folder, Search, SquarePen, Trash2, X } from 'lucide-react-native';
+import { BookOpen, Folder, Search, SquarePen, Trash2, X } from 'lucide-react-native';
 import type { ElementRef, ReactNode } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Animated as RNAnimated, Easing as RNEasing, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -396,11 +396,6 @@ export function AurenSidebar({
                     active={activeItem === 'newChat'}
                   />
                   <SidebarItem
-                    icon={<Search size={32} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
-                    label="Search chats"
-                    onPress={openSearchChats}
-                  />
-                  <SidebarItem
                     icon={<Folder size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />}
                     label="Projects"
                     onPress={onProjects}
@@ -460,6 +455,24 @@ export function AurenSidebar({
                   </View>
                   <Text style={styles.profileName} numberOfLines={1}>{profileName}</Text>
                 </Pressable>
+
+                <View style={styles.bottomActions}>
+                  <Pressable
+                    style={({ pressed }) => [styles.bottomIconButton, pressed && styles.iconPressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Library"
+                  >
+                    <BookOpen size={29} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
+                  </Pressable>
+                  <Pressable
+                    onPress={openSearchChats}
+                    style={({ pressed }) => [styles.bottomIconButton, pressed && styles.iconPressed]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Search chats"
+                  >
+                    <Search size={31} color={SIDEBAR_ICON_COLOR} strokeWidth={ICON_STROKE_WIDTH} />
+                  </Pressable>
+                </View>
               </View>
             </View>
           </Animated.View>
@@ -745,6 +758,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 18,
     backgroundColor: DRAWER_BACKGROUND,
   },
   profileInline: {
@@ -774,6 +788,23 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     fontWeight: '400',
     letterSpacing: -0.22,
+  },
+  bottomActions: {
+    flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+  },
+  bottomIconButton: {
+    width: 38,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  iconPressed: {
+    opacity: 0.54,
+    transform: [{ scale: 0.96 }],
   },
   contextOverlay: { flex: 1 },
   contextOverlayTint: {

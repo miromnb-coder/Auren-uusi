@@ -93,18 +93,27 @@ export function AurenHomeScreen({ session }: AurenHomeScreenProps) {
   function handleHeaderShareConversation() { void aurenHaptics.selection(); }
   function handleHeaderConversationMenu() { void aurenHaptics.selection(); }
 
+  function openSidebarFromCurrentScreen() {
+    void aurenHaptics.panelOpen();
+    Keyboard.dismiss();
+    setPlusSheetOpen(false);
+    setCreateProjectSheetOpen(false);
+    setCreateProjectError(null);
+    setProjectActionsOpen(false);
+    setRenameProjectTarget(null);
+    setSidebarOpen(true);
+  }
+
   function returnFromProjectsToSidebar() {
-    void aurenHaptics.panelOpen(); Keyboard.dismiss(); setPlusSheetOpen(false); setCreateProjectSheetOpen(false); setCreateProjectError(null); setActiveProject(null); setActiveScreen('chat'); setSidebarOpen(true);
+    openSidebarFromCurrentScreen();
   }
 
   function returnFromConversationSearchToSidebar() {
-    void aurenHaptics.panelOpen(); Keyboard.dismiss(); setPlusSheetOpen(false); setActiveProject(null); setActiveScreen('chat'); setSidebarOpen(true);
+    openSidebarFromCurrentScreen();
   }
 
   function handleSidebarOpen() {
-    if (activeScreen === 'projects') returnFromProjectsToSidebar();
-    else if (activeScreen === 'conversationSearch') returnFromConversationSearchToSidebar();
-    else openSidebar();
+    openSidebarFromCurrentScreen();
   }
 
   function openConversationSearch() {
